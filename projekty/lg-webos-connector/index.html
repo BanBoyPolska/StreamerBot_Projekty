@@ -1,1 +1,536 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LG WebOS Connector – BanBoyPolska</title>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #0e0e10;
+      --bg2: #18181b;
+      --bg3: #1f1f23;
+      --border: #2a2a2e;
+      --text: #efeff1;
+      --text-muted: #adadb8;
+      --accent: #9147ff;
+      --accent-hover: #772ce8;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      --badge-bg: #2a2a2e;
+      --code-bg: #111113;
+      --step-num: rgba(145,71,255,0.15);
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f4f8;
+      --bg2: #ffffff;
+      --bg3: #ececf0;
+      --border: #d4d4dc;
+      --text: #18181b;
+      --text-muted: #53535f;
+      --accent: #9147ff;
+      --accent-hover: #772ce8;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      --badge-bg: #e4e4ec;
+      --code-bg: #e8e8f0;
+      --step-num: rgba(145,71,255,0.12);
+    }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      object-fit: cover;
+      background: var(--bg3);
+    }
+    .site-title { font-size: 1rem; font-weight: 700; }
+    .site-title span { color: var(--accent); }
+
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .twitch-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--accent); color: #fff;
+      text-decoration: none; padding: 7px 14px;
+      border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+      transition: background 0.2s;
+    }
+    .twitch-btn:hover { background: var(--accent-hover); }
+    .twitch-btn svg { width: 15px; height: 15px; fill: #fff; }
+    .theme-toggle {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 6px; width: 36px; height: 36px;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; color: var(--text);
+      transition: background 0.2s;
+    }
+    .theme-toggle:hover { background: var(--border); }
+
+    /* BREADCRUMB */
+    .breadcrumb {
+      padding: 12px 2rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* LAYOUT */
+    .page-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 2rem 80px;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    /* MAIN CONTENT */
+    .content h1 {
+      font-size: 1.8rem; font-weight: 800;
+      line-height: 1.2; margin-bottom: 10px;
+    }
+    .content .subtitle {
+      color: var(--text-muted); font-size: 0.95rem;
+      line-height: 1.6; margin-bottom: 20px;
+    }
+    .tags { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 28px; }
+    .tag {
+      font-size: 0.74rem; padding: 3px 10px;
+      border-radius: 4px; background: var(--badge-bg);
+      color: var(--text-muted); border: 1px solid var(--border);
+    }
+    .tag.accent {
+      background: rgba(145,71,255,0.15); color: var(--accent);
+      border-color: rgba(145,71,255,0.3);
+    }
+
+    /* SECTION */
+    .section { margin-bottom: 36px; }
+    .section-title {
+      font-size: 1.05rem; font-weight: 700;
+      margin-bottom: 16px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .icon { font-size: 1.1rem; }
+
+    /* REQUIREMENTS */
+    .req-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .req-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .req-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+    .req-label { font-size: 0.83rem; font-weight: 600; color: var(--text); }
+    .req-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* STEPS */
+    .steps { display: flex; flex-direction: column; gap: 14px; }
+    .step {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+    }
+    .step-num {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--step-num);
+      border: 1.5px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.85rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-content {}
+    .step-title { font-size: 0.92rem; font-weight: 700; margin-bottom: 5px; }
+    .step-desc { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; }
+    .step-desc code {
+      background: var(--code-bg); padding: 1px 6px;
+      border-radius: 4px; font-family: monospace; font-size: 0.88em;
+      color: var(--accent);
+    }
+    .step-desc strong { color: var(--text); }
+
+    /* ACTIONS TABLE */
+    .actions-list { display: flex; flex-direction: column; gap: 8px; }
+    .action-item {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px;
+      display: flex; gap: 12px; align-items: center;
+    }
+    .action-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .action-name { font-size: 0.88rem; font-weight: 700; }
+    .action-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* TROUBLESHOOTING */
+    .trouble-list { display: flex; flex-direction: column; gap: 8px; }
+    .trouble-item {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-left: 3px solid #ffb400;
+      border-radius: 8px; padding: 12px 16px;
+    }
+    .trouble-q { font-size: 0.88rem; font-weight: 700; margin-bottom: 4px; }
+    .trouble-a { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* SIDEBAR */
+    .sidebar { position: sticky; top: 84px; }
+    .sidebar-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+      box-shadow: var(--card-shadow); margin-bottom: 16px;
+    }
+    .sidebar-card-header {
+      background: linear-gradient(135deg, rgba(145,71,255,0.25), rgba(145,71,255,0.08));
+      padding: 20px; text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-card-header .big-icon { font-size: 2.8rem; display: block; margin-bottom: 8px; }
+    .sidebar-card-header h3 { font-size: 0.95rem; font-weight: 700; }
+    .sidebar-card-header p { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+
+    .download-btn {
+      display: block; width: 100%;
+      background: var(--accent); color: #fff;
+      text-decoration: none; padding: 13px;
+      font-size: 0.9rem; font-weight: 700;
+      text-align: center; transition: background 0.2s;
+      border: none; cursor: pointer;
+    }
+    .download-btn:hover { background: var(--accent-hover); }
+    .download-btn .dl-icon { margin-right: 6px; }
+
+    .sidebar-meta { padding: 14px 16px; }
+    .meta-row {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-label { color: var(--text-muted); }
+    .meta-value { font-weight: 600; color: var(--text); }
+    .meta-value.green { color: #00c896; }
+
+    .sidebar-links { padding: 0 16px 14px; }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--accent); text-decoration: none;
+      font-size: 0.82rem; padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      transition: opacity 0.2s;
+    }
+    .sidebar-link:last-child { border-bottom: none; }
+    .sidebar-link:hover { opacity: 0.75; }
+
+    /* BACK LINK */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-muted); text-decoration: none;
+      font-size: 0.82rem; margin-bottom: 20px;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    /* INFO BOX */
+    .info-box {
+      background: rgba(145,71,255,0.08);
+      border: 1px solid rgba(145,71,255,0.25);
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 0.83rem; color: var(--text-muted);
+      line-height: 1.6; margin-top: 10px;
+    }
+    .info-box strong { color: var(--accent); }
+
+    footer {
+      text-align: center; padding: 20px;
+      color: var(--text-muted); font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 680px) {
+      .page-wrap { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .req-grid { grid-template-columns: 1fr; }
+      .site-title { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="header-left" href="../../index.html">
+      <img class="avatar" id="headerAvatar" src="" alt="BanBoyPolska" />
+      <span class="site-title">BanBoy<span>Polska</span></span>
+    </a>
+    <div class="header-right">
+      <button class="theme-toggle" id="themeToggle" title="Przełącz motyw">🌙</button>
+      <a class="twitch-btn" href="https://twitch.tv/banboypolska" target="_blank">
+        <svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+        Twitch
+      </a>
+    </div>
+  </header>
+
+  <div class="breadcrumb">
+    <a href="../../index.html">🏠 Projekty</a>
+    <span>›</span>
+    <span>LG WebOS Connector</span>
+  </div>
+
+  <div class="page-wrap">
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+      <a class="back-link" href="../../index.html">← Wróć do projektów</a>
+      <h1>📺 LG WebOS Connector</h1>
+      <p class="subtitle">Plugin do Elgato Stream Deck umożliwiający sterowanie telewizorami LG WebOS przez sieć lokalną — bez pilota, bez dodatkowych aplikacji.</p>
+      <div class="tags">
+        <span class="tag accent">Stream Deck</span>
+        <span class="tag">LG WebOS</span>
+        <span class="tag">LAN</span>
+        <span class="tag">C#</span>
+        <span class="tag">BanBoyPolska</span>
+      </div>
+
+      <!-- WYMAGANIA -->
+      <div class="section">
+        <div class="section-title"><span class="icon">⚙️</span> Wymagania</div>
+        <div class="req-grid">
+          <div class="req-item">
+            <div class="req-icon">📺</div>
+            <div>
+              <div class="req-label">LG TV z WebOS 4.0+</div>
+              <div class="req-desc">Modele od 2018 roku wzwyż</div>
+            </div>
+          </div>
+          <div class="req-item">
+            <div class="req-icon">🌐</div>
+            <div>
+              <div class="req-label">Ta sama sieć LAN/Wi-Fi</div>
+              <div class="req-desc">TV i komputer muszą być w tej samej sieci</div>
+            </div>
+          </div>
+          <div class="req-item">
+            <div class="req-icon">🎛️</div>
+            <div>
+              <div class="req-label">Stream Deck Software 6.0+</div>
+              <div class="req-desc">Dowolny model Stream Deck</div>
+            </div>
+          </div>
+          <div class="req-item">
+            <div class="req-icon">🔓</div>
+            <div>
+              <div class="req-label">Włączone urządzenia zewnętrzne</div>
+              <div class="req-desc">Ustawienia → Ogólne → Urządzenia zewnętrzne → Włączone</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INSTALACJA -->
+      <div class="section">
+        <div class="section-title"><span class="icon">📦</span> Instalacja</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <div class="step-title">Pobierz plugin</div>
+              <div class="step-desc">Kliknij przycisk <strong>Pobierz plugin</strong> po prawej stronie, aby pobrać plik <code>com.banboy.lgtv-webos-connect.streamDeckPlugin</code>.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <div class="step-title">Zainstaluj w Stream Deck</div>
+              <div class="step-desc">Kliknij dwukrotnie na pobrany plik. Aplikacja Stream Deck <strong>automatycznie go zainstaluje i uruchomi</strong> — nie potrzebujesz robić nic więcej.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <div class="step-title">Sparuj telewizor</div>
+              <div class="step-desc">
+                Przeciągnij przycisk <strong>Pair TV</strong> na wybrany klawisz Stream Deck. W panelu ustawień wpisz adres IP telewizora i kliknij <strong>Paruj TV</strong>. Na ekranie TV pojawi się dialog potwierdzający — zatwierdź go.
+                <div class="info-box"><strong>💡 Parowanie wystarczy zrobić raz.</strong> Wygenerowany klucz jest zapisywany globalnie — wszystkie przyciski działają automatycznie bez ponownego parowania.</div>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <div class="step-title">Dodaj akcje</div>
+              <div class="step-desc">Przeciągnij dowolne akcje z listy <strong>LGTV WebOS</strong> na wybrane przyciski Stream Deck. <strong>Gotowe!</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOSTĘPNE AKCJE -->
+      <div class="section">
+        <div class="section-title"><span class="icon">🎮</span> Dostępne akcje</div>
+        <div class="actions-list">
+          <div class="action-item">
+            <div class="action-icon">🔌</div>
+            <div>
+              <div class="action-name">Switch HDMI Input</div>
+              <div class="action-desc">Przełącza wejście telewizora na wybrany port HDMI (1, 2, 3 lub 4)</div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-icon">🔇</div>
+            <div>
+              <div class="action-name">Toggle Mute</div>
+              <div class="action-desc">Przełącza wyciszenie dźwięku telewizora (toggle — włącz/wyłącz)</div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-icon">⏻</div>
+            <div>
+              <div class="action-name">Power Off</div>
+              <div class="action-desc">Wyłącza telewizor (tryb standby)</div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-icon">📡</div>
+            <div>
+              <div class="action-name">Pair TV</div>
+              <div class="action-desc">Jednorazowe parowanie z telewizorem. Wymaga podania adresu IP TV.</div>
+            </div>
+          </div>
+        </div>
+        <div class="info-box" style="margin-top:14px;">
+          <strong>📍 Jak znaleźć IP telewizora?</strong> Na TV: Ustawienia → Ogólne → Sieć → Informacje o połączeniu sieciowym → Adres IP
+        </div>
+      </div>
+
+      <!-- ROZWIĄZYWANIE PROBLEMÓW -->
+      <div class="section">
+        <div class="section-title"><span class="icon">🔧</span> Rozwiązywanie problemów</div>
+        <div class="trouble-list">
+          <div class="trouble-item">
+            <div class="trouble-q">❌ Nie mogę połączyć się z TV</div>
+            <div class="trouble-a">TV jest wyłączony lub w trybie standby. Włącz telewizor przed próbą połączenia.</div>
+          </div>
+          <div class="trouble-item">
+            <div class="trouble-q">🌐 Connection refused / timeout</div>
+            <div class="trouble-a">Upewnij się, że TV i komputer są w tej samej sieci. Włącz zdalny dostęp w ustawieniach TV: Ustawienia → Ogólne → Urządzenia zewnętrzne → Włączone.</div>
+          </div>
+          <div class="trouble-item">
+            <div class="trouble-q">🔑 Przyciski przestały działać po czasie</div>
+            <div class="trouble-a">Zrestaruj aplikację Stream Deck. Jeśli problem się powtarza — sparuj ponownie używając przycisku Pair TV z aktualnym IP telewizora.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <span class="big-icon">📺</span>
+          <h3>LG WebOS Connector</h3>
+          <p>Plugin do Stream Deck</p>
+        </div>
+        <a class="download-btn" href="com.banboy.lgtv-webos-connect.streamDeckPlugin" download>
+          <span class="dl-icon">⬇️</span> Pobierz plugin
+        </a>
+        <div class="sidebar-meta">
+          <div class="meta-row">
+            <span class="meta-label">Status</span>
+            <span class="meta-value green">✓ Gotowy</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Platforma</span>
+            <span class="meta-value">Stream Deck</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Wymagania</span>
+            <span class="meta-value">WebOS 4.0+</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Autor</span>
+            <span class="meta-value">BanBoyPolska</span>
+          </div>
+        </div>
+        <div class="sidebar-links">
+          <a class="sidebar-link" href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">
+            📁 GitHub – kod źródłowy
+          </a>
+          <a class="sidebar-link" href="https://twitch.tv/banboypolska" target="_blank">
+            🟣 Twitch – BanBoyPolska
+          </a>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <footer>
+    Zrobione przez <a href="https://twitch.tv/banboypolska" target="_blank">BanBoyPolska</a> &nbsp;·&nbsp;
+    <a href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">GitHub</a>
+  </footer>
+
+  <script>
+    // Avatar
+    fetch("https://unclickable.com/twitch/user/banboypolska")
+      .then(r => r.json())
+      .then(data => {
+        const url = data?.profile_image_url || data?.data?.[0]?.profile_image_url;
+        if (url) document.getElementById("headerAvatar").src = url;
+      }).catch(() => {});
+
+    // Theme toggle
+    const html = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+    const saved = localStorage.getItem("theme") || "dark";
+    html.setAttribute("data-theme", saved);
+    btn.textContent = saved === "dark" ? "☀️" : "🌙";
+    btn.addEventListener("click", () => {
+      const next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+      btn.textContent = next === "dark" ? "☀️" : "🌙";
+    });
+  </script>
+
+</body>
+</html>
