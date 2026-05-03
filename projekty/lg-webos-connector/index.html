@@ -298,7 +298,7 @@
 
   <header>
     <a class="header-left" href="../../index.html">
-      <img class="avatar" id="headerAvatar" src="" alt="BanBoyPolska" />
+      <img class="avatar" id="headerAvatar" src="../../avatar.png" alt="BanBoyPolska" />
       <span class="site-title">BanBoy<span>Polska</span></span>
     </a>
     <div class="header-right">
@@ -510,13 +510,8 @@
   </footer>
 
   <script>
-    // Avatar
-    fetch("https://unclickable.com/twitch/user/banboypolska")
-      .then(r => r.json())
-      .then(data => {
-        const url = data?.profile_image_url || data?.data?.[0]?.profile_image_url;
-        if (url) document.getElementById("headerAvatar").src = url;
-      }).catch(() => {});
+    // Avatar – lokalny plik
+    document.getElementById('headerAvatar').src = '../../avatar.png';
 
     // Theme toggle
     const html = document.documentElement;
