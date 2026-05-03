@@ -6,322 +6,96 @@
   <title>BanBoyPolska – Projekty Streamer.bot</title>
   <style>
     :root[data-theme="dark"] {
-      --bg: #0e0e10;
-      --bg2: #18181b;
-      --bg3: #1f1f23;
-      --border: #2a2a2e;
-      --text: #efeff1;
-      --text-muted: #adadb8;
-      --accent: #9147ff;
-      --accent-hover: #772ce8;
-      --accent2: #00b5ad;
-      --card-shadow: 0 4px 24px rgba(0,0,0,0.5);
-      --badge-bg: #2a2a2e;
+      --bg: #0e0e10; --bg2: #18181b; --bg3: #1f1f23;
+      --border: #2a2a2e; --text: #efeff1; --text-muted: #adadb8;
+      --accent: #9147ff; --accent-hover: #772ce8;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.5); --badge-bg: #2a2a2e;
     }
     :root[data-theme="light"] {
-      --bg: #f4f4f8;
-      --bg2: #ffffff;
-      --bg3: #ececf0;
-      --border: #d4d4dc;
-      --text: #18181b;
-      --text-muted: #53535f;
-      --accent: #9147ff;
-      --accent-hover: #772ce8;
-      --accent2: #008b85;
-      --card-shadow: 0 4px 24px rgba(0,0,0,0.10);
-      --badge-bg: #e4e4ec;
+      --bg: #f4f4f8; --bg2: #ffffff; --bg3: #ececf0;
+      --border: #d4d4dc; --text: #18181b; --text-muted: #53535f;
+      --accent: #9147ff; --accent-hover: #772ce8;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.10); --badge-bg: #e4e4ec;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      transition: background 0.3s, color 0.3s;
-    }
+    body { font-family: 'Inter','Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
 
     /* HEADER */
-    header {
-      background: var(--bg2);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(8px);
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
-      object-fit: cover;
-      background: var(--bg3);
-    }
-
-    .site-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .site-title span {
-      color: var(--accent);
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .twitch-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--accent);
-      color: #fff;
-      text-decoration: none;
-      padding: 7px 14px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: background 0.2s;
-    }
+    header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .header-left { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; background: var(--bg3); }
+    .site-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .site-title span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .twitch-btn { display: flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; text-decoration: none; padding: 7px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: background 0.2s; }
     .twitch-btn:hover { background: var(--accent-hover); }
     .twitch-btn svg { width: 16px; height: 16px; fill: #fff; }
-
-    /* THEME TOGGLE */
-    .theme-toggle {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      width: 38px;
-      height: 38px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      transition: background 0.2s;
-      color: var(--text);
-    }
+    .theme-toggle { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--text); transition: background 0.2s; }
     .theme-toggle:hover { background: var(--border); }
 
+    /* STREAM STATUS BADGE */
+    .stream-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;
+      text-decoration: none; transition: opacity 0.2s; cursor: default;
+      border: 1px solid transparent;
+    }
+    .stream-status .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .stream-status.live {
+      background: rgba(255, 60, 60, 0.15); color: #ff4444;
+      border-color: rgba(255, 60, 60, 0.3);
+    }
+    .stream-status.live .dot {
+      background: #ff4444;
+      box-shadow: 0 0 0 0 rgba(255,68,68,0.6);
+      animation: pulse 1.5s infinite;
+    }
+    .stream-status.offline {
+      background: var(--badge-bg); color: var(--text-muted);
+      border-color: var(--border);
+    }
+    .stream-status.offline .dot { background: var(--text-muted); }
+    .stream-status.loading { opacity: 0.5; }
+    .stream-status.loading .dot { background: var(--text-muted); }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255,68,68,0.6); }
+      70% { box-shadow: 0 0 0 6px rgba(255,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,68,68,0); }
+    }
+
     /* HERO */
-    .hero {
-      text-align: center;
-      padding: 60px 2rem 40px;
-      background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .hero-avatar {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      border: 3px solid var(--accent);
-      margin: 0 auto 16px;
-      display: block;
-      background: var(--bg3);
-    }
-
-    .hero h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
+    .hero { text-align: center; padding: 60px 2rem 40px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+    .hero-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent); margin: 0 auto 16px; display: block; background: var(--bg3); }
+    .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
     .hero h1 span { color: var(--accent); }
+    .hero p { color: var(--text-muted); font-size: 1rem; max-width: 520px; margin: 0 auto 20px; line-height: 1.6; }
+    .hero-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .badge { background: var(--badge-bg); color: var(--text-muted); padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 500; border: 1px solid var(--border); }
+    .badge.accent { background: rgba(145,71,255,0.15); color: var(--accent); border-color: rgba(145,71,255,0.3); }
 
-    .hero p {
-      color: var(--text-muted);
-      font-size: 1rem;
-      max-width: 520px;
-      margin: 0 auto 20px;
-      line-height: 1.6;
-    }
-
-    .hero-badges {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .badge {
-      background: var(--badge-bg);
-      color: var(--text-muted);
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 0.78rem;
-      font-weight: 500;
-      border: 1px solid var(--border);
-    }
-    .badge.accent {
-      background: rgba(145, 71, 255, 0.15);
-      color: var(--accent);
-      border-color: rgba(145, 71, 255, 0.3);
-    }
-
-    /* PROJECTS SECTION */
-    main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 40px 2rem 80px;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    .section-header h2 {
-      font-size: 1.3rem;
-      font-weight: 700;
-    }
-    .section-header .count {
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 999px;
-    }
-
-    /* PROJECT CARD */
-    .projects-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-      gap: 20px;
-    }
-
-    .project-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      text-decoration: none;
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-      box-shadow: var(--card-shadow);
-    }
-    .project-card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 6px 32px rgba(145,71,255,0.18);
-      transform: translateY(-2px);
-    }
-
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .card-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: rgba(145, 71, 255, 0.15);
-      border: 1px solid rgba(145, 71, 255, 0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      flex-shrink: 0;
-    }
-
-    .card-status {
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 999px;
-    }
-    .status-ready {
-      background: rgba(0, 200, 150, 0.15);
-      color: #00c896;
-      border: 1px solid rgba(0, 200, 150, 0.3);
-    }
-
-    .card-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      line-height: 1.3;
-    }
-
-    .card-desc {
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      flex: 1;
-    }
-
-    .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 8px;
-      border-top: 1px solid var(--border);
-    }
-
-    .card-tags {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .tag {
-      font-size: 0.72rem;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: var(--badge-bg);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-    }
-
-    .card-arrow {
-      color: var(--accent);
-      font-size: 1rem;
-      font-weight: 700;
-      transition: transform 0.2s;
-    }
+    /* PROJECTS */
+    main { max-width: 900px; margin: 0 auto; padding: 40px 2rem 80px; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+    .section-header h2 { font-size: 1.3rem; font-weight: 700; }
+    .section-header .count { background: var(--accent); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
+    .project-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-decoration: none; color: var(--text); display: flex; flex-direction: column; gap: 12px; transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; box-shadow: var(--card-shadow); }
+    .project-card:hover { border-color: var(--accent); box-shadow: 0 6px 32px rgba(145,71,255,0.18); transform: translateY(-2px); }
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .card-icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(145,71,255,0.15); border: 1px solid rgba(145,71,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+    .card-status { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+    .status-ready { background: rgba(0,200,150,0.15); color: #00c896; border: 1px solid rgba(0,200,150,0.3); }
+    .card-title { font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+    .card-desc { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; flex: 1; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border); }
+    .card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: var(--badge-bg); color: var(--text-muted); border: 1px solid var(--border); }
+    .card-arrow { color: var(--accent); font-size: 1rem; font-weight: 700; transition: transform 0.2s; }
     .project-card:hover .card-arrow { transform: translateX(4px); }
 
-    /* COMING SOON CARD */
-    .card-coming-soon {
-      opacity: 0.5;
-      cursor: default;
-      pointer-events: none;
-    }
-    .status-soon {
-      background: rgba(255, 180, 0, 0.12);
-      color: #ffb400;
-      border: 1px solid rgba(255, 180, 0, 0.25);
-    }
-
-    /* FOOTER */
-    footer {
-      text-align: center;
-      padding: 20px;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      border-top: 1px solid var(--border);
-    }
+    footer { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid var(--border); }
     footer a { color: var(--accent); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
 
@@ -336,22 +110,25 @@
 
   <header>
     <a class="header-left" href="index.html">
-      <img class="avatar" id="headerAvatar" src="" alt="BanBoyPolska avatar" />
+      <img class="avatar" id="headerAvatar" src="/StreamerBot_Projekty/avatar.png" alt="BanBoyPolska avatar" />
       <span class="site-title">BanBoy<span>Polska</span></span>
     </a>
     <div class="header-right">
+      <!-- STATUS STREAMU -->
+      <a id="streamStatus" class="stream-status loading" href="https://twitch.tv/banboypolska" target="_blank">
+        <span class="dot"></span>
+        <span id="streamStatusText">…</span>
+      </a>
       <button class="theme-toggle" id="themeToggle" title="Przełącz motyw">🌙</button>
       <a class="twitch-btn" href="https://twitch.tv/banboypolska" target="_blank">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
-        </svg>
+        <svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
         Twitch
       </a>
     </div>
   </header>
 
   <section class="hero">
-    <img class="hero-avatar" id="heroAvatar" src="" alt="BanBoyPolska" />
+    <img class="hero-avatar" id="heroAvatar" src="/StreamerBot_Projekty/avatar.png" alt="BanBoyPolska" />
     <h1>BanBoy<span>Polska</span> – Projekty</h1>
     <p>Narzędzia i widgety do streamingu tworzone na żywo. Wszystko open-source, do pobrania za darmo.</p>
     <div class="hero-badges">
@@ -368,19 +145,14 @@
       <h2>Wszystkie projekty</h2>
       <span class="count">2</span>
     </div>
-
     <div class="projects-grid">
-
-      <!-- PROJEKT 1 -->
       <a class="project-card" href="projekty/lg-webos-connector/index.html">
         <div class="card-top">
           <div class="card-icon">📺</div>
           <span class="card-status status-ready">✓ Gotowy</span>
         </div>
         <div class="card-title">LG WebOS Connector</div>
-        <div class="card-desc">
-          Plugin do Stream Deck, który pozwala sterować telewizorami LG z systemem WebOS przez sieć lokalną. Zmiana wejść, głośności, włączanie i wyłączanie – bez pilota.
-        </div>
+        <div class="card-desc">Plugin do Stream Deck, który pozwala sterować telewizorami LG z systemem WebOS przez sieć lokalną. Zmiana wejść, głośności, włączanie i wyłączanie – bez pilota.</div>
         <div class="card-footer">
           <div class="card-tags">
             <span class="tag">Stream Deck</span>
@@ -390,17 +162,13 @@
           <span class="card-arrow">→</span>
         </div>
       </a>
-
-      <!-- PROJEKT 2 -->
       <a class="project-card" href="projekty/sub-goal/index.html">
         <div class="card-top">
           <div class="card-icon">🎯</div>
           <span class="card-status status-ready">✓ Gotowy</span>
         </div>
         <div class="card-title">Minimalistyczny Sub Goal</div>
-        <div class="card-desc">
-          Pasek postępu subskrypcji do OBS w stylu minimalistycznym. W pełni konfigurowalny – kolory, cel, animacje. Działa jako Browser Source.
-        </div>
+        <div class="card-desc">Pasek postępu subskrypcji do OBS w stylu minimalistycznym. W pełni konfigurowalny – kolory, cel, animacje. Działa jako Browser Source.</div>
         <div class="card-footer">
           <div class="card-tags">
             <span class="tag">OBS</span>
@@ -410,7 +178,6 @@
           <span class="card-arrow">→</span>
         </div>
       </a>
-
     </div>
   </main>
 
@@ -419,44 +186,50 @@
   </footer>
 
   <script>
-    // Pobierz avatar z Twitcha przez niezalogowane API proxy
-    const TWITCH_LOGIN = 'banboypolska';
-    fetch(`https://unclickable.com/twitch/user/${TWITCH_LOGIN}`)
-      .then(r => r.json())
-      .then(data => {
-        const url = data?.profile_image_url || data?.data?.[0]?.profile_image_url;
-        if (url) {
-          document.getElementById('headerAvatar').src = url;
-          document.getElementById('heroAvatar').src = url;
-        }
-      })
-      .catch(() => {
-        // fallback – inicjały
-        ['headerAvatar','heroAvatar'].forEach(id => {
-          const el = document.getElementById(id);
-          el.style.display = 'none';
-        });
-      });
+    // ─── KONFIGURACJA ───────────────────────────────────────────────────
+    const TWITCH_LOGIN  = 'banboypolska';
+    const WORKER_URL    = 'https://twitch-proxy.djbochen.workers.dev'; // ← np. https://twitch-proxy.TWOJNAZWA.workers.dev
+    // ────────────────────────────────────────────────────────────────────
 
-    // Fallback – użyj twitch CDN jeśli powyższe nie zadziała
-    const avatarUrl = 'https://static-cdn.jtvnw.net/user-default-pictures-uv/75305d54-c7cc-40d1-bb9c-91fbe85943c7-profile_image-70x70.png';
-    document.getElementById('headerAvatar').onerror = function() {
-      this.src = avatarUrl;
-    };
-    document.getElementById('heroAvatar').onerror = function() {
-      this.src = avatarUrl;
-    };
+    // Avatar – lokalny plik w głównym folderze repozytorium
+    document.getElementById('headerAvatar').src = '/StreamerBot_Projekty/avatar.png';
+    document.getElementById('heroAvatar').src    = '/StreamerBot_Projekty/avatar.png';
+
+    // Status streamu – przez Cloudflare Worker (Client Secret ukryty po stronie serwera)
+    async function checkStreamStatus() {
+      const statusEl = document.getElementById('streamStatus');
+      const textEl   = document.getElementById('streamStatusText');
+
+      try {
+        const res  = await fetch(`${WORKER_URL}/stream-status?login=${TWITCH_LOGIN}`);
+        const data = await res.json();
+
+        if (data.live) {
+          statusEl.className = 'stream-status live';
+          textEl.textContent  = `LIVE – ${data.viewers.toLocaleString('pl')} widzów`;
+          statusEl.title      = data.title || '';
+        } else {
+          statusEl.className = 'stream-status offline';
+          textEl.textContent  = 'Offline';
+          statusEl.title      = '';
+        }
+      } catch (e) {
+        statusEl.className = 'stream-status offline';
+        textEl.textContent  = 'Offline';
+      }
+    }
+
+    checkStreamStatus();
+    setInterval(checkStreamStatus, 2 * 60 * 1000);
 
     // Theme toggle
     const html = document.documentElement;
-    const btn = document.getElementById('themeToggle');
+    const btn  = document.getElementById('themeToggle');
     const saved = localStorage.getItem('theme') || 'dark';
     html.setAttribute('data-theme', saved);
     btn.textContent = saved === 'dark' ? '☀️' : '🌙';
-
     btn.addEventListener('click', () => {
-      const current = html.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
       btn.textContent = next === 'dark' ? '☀️' : '🌙';
