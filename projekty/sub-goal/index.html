@@ -1,1 +1,572 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubGoal – Instrukcja instalacji</title>
+<style>
+  :root {
+    --bg: #0f0f0f; --surface: #161616; --surface2: #1e1e1e;
+    --border: #2a2a2a; --text: #e4e4e4; --muted: #777;
+    --accent: #2a7fff; --accent-h: #1a6fee; --success: #22c55e;
+    --warn: #f59e0b; --red: #ef4444; --radius: 8px;
+    --font: 'Inter', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+  /* NAV */
+  nav { position: sticky; top: 0; z-index: 100; background: #111; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0; padding: 0 24px; height: 52px; overflow-x: auto; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500; padding: 0 14px; height: 52px; display: flex; align-items: center; border-bottom: 2px solid transparent; white-space: nowrap; transition: color .15s, border-color .15s; }
+  nav a:hover { color: var(--text); }
+  nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  nav .logo { font-weight: 700; font-size: 15px; color: var(--text); margin-right: 20px; padding: 0; border: none; cursor: default; }
+
+  /* LANG TABS */
+  .lang-tabs { display: flex; gap: 6px; padding: 20px 0 0; }
+  .lang-tab { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--muted); padding: 4px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .lang-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .lang-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lang-content { display: none; }
+  .lang-content.active { display: block; }
+
+  /* LAYOUT */
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
+  section { margin-bottom: 48px; }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  h2 .num { background: var(--accent); color: #fff; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  h3 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 8px; }
+  p { color: #bbb; margin-bottom: 10px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+  /* CODE BLOCK */
+  .code-wrap { position: relative; background: #0a0a0a; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+  .code-lang { font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; font-weight: 600; }
+  .code-title { font-size: 11px; color: var(--accent); font-weight: 600; }
+  .copy-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--muted); padding: 3px 10px; font-size: 11px; cursor: pointer; font-family: var(--font); transition: all .15s; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--success); color: var(--success); }
+  pre { padding: 14px 16px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7; color: #c9d1d9; }
+  pre .kw { color: #ff79c6; }
+  pre .str { color: #f1fa8c; }
+  pre .cm { color: #6272a4; }
+  pre .cn { color: #8be9fd; }
+  pre .nm { color: #50fa7b; }
+
+  /* STEPS */
+  .steps { list-style: none; counter-reset: step; }
+  .steps li { counter-increment: step; position: relative; padding: 12px 16px 12px 52px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; color: #bbb; font-size: 13px; }
+  .steps li::before { content: counter(step); position: absolute; left: 14px; top: 50%; transform: translateY(-50%); background: var(--surface2); border: 1px solid var(--border); width: 24px; height: 24px; border-radius: 50%; font-size: 11px; font-weight: 700; color: var(--accent); display: flex; align-items: center; justify-content: center; }
+  .steps li strong { color: var(--text); }
+  .steps li code { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: 'Courier New', monospace; font-size: 11px; color: #8be9fd; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--muted); margin: 2px; }
+  .badge.trigger { border-color: var(--warn); color: var(--warn); }
+  .badge.action { border-color: var(--accent); color: var(--accent); }
+  .badge.file { border-color: var(--success); color: var(--success); }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+  th { background: var(--surface2); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+  td { padding: 8px 12px; border: 1px solid var(--border); color: #bbb; }
+  td strong { color: var(--text); }
+  tr:hover td { background: var(--surface); }
+
+  /* INFO BOX */
+  .info { background: rgba(42,127,255,.08); border: 1px solid rgba(42,127,255,.2); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: #90b8f8; margin-bottom: 16px; }
+  .warn-box { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: #fcd34d; margin-bottom: 16px; }
+
+  /* DIVIDER */
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--muted); font-size: 12px; }
+
+  /* SCROLL TARGET OFFSET */
+  [id] { scroll-margin-top: 64px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">🎯 SubGoal</span>
+  <a href="#overview" class="nav-link active">Overview</a>
+  <a href="#files" class="nav-link">Pliki / Files</a>
+  <a href="#streamerbot" class="nav-link">Streamer.bot</a>
+  <a href="#obs" class="nav-link">OBS</a>
+  <a href="#csharp" class="nav-link">C# Kody</a>
+  <a href="#html-files" class="nav-link">HTML Kody</a>
+  <a href="#troubleshoot" class="nav-link">Troubleshoot</a>
+</nav>
+
+<div class="container">
+
+  <!-- LANG SWITCHER -->
+  <div class="lang-tabs" style="margin-bottom:8px">
+    <button class="lang-tab active" onclick="setLang('pl')">🇵🇱 Polski</button>
+    <button class="lang-tab" onclick="setLang('en')">🇬🇧 English</button>
+    <button class="lang-tab" onclick="setLang('de')">🇩🇪 Deutsch</button>
+  </div>
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <section id="overview">
+    <div class="lang-content pl active">
+      <h1>🎯 SubGoal – Pasek celu subskrypcji</h1>
+      <p class="subtitle">Dynamiczny pasek postępu subskrypcji dla OBS z panelem kontrolnym i integracją Streamer.bot</p>
+      <div class="info">System składa się z <strong>2 plików HTML</strong> (pasek w OBS + panel kontrolny) oraz <strong>4 akcji C#</strong> w Streamer.bot. Pasek aktualizuje się w czasie rzeczywistym przy każdym nowym subskrybencie lub gifcie.</div>
+    </div>
+    <div class="lang-content en">
+      <h1>🎯 SubGoal – Subscription Goal Bar</h1>
+      <p class="subtitle">Dynamic subscription progress bar for OBS with control panel and Streamer.bot integration</p>
+      <div class="info">The system consists of <strong>2 HTML files</strong> (OBS bar + control panel) and <strong>4 C# actions</strong> in Streamer.bot. The bar updates in real time with every new subscriber or gift.</div>
+    </div>
+    <div class="lang-content de">
+      <h1>🎯 SubGoal – Abonnement-Zielleiste</h1>
+      <p class="subtitle">Dynamische Fortschrittsleiste für OBS mit Steuerungspanel und Streamer.bot-Integration</p>
+      <div class="info">Das System besteht aus <strong>2 HTML-Dateien</strong> (OBS-Leiste + Steuerungspanel) und <strong>4 C#-Aktionen</strong> in Streamer.bot. Die Leiste aktualisiert sich in Echtzeit bei jedem neuen Abonnenten oder Geschenk-Sub.</div>
+    </div>
+
+    <!-- Architecture table (always visible) -->
+    <h3>Architektura / Architecture / Architektur</h3>
+    <table>
+      <tr><th>Plik / File</th><th>Rola / Role</th><th>Gdzie / Where</th></tr>
+      <tr><td><strong>subgoal-bar.html</strong> <span class="badge file">HTML</span></td><td>Pasek postępu widoczny na streamie</td><td>OBS → Browser Source</td></tr>
+      <tr><td><strong>control-panel.html</strong> <span class="badge file">HTML</span></td><td>Panel sterowania, ustawienia, testy</td><td>Przeglądarka / Browser</td></tr>
+      <tr><td><strong>SubGoal Subscribe</strong> <span class="badge action">C#</span></td><td>Obsługuje nowe i renew suby</td><td>Streamer.bot</td></tr>
+      <tr><td><strong>SubGoal Gift</strong> <span class="badge action">C#</span></td><td>Obsługuje gifted subs (1 lub wiele)</td><td>Streamer.bot</td></tr>
+      <tr><td><strong>SubGoal Sync</strong> <span class="badge action">C#</span></td><td>Synchronizuje licznik z Twitch API</td><td>Streamer.bot</td></tr>
+      <tr><td><strong>SubGoal Send</strong> <span class="badge action">C#</span></td><td>Relay eventów z panelu do OBS</td><td>Streamer.bot</td></tr>
+    </table>
+  </section>
+
+  <hr>
+
+  <!-- ===================== FILES ===================== -->
+  <section id="files">
+    <div class="lang-content pl active">
+      <h2><span class="num">1</span> Struktura plików</h2>
+      <p>Utwórz folder np. <code style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px;color:#8be9fd">subgoal/</code> i umieść w nim oba pliki HTML:</p>
+      <ul class="steps">
+        <li><strong>subgoal-bar.html</strong> – wgraj do folderu dostępnego lokalnie lub przez serwer. Dodaj jako Browser Source w OBS.</li>
+        <li><strong>control-panel.html</strong> – otwieraj w przeglądarce (np. Chrome) podczas streamu do zarządzania paskiem.</li>
+      </ul>
+    </div>
+    <div class="lang-content en">
+      <h2><span class="num">1</span> File Structure</h2>
+      <p>Create a folder e.g. <code style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px;color:#8be9fd">subgoal/</code> and place both HTML files there:</p>
+      <ul class="steps">
+        <li><strong>subgoal-bar.html</strong> – add as a Browser Source in OBS pointing to the local file path.</li>
+        <li><strong>control-panel.html</strong> – open in your browser (e.g. Chrome) during streams to manage the bar.</li>
+      </ul>
+    </div>
+    <div class="lang-content de">
+      <h2><span class="num">1</span> Dateistruktur</h2>
+      <p>Erstelle einen Ordner z.B. <code style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px;color:#8be9fd">subgoal/</code> und lege beide HTML-Dateien darin ab:</p>
+      <ul class="steps">
+        <li><strong>subgoal-bar.html</strong> – als Browser-Quelle in OBS hinzufügen (lokaler Pfad).</li>
+        <li><strong>control-panel.html</strong> – im Browser (z.B. Chrome) während des Streams öffnen.</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== STREAMER.BOT ===================== -->
+  <section id="streamerbot">
+    <div class="lang-content pl active">
+      <h2><span class="num">2</span> Konfiguracja Streamer.bot</h2>
+      <ul class="steps">
+        <li>Otwórz <strong>Streamer.bot</strong> → zakładka <strong>Actions</strong></li>
+        <li>Utwórz <strong>4 nowe akcje</strong> o nazwach: <code>SubGoal Subscribe</code>, <code>SubGoal Gift</code>, <code>SubGoal Sync</code>, <code>SubGoal Send</code></li>
+        <li>W każdej akcji dodaj sub-action: <strong>Core → C# → Execute Code</strong> i wklej odpowiedni kod z sekcji poniżej</li>
+        <li>Dla <strong>SubGoal Subscribe</strong>: dodaj trigger <span class="badge trigger">Twitch → Subscribe</span> i <span class="badge trigger">Twitch → Re-Subscribe</span></li>
+        <li>Dla <strong>SubGoal Gift</strong>: dodaj trigger <span class="badge trigger">Twitch → Gift Subscription</span></li>
+        <li>Dla <strong>SubGoal Sync</strong>: jako <strong>pierwszy</strong> sub-action dodaj <span class="badge trigger">Twitch → Subscribers → Get Subscriber Count</span>, potem Execute Code</li>
+        <li>Upewnij się że WebSocket Server jest włączony: <strong>Servers/Clients → WebSocket Server → Auto Start ✓</strong> (port 8080)</li>
+      </ul>
+    </div>
+    <div class="lang-content en">
+      <h2><span class="num">2</span> Streamer.bot Setup</h2>
+      <ul class="steps">
+        <li>Open <strong>Streamer.bot</strong> → <strong>Actions</strong> tab</li>
+        <li>Create <strong>4 new actions</strong> named: <code>SubGoal Subscribe</code>, <code>SubGoal Gift</code>, <code>SubGoal Sync</code>, <code>SubGoal Send</code></li>
+        <li>In each action add sub-action: <strong>Core → C# → Execute Code</strong> and paste the code from the section below</li>
+        <li>For <strong>SubGoal Subscribe</strong>: add triggers <span class="badge trigger">Twitch → Subscribe</span> and <span class="badge trigger">Twitch → Re-Subscribe</span></li>
+        <li>For <strong>SubGoal Gift</strong>: add trigger <span class="badge trigger">Twitch → Gift Subscription</span></li>
+        <li>For <strong>SubGoal Sync</strong>: add <span class="badge trigger">Twitch → Subscribers → Get Subscriber Count</span> as the <strong>first</strong> sub-action, then Execute Code</li>
+        <li>Make sure WebSocket Server is enabled: <strong>Servers/Clients → WebSocket Server → Auto Start ✓</strong> (port 8080)</li>
+      </ul>
+    </div>
+    <div class="lang-content de">
+      <h2><span class="num">2</span> Streamer.bot Einrichtung</h2>
+      <ul class="steps">
+        <li>Öffne <strong>Streamer.bot</strong> → Reiter <strong>Actions</strong></li>
+        <li>Erstelle <strong>4 neue Aktionen</strong> mit den Namen: <code>SubGoal Subscribe</code>, <code>SubGoal Gift</code>, <code>SubGoal Sync</code>, <code>SubGoal Send</code></li>
+        <li>In jeder Aktion Sub-Aktion hinzufügen: <strong>Core → C# → Execute Code</strong> und den entsprechenden Code einfügen</li>
+        <li>Für <strong>SubGoal Subscribe</strong>: Trigger <span class="badge trigger">Twitch → Subscribe</span> und <span class="badge trigger">Twitch → Re-Subscribe</span> hinzufügen</li>
+        <li>Für <strong>SubGoal Gift</strong>: Trigger <span class="badge trigger">Twitch → Gift Subscription</span> hinzufügen</li>
+        <li>Für <strong>SubGoal Sync</strong>: Als <strong>erste</strong> Sub-Aktion <span class="badge trigger">Twitch → Subscribers → Get Subscriber Count</span>, dann Execute Code</li>
+        <li>WebSocket-Server aktivieren: <strong>Servers/Clients → WebSocket Server → Auto Start ✓</strong> (Port 8080)</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== OBS ===================== -->
+  <section id="obs">
+    <div class="lang-content pl active">
+      <h2><span class="num">3</span> Konfiguracja OBS</h2>
+      <ul class="steps">
+        <li>Dodaj nowe źródło: <strong>Browser Source</strong>, nazwij je <code>Sub Goal</code></li>
+        <li>W polu URL wpisz ścieżkę do pliku: <code>file:///C:/subgoal/subgoal-bar.html</code> (dostosuj ścieżkę)</li>
+        <li>Ustaw szerokość i wysokość zgodnie z orientacją paska (np. 800×60 dla poziomego)</li>
+        <li>Zaznacz opcję <strong>„Allow OBS to control this browser source"</strong> – bez tego pasek nie odbierze eventów!</li>
+        <li>Kliknij <strong>Refresh</strong> po każdej zmianie pliku HTML</li>
+      </ul>
+    </div>
+    <div class="lang-content en">
+      <h2><span class="num">3</span> OBS Setup</h2>
+      <ul class="steps">
+        <li>Add a new source: <strong>Browser Source</strong>, name it <code>Sub Goal</code></li>
+        <li>Set the URL to the local file path: <code>file:///C:/subgoal/subgoal-bar.html</code> (adjust as needed)</li>
+        <li>Set width and height to match bar orientation (e.g. 800×60 for horizontal)</li>
+        <li>Check <strong>„Allow OBS to control this browser source"</strong> – without this the bar won't receive events!</li>
+        <li>Click <strong>Refresh</strong> after every HTML file change</li>
+      </ul>
+    </div>
+    <div class="lang-content de">
+      <h2><span class="num">3</span> OBS Einrichtung</h2>
+      <ul class="steps">
+        <li>Neue Quelle hinzufügen: <strong>Browser-Quelle</strong>, Name: <code>Sub Goal</code></li>
+        <li>URL auf lokalen Dateipfad setzen: <code>file:///C:/subgoal/subgoal-bar.html</code> (Pfad anpassen)</li>
+        <li>Breite und Höhe entsprechend der Ausrichtung einstellen (z.B. 800×60 für horizontal)</li>
+        <li>Option <strong>„OBS erlauben, diese Browser-Quelle zu steuern"</strong> aktivieren – ohne das empfängt die Leiste keine Events!</li>
+        <li>Nach jeder HTML-Dateiänderung auf <strong>Aktualisieren</strong> klicken</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== C# CODES ===================== -->
+  <section id="csharp">
+    <div class="lang-content pl active"><h2><span class="num">4</span> Kody C# – Akcje Streamer.bot</h2></div>
+    <div class="lang-content en"><h2><span class="num">4</span> C# Code – Streamer.bot Actions</h2></div>
+    <div class="lang-content de"><h2><span class="num">4</span> C#-Code – Streamer.bot Aktionen</h2></div>
+
+    <!-- SubGoal Subscribe -->
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">C#</span>
+        <span class="code-title">SubGoal Subscribe — Trigger: Twitch → Subscribe + Re-Subscribe</span>
+        <button class="copy-btn" onclick="copyCode(this)">Kopiuj / Copy</button>
+      </div>
+      <pre id="code-subscribe">using System;
+
+// AKCJA: SubGoal Subscribe
+// Trigger: Twitch → Subscribe  +  Twitch → Re-Subscribe
+
+public class CPHInline
+{
+    private const string OBS_SOURCE = "Sub Goal";
+    private const int    OBS_CONN   = 0;
+
+    public bool Execute()
+    {
+        string username = "";
+        CPH.TryGetArg("userName", out username);
+        if (string.IsNullOrEmpty(username)) username = "Unknown";
+
+        string safeUser = username
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"");
+
+        string eventData = "{\"source\":\"subgoal-panel\",\"type\":\"addSub\","
+                         + "\"data\":{\"username\":\"" + safeUser + "\","
+                         + "\"subCount\":-1}}";
+
+        string payload = "{\"vendorName\":\"obs-browser\","
+                       + "\"requestType\":\"emit_event\","
+                       + "\"requestData\":{"
+                       + "\"event_name\":\"obsCustomEvent\","
+                       + "\"event_data\":" + eventData + "}}";
+
+        CPH.ObsSendRaw("CallVendorRequest", payload, OBS_CONN);
+        CPH.LogInfo("[SubGoal] Nowy sub: " + username);
+
+        // Po 2s pobierz dokładną liczbę z Twitch API i zaktualizuj pasek + panel
+        CPH.Wait(2000);
+        CPH.RunAction("SubGoal Sync", false);
+        return true;
+    }
+}</pre>
+    </div>
+
+    <!-- SubGoal Gift -->
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">C#</span>
+        <span class="code-title">SubGoal Gift — Trigger: Twitch → Gift Subscription</span>
+        <button class="copy-btn" onclick="copyCode(this)">Kopiuj / Copy</button>
+      </div>
+      <pre id="code-gift">using System;
+
+// AKCJA: SubGoal Gift
+// Trigger: Twitch → Gift Subscription
+
+public class CPHInline
+{
+    private const int OBS_CONN = 0;
+
+    public bool Execute()
+    {
+        string gifter = "";
+        CPH.TryGetArg("userName", out gifter);
+        if (string.IsNullOrEmpty(gifter)) gifter = "Anonim";
+
+        int amount = 1;
+        CPH.TryGetArg("amount", out amount);
+        if (amount < 1) amount = 1;
+
+        string safeGifter = gifter
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"");
+
+        for (int i = 0; i < amount; i++)
+        {
+            string label = amount > 1
+                ? safeGifter + " [gift " + (i + 1) + "/" + amount + "]"
+                : safeGifter + " [gift]";
+
+            string eventData = "{\"source\":\"subgoal-panel\",\"type\":\"addSub\","
+                             + "\"data\":{\"username\":\"" + label + "\","
+                             + "\"subCount\":-1}}";
+
+            string payload = "{\"vendorName\":\"obs-browser\","
+                           + "\"requestType\":\"emit_event\","
+                           + "\"requestData\":{"
+                           + "\"event_name\":\"obsCustomEvent\","
+                           + "\"event_data\":" + eventData + "}}";
+
+            CPH.ObsSendRaw("CallVendorRequest", payload, OBS_CONN);
+            if (i < amount - 1) CPH.Wait(300);
+        }
+
+        CPH.LogInfo("[SubGoal] Gift sub: " + gifter + " x" + amount);
+
+        // Sync po zakończeniu animacji
+        CPH.Wait(amount * 300 + 500);
+        CPH.RunAction("SubGoal Sync", false);
+        return true;
+    }
+}</pre>
+    </div>
+
+    <!-- SubGoal Sync -->
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">C#</span>
+        <span class="code-title">SubGoal Sync — ⚠️ Wymagany 1. sub-action: Get Subscriber Count</span>
+        <button class="copy-btn" onclick="copyCode(this)">Kopiuj / Copy</button>
+      </div>
+      <div class="warn-box" style="margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;">
+        ⚠️ W Streamer.bot jako <strong>pierwszy</strong> sub-action w tej akcji dodaj: <strong>Twitch → Subscribers → Get Subscriber Count</strong> — dopiero potem Execute Code z tym kodem.
+      </div>
+      <pre id="code-sync">using System;
+
+// AKCJA: SubGoal Sync
+// Sub-actions kolejność:
+//   1. Twitch → Subscribers → Get Subscriber Count
+//   2. Execute Code (ten kod)
+
+public class CPHInline
+{
+    private const int OBS_CONN = 0;
+
+    public bool Execute()
+    {
+        int subCount = 0;
+        CPH.TryGetArg("subscriberCount", out subCount);
+
+        string barEvent = "{\"source\":\"subgoal-panel\",\"type\":\"setSubs\","
+                        + "\"data\":{\"value\":" + subCount + "}}";
+
+        string obsPayload = "{\"vendorName\":\"obs-browser\","
+                          + "\"requestType\":\"emit_event\","
+                          + "\"requestData\":{"
+                          + "\"event_name\":\"obsCustomEvent\","
+                          + "\"event_data\":" + barEvent + "}}";
+
+        CPH.ObsSendRaw("CallVendorRequest", obsPayload, OBS_CONN);
+        CPH.SetGlobalVar("subgoal_current", subCount, true);
+
+        string broadcastJson = "{\"type\":\"subgoal-sync\",\"subCount\":" + subCount + "}";
+        CPH.WebsocketBroadcastJson(broadcastJson);
+
+        CPH.LogInfo("[SubGoal Sync] subCount=" + subCount);
+        return true;
+    }
+}</pre>
+    </div>
+
+    <!-- SubGoal Send -->
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">C#</span>
+        <span class="code-title">SubGoal Send — Relay eventów z control-panel do OBS</span>
+        <button class="copy-btn" onclick="copyCode(this)">Kopiuj / Copy</button>
+      </div>
+      <pre id="code-send">using System;
+using Newtonsoft.Json.Linq;
+
+// AKCJA: SubGoal Send
+// Wywoływana przez control-panel.html przez WebSocket
+
+public class CPHInline
+{
+    private const string OBS_SOURCE = "Sub Goal";
+    private const int    OBS_CONN   = 0;
+
+    public bool Execute()
+    {
+        string eventJson = "";
+        CPH.TryGetArg("subgoalEventJson", out eventJson);
+
+        if (string.IsNullOrEmpty(eventJson))
+        {
+            CPH.LogWarn("[SubGoal Send] Brak argumentu subgoalEventJson");
+            return false;
+        }
+
+        try { JToken.Parse(eventJson); }
+        catch (Exception ex)
+        {
+            CPH.LogWarn("[SubGoal Send] Nieprawidłowy JSON: " + ex.Message);
+            return false;
+        }
+
+        string payload = "{\"vendorName\":\"obs-browser\","
+                       + "\"requestType\":\"emit_event\","
+                       + "\"requestData\":{"
+                       + "\"event_name\":\"obsCustomEvent\","
+                       + "\"event_data\":" + eventJson + "}}";
+
+        CPH.ObsSendRaw("CallVendorRequest", payload, OBS_CONN);
+        CPH.LogInfo("[SubGoal Send] Wysłano: " + eventJson);
+        return true;
+    }
+}</pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== HTML FILES ===================== -->
+  <section id="html-files">
+    <div class="lang-content pl active"><h2><span class="num">5</span> Pliki HTML – gotowe do wklejenia</h2><p>Skopiuj każdy blok i zapisz jako osobny plik .html</p></div>
+    <div class="lang-content en"><h2><span class="num">5</span> HTML Files – ready to paste</h2><p>Copy each block and save as a separate .html file</p></div>
+    <div class="lang-content de"><h2><span class="num">5</span> HTML-Dateien – zum Einfügen bereit</h2><p>Jeden Block kopieren und als separate .html-Datei speichern</p></div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">HTML</span>
+        <span class="code-title">subgoal-bar.html — Browser Source w OBS</span>
+        <button class="copy-btn" onclick="copyCode(this)">Kopiuj / Copy</button>
+      </div>
+      <pre id="code-bar-html" style="max-height:300px;overflow-y:auto">PASTE_BAR_HTML</pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-lang">HTML</span>
+        <span class="code-title">control-panel.html — Panel kontrolny w przeglądarce</span>
+        <button class="copy-btn" onclick="copyCode(this)">Kopiuj / Copy</button>
+      </div>
+      <pre id="code-panel-html" style="max-height:300px;overflow-y:auto">PASTE_PANEL_HTML</pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== TROUBLESHOOT ===================== -->
+  <section id="troubleshoot">
+    <div class="lang-content pl active">
+      <h2><span class="num">6</span> Rozwiązywanie problemów</h2>
+      <table>
+        <tr><th>Problem</th><th>Przyczyna</th><th>Rozwiązanie</th></tr>
+        <tr><td>Pasek nie reaguje na suby</td><td>Brak opcji „Allow OBS control" w Browser Source</td><td>Zaznacz tę opcję w ustawieniach źródła OBS</td></tr>
+        <tr><td>Panel pokazuje 0 subów</td><td>SubGoal Sync nie ma sub-action Get Subscriber Count</td><td>Dodaj go jako pierwszy krok przed Execute Code</td></tr>
+        <tr><td>Panel nie łączy się ze Streamer.bot</td><td>WebSocket Server wyłączony lub zły port</td><td>Włącz WebSocket Server na porcie 8080</td></tr>
+        <tr><td>Błąd kompilacji CS1061</td><td>Nieistniejąca metoda CPH.*</td><td>Użyj dokładnie kodów z tej instrukcji</td></tr>
+        <tr><td>RunAction nie działa</td><td>Zła nazwa akcji (podkreślnik vs spacja)</td><td>Sprawdź czy nazwa akcji ma spacje, nie podkreślniki</td></tr>
+      </table>
+    </div>
+    <div class="lang-content en">
+      <h2><span class="num">6</span> Troubleshooting</h2>
+      <table>
+        <tr><th>Problem</th><th>Cause</th><th>Solution</th></tr>
+        <tr><td>Bar doesn't react to subs</td><td>Missing „Allow OBS control" in Browser Source</td><td>Enable this option in OBS source settings</td></tr>
+        <tr><td>Panel shows 0 subs</td><td>SubGoal Sync missing Get Subscriber Count sub-action</td><td>Add it as first step before Execute Code</td></tr>
+        <tr><td>Panel won't connect to Streamer.bot</td><td>WebSocket Server off or wrong port</td><td>Enable WebSocket Server on port 8080</td></tr>
+        <tr><td>Compile error CS1061</td><td>Non-existent CPH.* method</td><td>Use exactly the code from this guide</td></tr>
+        <tr><td>RunAction doesn't work</td><td>Wrong action name (underscore vs space)</td><td>Action names use spaces, not underscores</td></tr>
+      </table>
+    </div>
+    <div class="lang-content de">
+      <h2><span class="num">6</span> Fehlerbehebung</h2>
+      <table>
+        <tr><th>Problem</th><th>Ursache</th><th>Lösung</th></tr>
+        <tr><td>Leiste reagiert nicht auf Subs</td><td>„OBS Browserquelle steuern" nicht aktiviert</td><td>Option in OBS Quell-Einstellungen aktivieren</td></tr>
+        <tr><td>Panel zeigt 0 Subs</td><td>SubGoal Sync fehlt Get Subscriber Count Sub-Aktion</td><td>Als ersten Schritt vor Execute Code hinzufügen</td></tr>
+        <tr><td>Panel verbindet nicht mit Streamer.bot</td><td>WebSocket-Server aus oder falscher Port</td><td>WebSocket-Server auf Port 8080 aktivieren</td></tr>
+        <tr><td>Kompilierfehler CS1061</td><td>Nicht existierende CPH.*-Methode</td><td>Genau den Code aus dieser Anleitung verwenden</td></tr>
+        <tr><td>RunAction funktioniert nicht</td><td>Falscher Aktionsname (Unterstrich vs Leerzeichen)</td><td>Aktionsnamen verwenden Leerzeichen, keine Unterstriche</td></tr>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<footer>SubGoal v1.0 &nbsp;·&nbsp; Streamer.bot + OBS &nbsp;·&nbsp; 2026</footer>
+
+<script>
+// Language switcher
+function setLang(lang) {
+  document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.lang-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.lang-tab').forEach(t => {
+    if (t.textContent.includes(lang === 'pl' ? 'Polski' : lang === 'en' ? 'English' : 'Deutsch'))
+      t.classList.add('active');
+  });
+  document.querySelectorAll('.lang-content.' + lang).forEach(c => c.classList.add('active'));
+}
+
+// Copy button
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = '✓ Skopiowano!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Kopiuj / Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Active nav link on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('a.nav-link');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+  navLinks.forEach(a => {
+    a.classList.remove('active');
+    if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

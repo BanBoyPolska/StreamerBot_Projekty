@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>SubGoal — Panel Kontrolny</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0f0f; --surface:#161616; --surface2:#1e1e1e; --border:#2a2a2a;
+  --text:#e4e4e4; --muted:#777; --accent:#2a7fff; --accent-h:#1a6fee;
+  --success:#22c55e; --warn:#f59e0b; --red:#ef4444; --radius:8px;
+  --font:'Inter',sans-serif;
+}
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+body{ background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; padding:20px; }
+
+h1{ font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.dot{ width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block; }
+
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; }
+.card-title{ font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:12px; font-weight:600; }
+
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+
+.field{ display:flex; flex-direction:column; gap:4px; }
+.field label{ font-size:11px; color:var(--muted); font-weight:500; }
+.field input,.field select{
+  background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+  color:var(--text); padding:7px 10px; font-size:13px; outline:none; font-family:var(--font);
+  transition:border-color .15s;
+}
+.field input:focus,.field select:focus{ border-color:var(--accent); }
+.field input[type="color"]{ padding:2px 4px; height:34px; cursor:pointer; }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:5px;
+  border:none; border-radius:6px; cursor:pointer; font-family:var(--font);
+  font-size:12px; font-weight:600; padding:8px 14px;
+  transition:background .15s, transform .1s;
+}
+.btn:active{ transform:scale(.97); }
+.btn-primary{ background:var(--accent); color:#fff; }  .btn-primary:hover{ background:var(--accent-h); }
+.btn-success{ background:var(--success); color:#000; } .btn-success:hover{ background:#16a34a; }
+.btn-ghost  { background:var(--surface2); color:var(--text); border:1px solid var(--border); } .btn-ghost:hover{ background:var(--border); }
+.btn-red    { background:var(--red); color:#fff; }     .btn-red:hover{ background:#dc2626; }
+.btn-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+#status-bar{
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius); padding:10px 14px; margin-bottom:12px;
+}
+.stat{ display:flex; flex-direction:column; gap:2px; }
+.stat-val{ font-size:20px; font-weight:700; color:var(--accent); line-height:1; }
+.stat-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+.sep{ width:1px; height:36px; background:var(--border); margin:0 4px; }
+#mini-track{ height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
+#mini-fill { height:100%; background:var(--accent); border-radius:99px; transition:width .5s; width:0%; }
+#mini-lbl  { font-size:10px; color:var(--muted); text-align:right; margin-top:3px; }
+
+#conn-dot{ width:8px;height:8px;border-radius:50%;background:#444;flex-shrink:0;transition:background .3s; }
+#conn-dot.ok   { background:var(--success); box-shadow:0 0 6px var(--success); }
+#conn-dot.error{ background:var(--red); }
+
+.info-box{ background:rgba(42,127,255,.08); border:1px solid rgba(42,127,255,.2); border-radius:6px; padding:10px 14px; font-size:12px; color:#90b8f8; line-height:1.6; }
+.warn-box{ background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.2); border-radius:6px; padding:10px 14px; font-size:12px; color:#fcd34d; line-height:1.6; }
+.ok-box  { background:rgba(34,197,94,.08);  border:1px solid rgba(34,197,94,.2);  border-radius:6px; padding:10px 14px; font-size:12px; color:#86efac; line-height:1.6; }
+
+#sb-code{
+  background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+  padding:10px 14px; font-family:'Courier New',monospace; font-size:11px;
+  color:#a5d6ff; white-space:pre; line-height:1.7; overflow-x:auto; display:block;
+}
+
+#test-names-row{ display:flex; gap:5px; flex-wrap:wrap; margin-top:8px; }
+.fname-btn{
+  background:var(--surface2); border:1px solid var(--border); border-radius:20px;
+  color:var(--muted); padding:3px 10px; font-size:11px; cursor:pointer; font-family:var(--font); transition:all .15s;
+}
+.fname-btn:hover{ border-color:var(--accent); color:var(--accent); }
+
+#toast{
+  position:fixed; bottom:18px; right:18px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:8px; padding:9px 16px; font-size:12px; color:var(--text);
+  opacity:0; pointer-events:none; transition:opacity .25s; z-index:9999;
+}
+#toast.show{ opacity:1; }
+
+.saved-badge{
+  font-size:10px; color:var(--success); opacity:0;
+  transition:opacity .3s; margin-left:8px; font-weight:600;
+}
+.saved-badge.show{ opacity:1; }
+
+header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span class="dot"></span> SubGoal — Panel Kontrolny</h1>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Sterowanie paskiem subskrypcji</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)">
+    <div id="conn-dot"></div>
+    <span id="conn-label">Inicjalizacja...</span>
+  </div>
+</header>
+
+<!-- STATUS -->
+<div id="status-bar">
+  <div class="stat"><div class="stat-val" id="stat-cur">—</div><div class="stat-lbl">Suby</div></div>
+  <div class="sep"></div>
+  <div class="stat"><div class="stat-val" id="stat-goal">—</div><div class="stat-lbl">Cel</div></div>
+  <div class="sep"></div>
+  <div class="stat"><div class="stat-val" id="stat-pct" style="color:var(--success)">—</div><div class="stat-lbl">Postęp</div></div>
+  <div class="sep"></div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:3px;">
+    <div id="mini-track"><div id="mini-fill"></div></div>
+    <div id="mini-lbl">Wczytywanie...</div>
+  </div>
+  <button class="btn btn-ghost" id="btn-sync" style="margin-left:8px;font-size:11px;padding:6px 10px" title="Pobierz aktualną liczbę subów ze streamer.bot">↻ Sync</button>
+</div>
+
+<!-- WYGLĄD -->
+<div class="card">
+  <div class="card-title">
+    Wygląd paska
+    <span class="saved-badge" id="config-saved">✓ Zapisano</span>
+  </div>
+  <div class="grid">
+    <div class="field">
+      <label>Orientacja</label>
+      <select id="cfg-orientation">
+        <option value="horizontal-bottom">Poziomy — dół</option>
+        <option value="horizontal-top">Poziomy — góra</option>
+        <option value="vertical-right">Pionowy — prawo</option>
+        <option value="vertical-left">Pionowy — lewo</option>
+      </select>
+    </div>
+    <div class="field"><label>Kolor paska</label><input type="color" id="cfg-color" value="#2a7fff"></div>
+    <div class="field"><label>Grubość paska (px)</label><input type="number" id="cfg-thickness" value="10" min="2" max="80"></div>
+
+    <div class="field"><label>Krok progów (co ile subów)</label><input type="number" id="cfg-mstep" value="25" min="1"></div>
+  </div>
+  <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+    <button class="btn btn-primary" id="btn-config">✓ Zastosuj i zapisz</button>
+    <span style="font-size:11px;color:var(--muted)">Ustawienia zapamiętane w panelu</span>
+  </div>
+</div>
+
+<!-- CEL I SUBY -->
+<div class="card">
+  <div class="card-title">Cel i liczba subów</div>
+  <div class="grid3">
+    <div class="field"><label>Aktualne suby</label><input type="number" id="inp-subs" value="0" min="0"></div>
+    <div class="field" style="justify-content:flex-end"><label>&nbsp;</label>
+      <button class="btn btn-success" id="btn-set">▶ Ustaw</button>
+    </div>
+  </div>
+</div>
+
+<!-- TESTY -->
+<div class="card">
+  <div class="card-title">Testowanie / symulacja</div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="btn-rnd">+ Losowy sub</button>
+    <button class="btn btn-ghost" id="btn-named">+ Sub →</button>
+    <input id="inp-name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;outline:none;font-family:var(--font);width:130px" placeholder="Nick...">
+    <button class="btn btn-red" id="btn-reset">↩ Reset</button>
+  </div>
+  <div id="test-names-row">
+    <span style="font-size:10px;color:var(--muted);margin-right:4px">Szybkie:</span>
+  </div>
+</div>
+
+<!-- STREAMER.BOT -->
+<div class="card">
+  <div class="card-title">Kod C# — akcja SubGoal_Send (relay panel → pasek)</div>
+  <code id="sb-code">// Wklej do akcji SubGoal_Send w streamer.bot
+using System;
+using Newtonsoft.Json.Linq;
+
+public class CPHInline
+{
+    private const string OBS_SOURCE = "SubGoal Bar";
+    private const int    OBS_CONN   = 0;
+
+    public bool Execute()
+    {
+        string eventJson = "";
+        CPH.TryGetArg("subgoalEventJson", out eventJson);
+        if (string.IsNullOrEmpty(eventJson)) return false;
+        try { JToken.Parse(eventJson); } catch { return false; }
+
+        string payload = "{\"vendorName\":\"obs-browser\","
+                       + "\"requestType\":\"emit_event\","
+                       + "\"requestData\":{"
+                       + "\"event_name\":\"obsCustomEvent\","
+                       + "\"event_data\":" + eventJson + "}}";
+
+        CPH.ObsSendRaw("CallVendorRequest", payload, OBS_CONN);
+        CPH.LogInfo("[SubGoal_Send] " + eventJson);
+        return true;
+    }
+}</code>
+  <div class="btn-row" style="margin-top:10px">
+    <button class="btn btn-ghost" id="btn-copy">⎘ Kopiuj kod C#</button>
+  </div>
+  <div class="warn-box" style="margin-top:10px">
+    ☑ W OBS Browser Source zaznacz <strong>Allow OBS to control this browser source</strong>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── STORAGE KEYS ─────────────────────────────────────────────────────────
+const PANEL_CFG_KEY = 'subgoal_panel_config';  // ustawienia wyglądu (panel-side)
+const PANEL_VAL_KEY = 'subgoal_panel_values';  // cel i liczba subów (panel-side)
+
+// ─── DEFAULT CONFIG ────────────────────────────────────────────────────────
+const DEFAULT_CFG = {
+  orientation:   'horizontal-bottom',
+  color:         '#2a7fff',
+  thickness:     10,
+  autoscale:     'next10',
+  milestoneStep: 25,
+};
+const DEFAULT_VAL = { current: 0, goal: 100 };
+
+let cfg = Object.assign({}, DEFAULT_CFG);
+let val = Object.assign({}, DEFAULT_VAL);
+
+// ─── SAVE / LOAD CONFIG ───────────────────────────────────────────────────
+function saveConfig() {
+  cfg = {
+    orientation:   document.getElementById('cfg-orientation').value,
+    color:         document.getElementById('cfg-color').value,
+    thickness:     parseInt(document.getElementById('cfg-thickness').value) || 10,
+    milestoneStep: parseInt(document.getElementById('cfg-mstep').value) || 25,
+  };
+  try { localStorage.setItem(PANEL_CFG_KEY, JSON.stringify(cfg)); } catch(e) {}
+
+  // Pokaż badge "Zapisano"
+  const badge = document.getElementById('config-saved');
+  badge.classList.add('show');
+  setTimeout(() => badge.classList.remove('show'), 2000);
+}
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(PANEL_CFG_KEY);
+    if (raw) cfg = Object.assign({}, DEFAULT_CFG, JSON.parse(raw));
+  } catch(e) {}
+
+  document.getElementById('cfg-orientation').value = cfg.orientation;
+  document.getElementById('cfg-color').value        = cfg.color;
+  document.getElementById('cfg-thickness').value    = cfg.thickness;
+  document.getElementById('cfg-mstep').value        = cfg.milestoneStep;
+}
+
+function calculateGoal(current) {
+  if (current < 50) return 50;
+  return (Math.floor(current / 10) + 1) * 10;
+}
+
+function saveValues() {
+  val.current = parseInt(document.getElementById('inp-subs').value) || 0;
+  val.goal    = calculateGoal(val.current);
+  try { localStorage.setItem(PANEL_VAL_KEY, JSON.stringify(val)); } catch(e) {}
+}
+
+function loadValues() {
+  try {
+    const raw = localStorage.getItem(PANEL_VAL_KEY);
+    if (raw) val = Object.assign({}, DEFAULT_VAL, JSON.parse(raw));
+  } catch(e) {}
+  document.getElementById('inp-subs').value = val.current;
+}
+
+// ─── STATUS UI ────────────────────────────────────────────────────────────
+function updateStatusUI(current, _goal) {
+  val.current = current;
+  val.goal    = calculateGoal(current);
+  const goal  = val.goal;
+  const pct = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+  document.getElementById('stat-cur').textContent  = current;
+  document.getElementById('stat-goal').textContent = goal;
+  document.getElementById('stat-pct').textContent  = pct.toFixed(1) + '%';
+  document.getElementById('mini-fill').style.width = pct + '%';
+  document.getElementById('mini-lbl').textContent  = current + ' / ' + goal + ' subów';
+  document.getElementById('inp-subs').value = current;
+  try { localStorage.setItem(PANEL_VAL_KEY, JSON.stringify(val)); } catch(e) {}
+}
+
+// ─── STREAMER.BOT WS ──────────────────────────────────────────────────────
+const SB_WS_PORT = 8080;
+let sbWs = null, sbReady = false, reconnectTO = null;
+
+let pollTO = null;
+
+function sbGetGlobal() {
+  if (!sbReady || !sbWs || sbWs.readyState !== WebSocket.OPEN) return;
+  // Próbuj oba znane formaty requestu (różne wersje streamer.bot)
+  sbWs.send(JSON.stringify({
+    request:  'GetGlobal',
+    id:       'sg-getvar',
+    variable: 'subgoal_current',
+    persisted: true
+  }));
+}
+
+function startPolling() {
+  if (pollTO) clearInterval(pollTO);
+  pollTO = setInterval(sbGetGlobal, 5000); // co 5s jako pewny fallback
+}
+
+function stopPolling() {
+  if (pollTO) { clearInterval(pollTO); pollTO = null; }
+}
+
+function sbConnect() {
+  try { sbWs = new WebSocket('ws://127.0.0.1:' + SB_WS_PORT); }
+  catch(e) { scheduleReconnect(); return; }
+
+  sbWs.onopen = () => {
+    sbReady = true;
+    setConn(true);
+    // Subskrybuj wszystkie eventy żeby łapać broadcasty
+    sbWs.send(JSON.stringify({ request:'Subscribe', id:'panel-sub', events:{ General:['Custom'], Raw:['Action'] } }));
+    setTimeout(pushConfigToBar, 800);
+    setTimeout(() => {
+      // Wywołaj SubGoal_Sync — pobierze z Twitch API i wyśle broadcast
+      sbWs.send(JSON.stringify({
+        request: 'DoAction',
+        id:      'sg-boot-sync',
+        action:  { name: 'SubGoal Sync' }
+      }));
+      // Odczytaj zmienną globalną natychmiast
+      sbGetGlobal();
+      // Uruchom polling co 5s jako pewny fallback
+      startPolling();
+    }, 1200);
+  };
+
+  sbWs.onclose = () => {
+    sbReady = false;
+    setConn(false);
+    stopPolling();
+    scheduleReconnect();
+  };
+  sbWs.onerror = () => { sbReady = false; setConn(false); };
+
+  sbWs.onmessage = (e) => {
+    try {
+      const raw = JSON.parse(e.data);
+      // DEBUG: loguj każdą wiadomość żeby zobaczyć dokładny format
+      if (raw.id && raw.id.startsWith('sg-')) {
+        console.log('[SubGoal WS]', JSON.stringify(raw));
+      }
+      if (raw.data) {
+        console.log('[SubGoal BROADCAST]', JSON.stringify(raw));
+      }
+
+      // Format 1: GetGlobal → { status:'ok', variable: { value: X } }
+      if (raw.status === 'ok' && raw.id === 'sg-getvar') {
+        let v = null;
+        if (raw.variable !== undefined) v = raw.variable.value ?? raw.variable;
+        else if (raw.value !== undefined) v = raw.value;
+        const n = parseInt(v);
+        if (!isNaN(n) && n >= 0) { updateStatusUI(n, val.goal); return; }
+      }
+
+      // Format 2: WebsocketBroadcastJson → data zawiera nasz JSON
+      if (raw.data) {
+        // data może być obiektem lub stringiem
+        let d = raw.data;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e) {} }
+        if (d && d.type === 'subgoal-sync' && d.subCount !== undefined) {
+          const n = parseInt(d.subCount);
+          if (!isNaN(n) && n >= 0) { updateStatusUI(n, val.goal); return; }
+        }
+        // Czasem streamer.bot owija w { data: { data: ... } }
+        if (d && d.data) {
+          let dd = d.data;
+          if (typeof dd === 'string') { try { dd = JSON.parse(dd); } catch(e) {} }
+          if (dd && dd.type === 'subgoal-sync' && dd.subCount !== undefined) {
+            const n = parseInt(dd.subCount);
+            if (!isNaN(n) && n >= 0) { updateStatusUI(n, val.goal); return; }
+          }
+        }
+      }
+    } catch(er) { console.error('[SubGoal WS error]', er); }
+  };
+}
+
+function scheduleReconnect() {
+  if (reconnectTO) clearTimeout(reconnectTO);
+  reconnectTO = setTimeout(sbConnect, 3000);
+}
+
+// ─── SEND CMD DO PASKA (przez SubGoal_Send) ───────────────────────────────
+function sendCmd(type, data) {
+  if (!sbReady || !sbWs || sbWs.readyState !== WebSocket.OPEN) {
+    toast('⚠ Brak połączenia ze streamer.bot!');
+    return;
+  }
+  const eventData = JSON.stringify({ source: 'subgoal-panel', type: type, data: data });
+  sbWs.send(JSON.stringify({
+    request: 'DoAction',
+    id:      'sg-' + Date.now(),
+    action:  { name: 'SubGoal_Send' },
+    args:    { subgoalEventJson: eventData }
+  }));
+}
+
+// ─── PUSH CONFIG DO PASKA ─────────────────────────────────────────────────
+function pushConfigToBar() {
+  sendCmd('config', cfg);
+}
+
+// ─── SYNC — pobierz aktualną liczbę subów ze streamer.bot GlobalVar ───────
+function requestSync() {
+  if (!sbReady || !sbWs || sbWs.readyState !== WebSocket.OPEN) return;
+  // Pobierz globalną zmienną subgoal_current ustawianą przez SubGoal_Sync
+  sbWs.send(JSON.stringify({
+    request: 'GetGlobal',
+    id:      'sg-getvar',
+    variable: 'subgoal_current',
+    persisted: true
+  }));
+}
+
+// ─── CONN STATUS ──────────────────────────────────────────────────────────
+function setConn(v) {
+  document.getElementById('conn-dot').className = v ? 'ok' : 'error';
+  document.getElementById('conn-label').textContent = v
+    ? 'Połączony ze streamer.bot'
+    : 'Brak połączenia (retry za 3s)';
+}
+
+// ─── PRZYCISKI ────────────────────────────────────────────────────────────
+const FAKE = ['xXDragonSlayerXx','TwitchFan99','ProGamer2025','StreamLover',
+              'NightOwl42','SpeedRun_PL','KotwaNaMorzu','GrumpyCat77'];
+
+document.getElementById('btn-config').onclick = () => {
+  saveConfig();
+  pushConfigToBar();
+  toast('Wygląd zastosowany i zapisany ✓');
+};
+
+document.getElementById('btn-set').onclick = () => {
+  saveValues();
+  sendCmd('setSubs', { value: val.current });
+  updateStatusUI(val.current, val.goal);
+  toast('Wartości ustawione ✓');
+};
+
+document.getElementById('btn-sync').onclick = () => {
+  if (!sbReady) { toast('⚠ Brak połączenia ze streamer.bot'); return; }
+  sbWs.send(JSON.stringify({
+    request: 'DoAction',
+    id:      'sg-sync-' + Date.now(),
+    action:  { name: 'SubGoal Sync' }
+  }));
+  // Fallback: odczytaj zmienną globalną po 3s gdyby broadcast nie dotarł
+  setTimeout(() => {
+    sbWs.send(JSON.stringify({
+      request:   'GetGlobal',
+      id:        'sg-getvar',
+      variable:  'subgoal_current',
+      persisted: true
+    }));
+  }, 3000);
+  toast('Synchronizacja w toku...');
+};
+
+document.getElementById('btn-rnd').onclick = () => {
+  const name = FAKE[Math.floor(Math.random() * FAKE.length)];
+  sendCmd('addSub', { username: name, subCount: -1 });
+  updateStatusUI(val.current + 1, val.goal);
+  toast('+Sub: ' + name);
+};
+
+document.getElementById('btn-named').onclick = () => {
+  const name = document.getElementById('inp-name').value.trim() || 'TestUser';
+  sendCmd('addSub', { username: name, subCount: -1 });
+  updateStatusUI(val.current + 1, val.goal);
+  toast('+Sub: ' + name);
+};
+
+document.getElementById('btn-reset').onclick = () => {
+  sendCmd('reset', {});
+  updateStatusUI(0, val.goal);
+  toast('Reset ✓');
+};
+
+document.getElementById('btn-copy').onclick = () => {
+  navigator.clipboard.writeText(document.getElementById('sb-code').textContent)
+    .then(() => toast('Kod C# skopiowany ✓'));
+};
+
+// Szybkie nicki
+const nr = document.getElementById('test-names-row');
+FAKE.slice(0, 6).forEach(name => {
+  const b = document.createElement('button'); b.className = 'fname-btn';
+  b.textContent = name;
+  b.onclick = () => {
+    sendCmd('addSub', { username: name, subCount: -1 });
+    updateStatusUI(val.current + 1, val.goal);
+    toast('+Sub: ' + name);
+  };
+  nr.appendChild(b);
+});
+
+// ─── TOAST ────────────────────────────────────────────────────────────────
+let toastTO;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTO);
+  toastTO = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────
+loadConfig();
+loadValues();
+updateStatusUI(val.current, val.goal);
+sbConnect();
+</script>
+</body>
+</html>

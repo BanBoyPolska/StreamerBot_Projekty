@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>SubGoal Bar</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent}
+#bar-wrapper{position:fixed;display:none}
+#bar-wrapper.horizontal{left:0;right:0;bottom:0}
+#bar-wrapper.horizontal.edge-top{bottom:auto;top:0}
+#bar-wrapper.vertical{top:0;bottom:0;right:0}
+#bar-wrapper.vertical.edge-left{right:auto;left:0}
+#bar-track{position:relative;width:100%;height:100%;background:rgba(255,255,255,0.07);overflow:visible}
+#bar-fill{position:absolute;background:var(--bar-color,#2a7fff);transition:width .6s cubic-bezier(.16,1,.3,1),height .6s cubic-bezier(.16,1,.3,1);overflow:visible}
+#bar-wrapper.horizontal #bar-fill{top:0;left:0;bottom:0;height:100%;width:0}
+#bar-wrapper.vertical   #bar-fill{bottom:0;left:0;right:0;width:100%;height:0}
+#bar-fill::after{content:'';position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:shimmer 2.5s ease-in-out infinite;pointer-events:none}
+@keyframes shimmer{0%{transform:translateX(-200%) skewX(-12deg)}100%{transform:translateX(500%) skewX(-12deg)}}
+.milestone-line{position:absolute;background:rgba(255,255,255,0.22);pointer-events:none}
+#bar-wrapper.horizontal .milestone-line{top:0;bottom:0;width:1px}
+#bar-wrapper.vertical   .milestone-line{left:0;right:0;height:1px}
+.milestone-label{position:absolute;font-size:9px;font-weight:600;color:rgba(255,255,255,.45);letter-spacing:.05em;white-space:nowrap;pointer-events:none;font-family:Inter,sans-serif}
+#bar-wrapper.horizontal .milestone-label{bottom:calc(var(--bar-thickness,10px) + 3px);transform:translateX(-50%)}
+#bar-wrapper.vertical   .milestone-label{left:calc(var(--bar-thickness,10px) + 3px);transform:translateY(50%)}
+#sub-notification{position:fixed;pointer-events:none;opacity:0;white-space:nowrap;font-family:Inter,sans-serif;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,1);transition:opacity .35s ease;z-index:9999;background:rgba(0,0,0,0.55);padding:2px 8px;border-radius:4px}
+
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+<div id="bar-wrapper">
+  <div id="bar-track">
+    <div id="bar-fill"></div>
+  </div>
+</div>
+<div id="sub-notification"></div>
+
+<script>
+const LSKEY = 'subgoalstate';
+
+function calculateGoal(current) {
+  if (current < 50) return 50;
+  return (Math.floor(current / 10) + 1) * 10;
+}
+const DEFAULT = { current:0, goal:100, color:'#2a7fff', thickness:10, orientation:'horizontal-bottom', milestoneStep:25, autoscale:'next10' };
+
+let S = Object.assign({}, DEFAULT);
+
+const WRAP  = document.getElementById('bar-wrapper');
+const FILL  = document.getElementById('bar-fill');
+const TRACK = document.getElementById('bar-track');
+const NOTIF = document.getElementById('sub-notification');
+
+function orient() { return S.orientation.split('-')[0]; }
+function edge()   { return S.orientation.split('-')[1]; }
+function barLen() { return orient()==='horizontal' ? window.innerWidth : window.innerHeight; }
+
+function init() {
+  document.documentElement.style.setProperty('--bar-color', S.color);
+  document.documentElement.style.setProperty('--bar-thickness', S.thickness + 'px');
+  WRAP.className = '';
+  WRAP.classList.add(orient());
+  if (edge()==='top' || edge()==='left') WRAP.classList.add('edge-' + edge());
+  if (orient()==='horizontal') {
+    WRAP.style.cssText = 'width:100vw;height:'+S.thickness+'px;left:0;right:0;' + (edge()==='top' ? 'top:0;bottom:auto' : 'bottom:0;top:auto') + ';display:block';
+  } else {
+    WRAP.style.cssText = 'height:100vh;width:'+S.thickness+'px;top:0;bottom:0;' + (edge()==='left' ? 'left:0;right:auto' : 'right:0;left:auto') + ';display:block';
+  }
+  renderMilestones();
+  updateBar(false);
+}
+
+function renderMilestones() {
+  TRACK.querySelectorAll('.milestone-line,.milestone-label').forEach(e => e.remove());
+  const step = S.milestoneStep, goal = S.goal;
+  if (!goal || !step) return;
+  const pxPerSub = barLen() / goal;
+  const labelEvery = Math.max(step, Math.ceil(28 / (pxPerSub * step)) * step);
+  const vert = orient() === 'vertical';
+  for (let i = step; i < goal; i += step) {
+    const pct = (i / goal * 100).toFixed(3) + '%';
+    const line = document.createElement('div');
+    line.className = 'milestone-line';
+    if (vert) line.style.bottom = pct; else line.style.left = pct;
+    TRACK.appendChild(line);
+    if (i % labelEvery === 0) {
+      const lbl = document.createElement('div');
+      lbl.className = 'milestone-label';
+      lbl.textContent = i;
+      if (vert) lbl.style.bottom = pct; else lbl.style.left = pct;
+      TRACK.appendChild(lbl);
+    }
+  }
+}
+
+function updateBar(anim) {
+  const pct = Math.min(S.current / S.goal * 100, 100);
+  if (anim === false) {
+    FILL.style.transition = 'none';
+    requestAnimationFrame(() => { FILL.style.transition = ''; });
+  }
+  if (orient() === 'horizontal') {
+    FILL.style.width  = pct + '%';
+    FILL.style.height = '100%';
+  } else {
+    FILL.style.height = pct + '%';
+    FILL.style.width  = '100%';
+  }
+}
+
+let notifTO = null;
+function showNotif(username) {
+  const pct = Math.min(S.current / S.goal * 100, 100), th = S.thickness;
+  NOTIF.textContent = username;
+  if (orient() === 'horizontal') {
+    const x = pct / 100 * window.innerWidth;
+    const est = username.length * 7 + 16;
+    let left = Math.max(4, Math.min(x - est/2, window.innerWidth - est - 4));
+    NOTIF.style.left   = left + 'px';
+    NOTIF.style.right  = 'auto';
+    NOTIF.style.bottom = edge() !== 'top' ? (th + 6) + 'px' : 'auto';
+    NOTIF.style.top    = edge() === 'top'  ? (th + 6) + 'px' : 'auto';
+  } else {
+    const y = window.innerHeight - pct / 100 * window.innerHeight;
+    NOTIF.style.top    = Math.max(4, y - 10) + 'px';
+    NOTIF.style.bottom = 'auto';
+    NOTIF.style.right  = edge() !== 'left' ? (th + 6) + 'px' : 'auto';
+    NOTIF.style.left   = edge() === 'left'  ? (th + 6) + 'px' : 'auto';
+  }
+  NOTIF.style.opacity = '1';
+  if (notifTO) clearTimeout(notifTO);
+  notifTO = setTimeout(() => { NOTIF.style.opacity = '0'; }, 2800);
+}
+
+function goalReached() {
+  const colors = ['#ffffff', '#ffd700', '#ff6b6b', '#a0e7e5', '#9146ff', '#00ff88'];
+  const base = { ticks:250, zIndex:9999, colors, shapes:['square','circle'], scalar:1.1 };
+  confetti(Object.assign({}, base, { origin:{x:.5,y:.55}, particleCount:160, spread:120, startVelocity:60 }));
+  setTimeout(() => {
+    confetti(Object.assign({}, base, { origin:{x:.1,y:.6}, angle:65,  spread:80, particleCount:80, startVelocity:55 }));
+    confetti(Object.assign({}, base, { origin:{x:.9,y:.6}, angle:115, spread:80, particleCount:80, startVelocity:55 }));
+  }, 250);
+  setTimeout(() => {
+    confetti(Object.assign({}, base, { origin:{x:.3,y:0}, angle:270, spread:70, particleCount:70, startVelocity:45, ticks:300 }));
+    confetti(Object.assign({}, base, { origin:{x:.7,y:0}, angle:270, spread:70, particleCount:70, startVelocity:45, ticks:300 }));
+    confetti(Object.assign({}, base, { origin:{x:.5,y:0}, angle:270, spread:90, particleCount:90, startVelocity:50, ticks:300 }));
+  }, 600);
+  setTimeout(() => {
+    confetti(Object.assign({}, base, { origin:{x:0,y:1}, angle:55,  spread:60, particleCount:60, startVelocity:50 }));
+    confetti(Object.assign({}, base, { origin:{x:1,y:1}, angle:125, spread:60, particleCount:60, startVelocity:50 }));
+  }, 1000);
+}
+
+function addSub(username, exactCount) {
+  const prevGoal = S.goal;
+  if (typeof exactCount === 'number' && exactCount >= 0) S.current = exactCount;
+  else S.current++;
+  const goalHit = S.current >= prevGoal;
+  S.goal = calculateGoal(S.current);
+  saveState();
+  renderMilestones();
+  updateBar(true);
+  if (username) showNotif(username);
+  if (goalHit) setTimeout(goalReached, 300);
+}
+
+function saveState() {
+  try { localStorage.setItem(LSKEY, JSON.stringify(S)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const r = localStorage.getItem(LSKEY);
+    if (r) S = Object.assign({}, DEFAULT, JSON.parse(r));
+    // Zawsze przelicz goal na podstawie aktualnej liczby subów
+    S.goal = calculateGoal(S.current);
+  } catch(e) {}
+}
+
+// OBS CustomEvent — jedyna metoda komunikacji Dock ↔ Browser Source w OBS
+window.addEventListener('obsCustomEvent', function(e) {
+  let msg;
+  try { msg = typeof e.detail === 'string' ? JSON.parse(e.detail) : e.detail; } catch(er) { return; }
+  if (!msg || msg.source !== 'subgoal-panel') return;
+  handleCommand(msg);
+});
+
+// postMessage — tryb iframe / test lokalny
+window.addEventListener('message', function(e) {
+  const msg = e.data;
+  if (!msg || msg.source !== 'subgoal-panel') return;
+  handleCommand(msg);
+  if (msg.type === 'getState') {
+    try { e.source.postMessage({ source:'subgoal-bar', type:'stateReply', data:S }, '*'); } catch(er) {}
+  }
+});
+
+function handleCommand(msg) {
+  switch (msg.type) {
+    case 'config':
+      S = Object.assign({}, S, msg.data);
+      saveState();
+      init();  // init już woła renderMilestones + updateBar
+      break;
+    case 'setSubs':
+      S.current = msg.data.value;
+      S.goal = calculateGoal(S.current);
+      saveState();
+      renderMilestones();
+      updateBar(true);
+      break;
+    case 'setGoal':
+      S.goal = msg.data.value;
+      saveState();
+      renderMilestones();
+      updateBar(true);
+      break;
+    case 'addSub':
+      addSub(msg.data.username, msg.data.subCount);
+      break;
+    case 'reset':
+      S.current = 0;
+      saveState();
+      renderMilestones();
+      updateBar(false);
+      break;
+  }
+}
+
+loadState();
+init();
+window.addEventListener('resize', renderMilestones);
+</script>
+</body>
+</html>
