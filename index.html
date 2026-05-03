@@ -190,9 +190,9 @@
     </a>
     <div class="header-right">
       <!-- STATUS STREAMU -->
-      <a id="streamStatus" class="stream-status loading" href="https://twitch.tv/banboypolska" target="_blank">
+      <a id="streamStatus" class="stream-status offline" href="https://twitch.tv/banboypolska" target="_blank">
         <span class="dot"></span>
-        <span id="streamStatusText">…</span>
+        <span id="streamStatusText">Offline</span>
       </a>
       <button class="theme-toggle" id="themeToggle" title="Przełącz motyw">🌙</button>
       <a class="twitch-btn" href="https://twitch.tv/banboypolska" target="_blank">
@@ -313,7 +313,10 @@
       const textEl   = document.getElementById('streamStatusText');
 
       try {
-        const res  = await fetch(`${WORKER_URL}/stream-status?login=${TWITCH_LOGIN}`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res  = await fetch(`${WORKER_URL}/stream-status?login=${TWITCH_LOGIN}`, { signal: controller.signal });
+        clearTimeout(timeout);
         const data = await res.json();
 
         if (data.live) {
@@ -344,8 +347,9 @@
           if (gme) gme.textContent = '';
         }
       } catch (e) {
-        statusEl.className = 'stream-status offline';
-        textEl.textContent  = 'Offline';
+        console.warn('Stream status error:', e.message);
+        if (statusEl) { statusEl.className = 'stream-status offline'; }
+        if (textEl)   { textEl.textContent  = 'Offline'; }
       }
     }
 
