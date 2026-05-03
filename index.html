@@ -323,22 +323,25 @@
 
           // Pokaż embed streamu
           const section = document.getElementById('streamSection');
-          section.classList.add('visible');
           const player  = document.getElementById('twitchPlayer');
-          if (!player.src || player.src === '') {
+          const gameEl  = document.getElementById('streamGame');
+          if (section) section.classList.add('visible');
+          if (player && (!player.src || player.src === '')) {
             player.src = `https://player.twitch.tv/?channel=${TWITCH_LOGIN}&parent=banboypolska.github.io&autoplay=false`;
           }
-          const gameEl = document.getElementById('streamGame');
-          if (data.game) gameEl.textContent = `🎮 ${data.game}${data.title ? ' · ' + data.title : ''}`;
+          if (gameEl && data.game) gameEl.textContent = `🎮 ${data.game}${data.title ? ' · ' + data.title : ''}`;
 
         } else {
           statusEl.className = 'stream-status offline';
           textEl.textContent  = 'Offline';
           statusEl.title      = '';
           // Ukryj embed
-          document.getElementById('streamSection').classList.remove('visible');
-          document.getElementById('twitchPlayer').src = '';
-          document.getElementById('streamGame').textContent = '';
+          const sec = document.getElementById('streamSection');
+          const plr = document.getElementById('twitchPlayer');
+          const gme = document.getElementById('streamGame');
+          if (sec) sec.classList.remove('visible');
+          if (plr) plr.src = '';
+          if (gme) gme.textContent = '';
         }
       } catch (e) {
         statusEl.className = 'stream-status offline';
