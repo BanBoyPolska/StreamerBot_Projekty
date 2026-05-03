@@ -304,8 +304,8 @@
     // ────────────────────────────────────────────────────────────────────
 
     // Avatar – lokalny plik w głównym folderze repozytorium
-    document.getElementById('headerAvatar').src = '/StreamerBot_Projekty/avatar.png';
-    document.getElementById('heroAvatar').src    = '/StreamerBot_Projekty/avatar.png';
+    const hAvatar = document.getElementById('headerAvatar');
+    if (hAvatar) hAvatar.src = '/StreamerBot_Projekty/avatar.png';
 
     // Status streamu – przez Cloudflare Worker (Client Secret ukryty po stronie serwera)
     async function checkStreamStatus() {
