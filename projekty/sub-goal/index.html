@@ -20,7 +20,8 @@
       --badge-bg: #e4e4ec; --code-bg: #e8e8f0; --step-num: rgba(145,71,255,0.12);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter','Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+    body { font-family: 'Inter','Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; overflow-x: hidden; }
+
 
     header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
     .header-left { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
@@ -34,11 +35,14 @@
     .theme-toggle { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--text); transition: background 0.2s; }
     .theme-toggle:hover { background: var(--border); }
 
+
     .breadcrumb { padding: 12px 2rem; font-size: 0.82rem; color: var(--text-muted); background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
     .breadcrumb a { color: var(--accent); text-decoration: none; }
     .breadcrumb a:hover { text-decoration: underline; }
 
+
     .page-wrap { max-width: 860px; margin: 0 auto; padding: 40px 2rem 80px; display: grid; grid-template-columns: 1fr 260px; gap: 32px; align-items: start; }
+
 
     .content h1 { font-size: 1.8rem; font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
     .content .subtitle { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; }
@@ -46,9 +50,11 @@
     .tag { font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; background: var(--badge-bg); color: var(--text-muted); border: 1px solid var(--border); }
     .tag.accent { background: rgba(145,71,255,0.15); color: var(--accent); border-color: rgba(145,71,255,0.3); }
 
+
     .section { margin-bottom: 36px; }
     .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
     .section-title .icon { font-size: 1.1rem; }
+
 
     /* FILES TABLE */
     .files-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
@@ -63,26 +69,34 @@
     .badge-sb { background: rgba(145,71,255,0.12); color: var(--accent); border: 1px solid rgba(145,71,255,0.25); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
     .badge-browser { background: rgba(255,180,0,0.10); color: #ffb400; border: 1px solid rgba(255,180,0,0.25); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 
+
     /* STEPS */
     .steps { display: flex; flex-direction: column; gap: 14px; }
     .step { display: flex; gap: 14px; align-items: flex-start; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
     .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--step-num); border: 1.5px solid var(--accent); color: var(--accent); font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-content { flex: 1; min-width: 0; }
     .step-title { font-size: 0.92rem; font-weight: 700; margin-bottom: 5px; }
     .step-desc { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; }
     .step-desc strong { color: var(--text); }
 
+
     /* CODE BLOCK */
-    .code-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 10px; position: relative; overflow-x: auto; }
+    .code-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 10px; position: relative; overflow: hidden; }
     .code-block pre { font-family: monospace; font-size: 0.8rem; color: #a8b4c8; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
     .code-block .code-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
     .copy-btn { position: absolute; top: 10px; right: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 5px; padding: 4px 10px; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; transition: background 0.2s, color 0.2s; }
     .copy-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* IMPORT CODE */
+    #sbImportCode { white-space: pre-wrap; word-break: break-all; }
+
 
     /* INFO BOX */
     .info-box { background: rgba(145,71,255,0.08); border: 1px solid rgba(145,71,255,0.25); border-radius: 8px; padding: 12px 14px; font-size: 0.83rem; color: var(--text-muted); line-height: 1.6; margin-top: 10px; }
     .info-box strong { color: var(--accent); }
     .warn-box { background: rgba(255,180,0,0.07); border: 1px solid rgba(255,180,0,0.25); border-left: 3px solid #ffb400; border-radius: 8px; padding: 12px 14px; font-size: 0.83rem; color: var(--text-muted); line-height: 1.6; margin-top: 10px; }
     .warn-box strong { color: #ffb400; }
+
 
     /* TROUBLE TABLE */
     .trouble-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
@@ -93,6 +107,7 @@
     .trouble-table td:first-child { color: #ff6b6b; font-weight: 600; }
     .trouble-table td:nth-child(2) { color: var(--text-muted); }
     .trouble-table td:nth-child(3) { color: var(--text); }
+
 
     /* SIDEBAR */
     .sidebar { position: sticky; top: 84px; }
@@ -114,6 +129,7 @@
     .sidebar-link:last-child { border-bottom: none; }
     .sidebar-link:hover { opacity: 0.75; }
 
+
     /* TOC */
     .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
     .toc-title { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
@@ -121,32 +137,25 @@
     .toc a:last-child { border-bottom: none; }
     .toc a:hover { color: var(--accent); }
 
+
     .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: 0.82rem; margin-bottom: 20px; transition: color 0.2s; }
     .back-link:hover { color: var(--accent); }
+
 
     footer { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid var(--border); }
     footer a { color: var(--accent); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
+
 
     @media (max-width: 680px) {
       .page-wrap { grid-template-columns: 1fr; }
       .sidebar { position: static; }
       .site-title { display: none; }
     }
-  
-    /* Import code - jedna linia z obcięciem */
-    #sbImportCode {
-      white-space: nowrap !important;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-      display: block;
-      cursor: default;
-      user-select: none;
-    }
   </style>
 </head>
 <body>
+
 
   <header>
     <a class="header-left" href="../../index.html">
@@ -162,11 +171,13 @@
     </div>
   </header>
 
+
   <div class="breadcrumb">
     <a href="../../index.html">🏠 Projekty</a>
     <span>›</span>
     <span>Minimalistyczny Sub Goal</span>
   </div>
+
 
   <div class="page-wrap">
     <div class="content">
@@ -181,6 +192,7 @@
         <span class="tag">HTML/CSS/JS</span>
         <span class="tag">C#</span>
       </div>
+
 
       <!-- PLIKI PROJEKTU -->
       <div class="section" id="files">
@@ -224,6 +236,7 @@
         </table>
       </div>
 
+
       <!-- INSTALACJA -->
       <div class="section" id="install">
         <div class="section-title"><span class="icon">📦</span> Instalacja</div>
@@ -233,7 +246,7 @@
             <div class="step-content">
               <div class="step-title">Pobierz pliki</div>
               <div class="step-desc">
-                Kliknij <strong>Pobierz ZIP</strong> w sidebarze. Wypakuj archiwum i umieść wszystkie pliki w jednym folderze, np.:
+                Kliknij <strong>Pobierz pliki </strong> i umieść wszystkie pliki w jednym folderze, np.:
                 <div class="code-block"><pre>C:\subgoal\
   subgoal-bar.html
   control-panel.html</pre></div>
@@ -289,6 +302,7 @@
         </div>
       </div>
 
+
       <!-- KONFIGURACJA SubGoal Sync -->
       <div class="section" id="sync">
         <div class="section-title"><span class="icon">🔄</span> Konfiguracja SubGoal Sync</div>
@@ -312,6 +326,7 @@
           </div>
         </div>
       </div>
+
 
       <!-- ROZWIĄZYWANIE PROBLEMÓW -->
       <div class="section" id="troubleshooting">
@@ -351,6 +366,7 @@
       </div>
     </div>
 
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-card">
@@ -359,8 +375,8 @@
           <h3>Minimalistyczny Sub Goal</h3>
           <p>OBS Widget + Streamer.bot</p>
         </div>
-        <a class="download-btn" href="subgoal-bar.html" download onclick="trackDownload('sub-goal', this.href)">⬇️ subgoal-bar.html</a>
-        <a class="download-btn" href="control-panel.html" download onclick="trackDownload('sub-goal', this.href)" style="border-top:1px solid rgba(255,255,255,0.1);">⬇️ control-panel.html</a><div style="text-align:center;padding:6px 0 2px;font-size:0.75rem;color:var(--text-muted);"><span class="dl-count"></span></div>
+        <a class="download-btn" href="subgoal-bar.html" download>⬇️ subgoal-bar.html</a>
+        <a class="download-btn" href="control-panel.html" download style="border-top:1px solid rgba(255,255,255,0.1);">⬇️ control-panel.html</a>
         <div class="sidebar-meta">
           <div class="meta-row">
             <span class="meta-label">Status</span>
@@ -381,6 +397,7 @@
         </div>
       </div>
 
+
       <div class="toc">
         <div class="toc-title">Na tej stronie</div>
         <a href="#files">📁 Pliki projektu</a>
@@ -391,13 +408,21 @@
     </aside>
   </div>
 
+
   <footer>
     Zrobione przez <a href="https://twitch.tv/banboypolska" target="_blank">BanBoyPolska</a> &nbsp;·&nbsp;
     <a href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">GitHub</a>
   </footer>
 
+
   <script>
-    document.getElementById("headerAvatar").src = "../../avatar.png";
+    fetch("https://unclickable.com/twitch/user/banboypolska")
+      .then(r => r.json())
+      .then(data => {
+        const url = data?.profile_image_url || data?.data?.[0]?.profile_image_url;
+        if (url) document.getElementById("headerAvatar").src = url;
+      }).catch(() => {});
+
 
     const html = document.documentElement;
     const btn = document.getElementById("themeToggle");
@@ -411,6 +436,7 @@
       btn.textContent = next === "dark" ? "☀️" : "🌙";
     });
 
+
     // Copy buttons (generic)
     document.querySelectorAll(".copy-btn").forEach(btn => {
       if (btn.hasAttribute("onclick")) return;
@@ -422,6 +448,7 @@
         });
       });
     });
+
 
     // Copy import code
     function copyImport(btn) {
