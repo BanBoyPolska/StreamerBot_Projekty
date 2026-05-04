@@ -184,6 +184,7 @@
       .site-title { display: none; }
     }
   </style>
+  <script src="https://embed.twitch.tv/embed/v1.js"></script>
 </head>
 <body>
 
@@ -242,18 +243,10 @@
     </div>
     <div id="streamGame" class="stream-game"></div>
     <div class="stream-wrap">
-      <div class="player-wrap">
-        <iframe
-          id="twitchPlayer"
-          src=""
-          width="100%"
-          height="400"
-          allowfullscreen
-          style="width:100%;height:400px;display:block;border:none;">
-        </iframe>
-      </div>
+      <div id="twitchPlayerContainer" class="player-wrap"></div>
       <iframe
-        src="https://www.twitch.tv/embed/banboypolska/chat?parent=banboypolska.github.io&darkpopout"
+        id="twitchChat"
+        src=""
         width="340"
         height="400"
         style="width:340px;flex-shrink:0;display:block;border:none;">
@@ -309,7 +302,7 @@
 
   <script>
     // ─── KONFIGURACJA ───────────────────────────────────────────────────
-    const TWITCH_LOGIN  = 'soninq';
+    const TWITCH_LOGIN  = 'banboypolska';
     const WORKER_URL    = 'https://twitch-proxy.djbochen.workers.dev';
     // ────────────────────────────────────────────────────────────────────
 
@@ -336,12 +329,29 @@
 
           // Pokaż embed streamu
           const section = document.getElementById('streamSection');
-          const player  = document.getElementById('twitchPlayer');
           const gameEl  = document.getElementById('streamGame');
           if (section) section.classList.add('visible');
-          if (player && (!player.src || player.src === '')) {
-            player.src = `https://player.twitch.tv/?channel=${TWITCH_LOGIN}&parent=banboypolska.github.io&autoplay=false`;
+
+          // Twitch Embed SDK
+          const container = document.getElementById('twitchPlayerContainer');
+          if (container && !container.dataset.loaded) {
+            container.dataset.loaded = '1';
+            new Twitch.Embed('twitchPlayerContainer', {
+              width: '100%',
+              height: 400,
+              channel: TWITCH_LOGIN,
+              parent: ['banboypolska.github.io'],
+              autoplay: false,
+              layout: 'video',
+            });
           }
+
+          // Chat
+          const chatFrame = document.getElementById('twitchChat');
+          if (chatFrame && !chatFrame.src.includes('twitch.tv')) {
+            chatFrame.src = `https://www.twitch.tv/embed/${TWITCH_LOGIN}/chat?parent=banboypolska.github.io&darkpopout`;
+          }
+
           if (gameEl && data.game) gameEl.textContent = `🎮 ${data.game}${data.title ? ' · ' + data.title : ''}`;
 
         } else {
@@ -353,7 +363,10 @@
           const plr = document.getElementById('twitchPlayer');
           const gme = document.getElementById('streamGame');
           if (sec) sec.classList.remove('visible');
-          if (plr) plr.src = '';
+          const container = document.getElementById('twitchPlayerContainer');
+          if (container) { container.innerHTML = ''; delete container.dataset.loaded; }
+          const chatFrame = document.getElementById('twitchChat');
+          if (chatFrame) chatFrame.src = 'about:blank';
           if (gme) gme.textContent = '';
         }
       } catch (e) {
