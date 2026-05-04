@@ -158,15 +158,19 @@
       animation: pulse 1.5s infinite;
     }
     .stream-wrap {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 12px;
+      display: flex;
+      flex-direction: row;
+      gap: 0;
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
     }
-    .stream-wrap iframe { display: block; width: 100%; border: none; }
+    .stream-wrap .player-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+    .stream-wrap iframe { display: block; width: 100%; min-width: 0; border: none; }
     .stream-game { font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; }
     @media (max-width: 700px) {
       .stream-wrap { grid-template-columns: 1fr; }
@@ -209,7 +213,7 @@
       <img class="about-avatar" src="avatar.png" alt="BanBoyPolska" />
       <div class="about-text">
         <h2>Cześć, jestem <span>BanBoyPolska</span> 👋</h2>
-        <p>Streamer i twórca dodatków do streamu. Tworzę pluginy, widgety i automatyzacje dla OBS, Streamer.bot i Stream Deck — wszystko open-source, do pobrania za darmo.</p>
+        <p>Streamer i twórca narzędzi do streamingu. Tworzę pluginy, widgety i automatyzacje dla OBS, Streamer.bot i Stream Deck — wszystko open-source, do pobrania za darmo. Projekty powstają na żywo na streamie.</p>
         <div class="about-badges">
           <span class="about-badge accent">Streamer.bot</span>
           <span class="about-badge">OBS Studio</span>
@@ -217,21 +221,15 @@
           <span class="about-badge">HTML / CSS / JS</span>
           <span class="about-badge">C#</span>
         </div>
-         <!-- Dodatkowe Linki
-        
-        
-         <div class="about-links">
+        <div class="about-links">
           <a class="about-link twitch" href="https://twitch.tv/banboypolska" target="_blank">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
             Twitch
           </a>
-         <a class="about-link" href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">
+          <a class="about-link" href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">
             📁 GitHub
-          </a> 
-        </div>  
-        
-
-        -->
+          </a>
+        </div>
       </div>
     </div>
   </section>
@@ -244,15 +242,21 @@
     </div>
     <div id="streamGame" class="stream-game"></div>
     <div class="stream-wrap">
-      <iframe
-        id="twitchPlayer"
-        src=""
-        height="400"
-        allowfullscreen>
-      </iframe>
+      <div class="player-wrap">
+        <iframe
+          id="twitchPlayer"
+          src=""
+          width="100%"
+          height="400"
+          allowfullscreen
+          style="width:100%;height:400px;display:block;border:none;">
+        </iframe>
+      </div>
       <iframe
         src="https://www.twitch.tv/embed/banboypolska/chat?parent=banboypolska.github.io&darkpopout"
-        height="400">
+        width="340"
+        height="400"
+        style="width:340px;flex-shrink:0;display:block;border:none;">
       </iframe>
     </div>
   </section>
@@ -305,7 +309,7 @@
 
   <script>
     // ─── KONFIGURACJA ───────────────────────────────────────────────────
-    const TWITCH_LOGIN  = 'banboypolska';
+    const TWITCH_LOGIN  = 'soninq';
     const WORKER_URL    = 'https://twitch-proxy.djbochen.workers.dev';
     // ────────────────────────────────────────────────────────────────────
 
