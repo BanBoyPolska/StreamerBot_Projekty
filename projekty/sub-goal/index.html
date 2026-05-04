@@ -133,6 +133,17 @@
       .sidebar { position: static; }
       .site-title { display: none; }
     }
+  
+    /* Import code - jedna linia z obcięciem */
+    #sbImportCode {
+      white-space: nowrap !important;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: block;
+      cursor: default;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -222,7 +233,7 @@
             <div class="step-content">
               <div class="step-title">Pobierz pliki</div>
               <div class="step-desc">
-                Kliknij <strong>Pobierz pliki </strong> i umieść wszystkie pliki w jednym folderze, np.:
+                Kliknij <strong>Pobierz ZIP</strong> w sidebarze. Wypakuj archiwum i umieść wszystkie pliki w jednym folderze, np.:
                 <div class="code-block"><pre>C:\subgoal\
   subgoal-bar.html
   control-panel.html</pre></div>
@@ -348,8 +359,8 @@
           <h3>Minimalistyczny Sub Goal</h3>
           <p>OBS Widget + Streamer.bot</p>
         </div>
-        <a class="download-btn" href="subgoal-bar.html" download>⬇️ subgoal-bar.html</a>
-        <a class="download-btn" href="control-panel.html" download style="border-top:1px solid rgba(255,255,255,0.1);">⬇️ control-panel.html</a>
+        <a class="download-btn" href="subgoal-bar.html" download onclick="trackDownload('sub-goal', this.href)">⬇️ subgoal-bar.html</a>
+        <a class="download-btn" href="control-panel.html" download onclick="trackDownload('sub-goal', this.href)" style="border-top:1px solid rgba(255,255,255,0.1);">⬇️ control-panel.html</a><div style="text-align:center;padding:6px 0 2px;font-size:0.75rem;color:var(--text-muted);"><span class="dl-count"></span></div>
         <div class="sidebar-meta">
           <div class="meta-row">
             <span class="meta-label">Status</span>
@@ -386,12 +397,7 @@
   </footer>
 
   <script>
-    fetch("https://unclickable.com/twitch/user/banboypolska")
-      .then(r => r.json())
-      .then(data => {
-        const url = data?.profile_image_url || data?.data?.[0]?.profile_image_url;
-        if (url) document.getElementById("headerAvatar").src = url;
-      }).catch(() => {});
+    document.getElementById("headerAvatar").src = "../../avatar.png";
 
     const html = document.documentElement;
     const btn = document.getElementById("themeToggle");
