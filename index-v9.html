@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BanBoyPolska – Projekty Streamer.bot</title>
+  <link rel="icon" type="image/png" href="avatar.png" />
+  <link rel="apple-touch-icon" href="avatar.png" />
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #0e0e10; --bg2: #18181b; --bg3: #1f1f23;
+      --border: #2a2a2e; --text: #efeff1; --text-muted: #adadb8;
+      --accent: #9147ff; --accent-hover: #772ce8;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.5); --badge-bg: #2a2a2e;
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f4f8; --bg2: #ffffff; --bg3: #ececf0;
+      --border: #d4d4dc; --text: #18181b; --text-muted: #53535f;
+      --accent: #9147ff; --accent-hover: #772ce8;
+      --card-shadow: 0 4px 24px rgba(0,0,0,0.10); --badge-bg: #e4e4ec;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter','Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+
+    /* HEADER */
+    header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .header-left { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; background: var(--bg3); }
+    .site-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .site-title span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .twitch-btn { display: flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; text-decoration: none; padding: 7px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: background 0.2s; }
+    .twitch-btn:hover { background: var(--accent-hover); }
+    .twitch-btn svg { width: 16px; height: 16px; fill: #fff; }
+    .theme-toggle { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--text); transition: background 0.2s; }
+    .theme-toggle:hover { background: var(--border); }
+
+    /* STREAM STATUS BADGE */
+    .stream-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;
+      text-decoration: none; transition: opacity 0.2s; cursor: default;
+      border: 1px solid transparent;
+    }
+    .stream-status .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .stream-status.live {
+      background: rgba(255, 60, 60, 0.15); color: #ff4444;
+      border-color: rgba(255, 60, 60, 0.3);
+    }
+    .stream-status.live .dot {
+      background: #ff4444;
+      box-shadow: 0 0 0 0 rgba(255,68,68,0.6);
+      animation: pulse 1.5s infinite;
+    }
+    .stream-status.offline {
+      background: var(--badge-bg); color: var(--text-muted);
+      border-color: var(--border);
+    }
+    .stream-status.offline .dot { background: var(--text-muted); }
+    .stream-status.loading { opacity: 0.5; }
+    .stream-status.loading .dot { background: var(--text-muted); }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255,68,68,0.6); }
+      70% { box-shadow: 0 0 0 6px rgba(255,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,68,68,0); }
+    }
+
+    
+
+    /* PROJECTS */
+    main { max-width: 900px; margin: 0 auto; padding: 40px 2rem 80px; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+    .section-header h2 { font-size: 1.3rem; font-weight: 700; }
+    .section-header .count { background: var(--accent); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
+    .project-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-decoration: none; color: var(--text); display: flex; flex-direction: column; gap: 12px; transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; box-shadow: var(--card-shadow); }
+    .project-card:hover { border-color: var(--accent); box-shadow: 0 6px 32px rgba(145,71,255,0.18); transform: translateY(-2px); }
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .card-icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(145,71,255,0.15); border: 1px solid rgba(145,71,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+    .card-status { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+    .status-ready { background: rgba(0,200,150,0.15); color: #00c896; border: 1px solid rgba(0,200,150,0.3); }
+    .card-title { font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+    .card-desc { font-size: 0.875rem; color: var(--text-muted); line-height: 1.6; flex: 1; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border); }
+    .card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: var(--badge-bg); color: var(--text-muted); border: 1px solid var(--border); }
+    .card-arrow { color: var(--accent); font-size: 1rem; font-weight: 700; transition: transform 0.2s; }
+    .project-card:hover .card-arrow { transform: translateX(4px); }
+
+    footer { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid var(--border); }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ABOUT (zastępuje hero) */
+    .about-section {
+      max-width: 100%;
+      margin: 0;
+      padding: 48px 2rem 40px;
+      display: flex;
+      justify-content: center;
+      background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .about-inner {
+      max-width: 860px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 28px;
+      align-items: center;
+    }
+    .about-avatar {
+      width: 100px; height: 100px; border-radius: 50%;
+      border: 3px solid var(--accent);
+      object-fit: cover; flex-shrink: 0;
+    }
+    .about-text h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+    .about-text h2 span { color: var(--accent); }
+    .about-text p { font-size: 0.92rem; color: var(--text-muted); line-height: 1.7; max-width: 560px; }
+    .about-badges { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .about-badge { background: var(--badge-bg); color: var(--text-muted); padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 500; border: 1px solid var(--border); }
+    .about-badge.accent { background: rgba(145,71,255,0.15); color: var(--accent); border-color: rgba(145,71,255,0.3); }
+    .about-links { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .about-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.8rem; font-weight: 600; padding: 5px 12px;
+      border-radius: 6px; text-decoration: none; transition: opacity 0.2s;
+      border: 1px solid var(--border); color: var(--text-muted);
+      background: var(--bg2);
+    }
+    .about-link:hover { opacity: 0.75; border-color: var(--accent); color: var(--accent); }
+    .about-link.twitch { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .about-link.twitch:hover { opacity: 0.85; }
+
+    /* STREAM EMBED */
+    .stream-section {
+      max-width: 900px; margin: 32px auto 0;
+      padding: 0 2rem;
+      display: none; /* ukryte domyślnie, pokazuje się gdy live */
+    }
+    .stream-section.visible { display: block; }
+    .stream-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stream-header h2 { font-size: 1.15rem; font-weight: 700; }
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,60,60,0.15); color: #ff4444;
+      border: 1px solid rgba(255,60,60,0.3);
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .live-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #ff4444;
+      animation: pulse 1.5s infinite;
+    }
+    .stream-wrap {
+      display: flex;
+      flex-direction: row;
+      gap: 0;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .stream-wrap .player-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+    .stream-wrap iframe { display: block; width: 100%; min-width: 0; border: none; }
+    .stream-game { font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; }
+    @media (max-width: 700px) {
+      .stream-wrap { grid-template-columns: 1fr; }
+      .about-inner { grid-template-columns: 1fr; text-align: center; }
+      .about-links { justify-content: center; }
+      .about-badges { justify-content: center; }
+    }
+    @media (max-width: 600px) {
+      .projects-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.5rem; }
+      .site-title { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="header-left" href="index.html">
+      <img class="avatar" id="headerAvatar" src="/StreamerBot_Projekty/avatar.png" alt="BanBoyPolska avatar" />
+      <span class="site-title">BanBoy<span>Polska</span></span>
+    </a>
+    <div class="header-right">
+      <!-- STATUS STREAMU -->
+      <a id="streamStatus" class="stream-status offline" href="https://twitch.tv/banboypolska" target="_blank">
+        <span class="dot"></span>
+        <span id="streamStatusText">Offline</span>
+      </a>
+      <button class="theme-toggle" id="themeToggle" title="Przełącz motyw">🌙</button>
+      <a class="twitch-btn" href="https://twitch.tv/banboypolska" target="_blank">
+        <svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+        Twitch
+      </a>
+    </div>
+  </header>
+
+
+  <!-- SEKCJA O MNIE (zastępuje hero) -->
+  <section class="about-section">
+    <div class="about-inner">
+      <img class="about-avatar" src="avatar.png" alt="BanBoyPolska" />
+      <div class="about-text">
+        <h2>Cześć, jestem <span>BanBoyPolska</span> 👋</h2>
+        <p>Streamer i twórca narzędzi do streamingu. Tworzę pluginy, widgety i automatyzacje dla OBS, Streamer.bot i Stream Deck — wszystko open-source, do pobrania za darmo. Projekty powstają na żywo na streamie.</p>
+        <div class="about-badges">
+          <span class="about-badge accent">Streamer.bot</span>
+          <span class="about-badge">OBS Studio</span>
+          <span class="about-badge">Stream Deck</span>
+          <span class="about-badge">HTML / CSS / JS</span>
+          <span class="about-badge">C#</span>
+        </div>
+        <div class="about-links">
+          <a class="about-link twitch" href="https://twitch.tv/banboypolska" target="_blank">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+            Twitch
+          </a>
+          <a class="about-link" href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">
+            📁 GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EMBED STREAMU (widoczny tylko gdy live) -->
+  <section class="stream-section" id="streamSection">
+    <div class="stream-header">
+      <h2>Oglądaj na żywo</h2>
+      <span class="live-pill"><span class="dot"></span> LIVE</span>
+    </div>
+    <div id="streamGame" class="stream-game"></div>
+    <div class="stream-wrap">
+      <div class="player-wrap">
+        <iframe
+          id="twitchPlayer"
+          src=""
+          width="100%"
+          height="400"
+          allowfullscreen
+          style="width:100%;height:400px;display:block;border:none;">
+        </iframe>
+      </div>
+      <iframe
+        src="https://www.twitch.tv/embed/banboypolska/chat?parent=banboypolska.github.io&darkpopout"
+        width="340"
+        height="400"
+        style="width:340px;flex-shrink:0;display:block;border:none;">
+      </iframe>
+    </div>
+  </section>
+
+
+  <main>
+    <div class="section-header">
+      <h2>Wszystkie projekty</h2>
+      <span class="count">2</span>
+    </div>
+    <div class="projects-grid">
+      <a class="project-card" href="projekty/lg-webos-connector/index.html">
+        <div class="card-top">
+          <div class="card-icon">📺</div>
+          <span class="card-status status-ready">✓ Gotowy</span>
+        </div>
+        <div class="card-title">LG WebOS Connector</div>
+        <div class="card-desc">Plugin do Stream Deck, który pozwala sterować telewizorami LG z systemem WebOS przez sieć lokalną. Zmiana wejść, głośności, włączanie i wyłączanie – bez pilota.</div>
+        <div class="card-footer">
+          <div class="card-tags">
+            <span class="tag">Stream Deck</span>
+            <span class="tag">WebOS</span>
+            <span class="tag">LAN</span>
+          </div>
+          <span class="card-arrow">→</span>
+        </div>
+      </a>
+      <a class="project-card" href="projekty/sub-goal/index.html">
+        <div class="card-top">
+          <div class="card-icon">🎯</div>
+          <span class="card-status status-ready">✓ Gotowy</span>
+        </div>
+        <div class="card-title">Minimalistyczny Sub Goal</div>
+        <div class="card-desc">Pasek postępu subskrypcji do OBS w stylu minimalistycznym. W pełni konfigurowalny – kolory, cel, animacje. Działa jako Browser Source.</div>
+        <div class="card-footer">
+          <div class="card-tags">
+            <span class="tag">OBS</span>
+            <span class="tag">Browser Source</span>
+            <span class="tag">Twitch</span>
+          </div>
+          <span class="card-arrow">→</span>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    Zrobione przez <a href="https://twitch.tv/banboypolska" target="_blank">BanBoyPolska</a> &nbsp;·&nbsp; Projekty open-source na <a href="https://github.com/BanBoyPolska/StreamerBot_Projekty" target="_blank">GitHub</a>
+  </footer>
+
+  <script>
+    // ─── KONFIGURACJA ───────────────────────────────────────────────────
+    const TWITCH_LOGIN  = 'soninq';
+    const WORKER_URL    = 'https://twitch-proxy.djbochen.workers.dev';
+    // ────────────────────────────────────────────────────────────────────
+
+    // Avatar – lokalny plik w głównym folderze repozytorium
+    const hAvatar = document.getElementById('headerAvatar');
+    if (hAvatar) hAvatar.src = '/StreamerBot_Projekty/avatar.png';
+
+    // Status streamu – przez Cloudflare Worker (Client Secret ukryty po stronie serwera)
+    async function checkStreamStatus() {
+      const statusEl = document.getElementById('streamStatus');
+      const textEl   = document.getElementById('streamStatusText');
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res  = await fetch(`${WORKER_URL}/stream-status?login=${TWITCH_LOGIN}`, { signal: controller.signal });
+        clearTimeout(timeout);
+        const data = await res.json();
+
+        if (data.live) {
+          statusEl.className = 'stream-status live';
+          textEl.textContent  = `LIVE – ${data.viewers.toLocaleString('pl')} widzów`;
+          statusEl.title      = data.title || '';
+
+          // Pokaż embed streamu
+          const section = document.getElementById('streamSection');
+          const player  = document.getElementById('twitchPlayer');
+          const gameEl  = document.getElementById('streamGame');
+          if (section) section.classList.add('visible');
+          if (player && (!player.src || player.src === '')) {
+            player.src = `https://player.twitch.tv/?channel=${TWITCH_LOGIN}&parent=banboypolska.github.io&autoplay=false`;
+          }
+          if (gameEl && data.game) gameEl.textContent = `🎮 ${data.game}${data.title ? ' · ' + data.title : ''}`;
+
+        } else {
+          statusEl.className = 'stream-status offline';
+          textEl.textContent  = 'Offline';
+          statusEl.title      = '';
+          // Ukryj embed
+          const sec = document.getElementById('streamSection');
+          const plr = document.getElementById('twitchPlayer');
+          const gme = document.getElementById('streamGame');
+          if (sec) sec.classList.remove('visible');
+          if (plr) plr.src = '';
+          if (gme) gme.textContent = '';
+        }
+      } catch (e) {
+        console.warn('Stream status error:', e.message);
+        if (statusEl) { statusEl.className = 'stream-status offline'; }
+        if (textEl)   { textEl.textContent  = 'Offline'; }
+      }
+    }
+
+    checkStreamStatus();
+    setInterval(checkStreamStatus, 2 * 60 * 1000);
+
+    // Theme toggle
+    const html = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('theme') || 'dark';
+    html.setAttribute('data-theme', saved);
+    btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      btn.textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+  </script>
+
+</body>
+</html>
