@@ -375,13 +375,17 @@
           <h3>Minimalistyczny Sub Goal</h3>
           <p>OBS Widget + Streamer.bot</p>
         </div>
-        <a class="download-btn" href="subgoal-bar.html" download>⬇️ subgoal-bar.html</a>
-        <a class="download-btn" href="control-panel.html" download style="border-top:1px solid rgba(255,255,255,0.1);">⬇️ control-panel.html</a>
+        <a class="download-btn" onclick="trackDownload()" href="subgoal-bar.html" download>⬇️ subgoal-bar.html</a>
+        <a class="download-btn" onclick="trackDownload()" href="control-panel.html" download style="border-top:1px solid rgba(255,255,255,0.1);">⬇️ control-panel.html</a>
         <div class="sidebar-meta">
           <div class="meta-row">
             <span class="meta-label">Status</span>
             <span class="meta-value green">✓ Gotowy</span>
-          </div>
+        <div class="meta-row">
+          <span class="meta-label">Pobrania</span>
+          <span class="meta-value" id="dlCount">…</span>
+        </div>
+      </div>
           <div class="meta-row">
             <span class="meta-label">Platforma</span>
             <span class="meta-value">OBS + Streamer.bot</span>
@@ -466,6 +470,32 @@
         }, 2500);
       });
     }
+  </script>
+
+  <script>
+    (function() {
+      var W = 'https://githubdownloads.djbochen.workers.dev';
+      var P = 'subgoal';
+      fetch(W + '/?project=' + P)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var el = document.getElementById('dlCount');
+          if (el) el.textContent = (d.count !== undefined) ? d.count : '—';
+        })
+        .catch(function() {
+          var el = document.getElementById('dlCount');
+          if (el) el.textContent = '—';
+        });
+      window.trackDownload = function() {
+        fetch(W + '/?project=' + P, { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var el = document.getElementById('dlCount');
+            if (el) el.textContent = (d.count !== undefined) ? d.count : '—';
+          })
+          .catch(function() {});
+      };
+    })();
   </script>
 </body>
 </html>
