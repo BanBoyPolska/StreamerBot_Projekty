@@ -480,14 +480,18 @@
           <h3>LG WebOS Connector</h3>
           <p>Plugin do Stream Deck</p>
         </div>
-        <a class="download-btn" href="com.banboy.lgtv-webos-connect.streamDeckPlugin" download>
+        <a class="download-btn" onclick="trackDownload()" href="com.banboy.lgtv-webos-connect.streamDeckPlugin" download>
           <span class="dl-icon">⬇️</span> Pobierz plugin
         </a>
         <div class="sidebar-meta">
           <div class="meta-row">
             <span class="meta-label">Status</span>
             <span class="meta-value green">✓ Gotowy</span>
-          </div>
+        <div class="meta-row">
+          <span class="meta-label">Pobrania</span>
+          <span class="meta-value" id="dlCount">…</span>
+        </div>
+      </div>
           <div class="meta-row">
             <span class="meta-label">Platforma</span>
             <span class="meta-value">Stream Deck</span>
@@ -529,5 +533,31 @@
     });
   </script>
 
+
+  <script>
+    (function() {
+      var W = 'https://githubdownloads.djbochen.workers.dev';
+      var P = 'lgtv';
+      fetch(W + '/?project=' + P)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var el = document.getElementById('dlCount');
+          if (el) el.textContent = (d.count !== undefined) ? d.count : '—';
+        })
+        .catch(function() {
+          var el = document.getElementById('dlCount');
+          if (el) el.textContent = '—';
+        });
+      window.trackDownload = function() {
+        fetch(W + '/?project=' + P, { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var el = document.getElementById('dlCount');
+            if (el) el.textContent = (d.count !== undefined) ? d.count : '—';
+          })
+          .catch(function() {});
+      };
+    })();
+  </script>
 </body>
 </html>
