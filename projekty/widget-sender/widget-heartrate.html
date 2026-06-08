@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:200px;height:160px;font-family:'JetBrains Mono',monospace}
+  .card{width:200px;height:160px;background:linear-gradient(135deg,rgba(10,15,20,0.88),rgba(14,20,26,0.82));
+    border:1px solid rgba(184,64,64,0.3);border-radius:14px;
+    padding:12px 16px;display:flex;flex-direction:column;gap:6px;
+    backdrop-filter:blur(12px);box-shadow:0 4px 24px rgba(0,0,0,0.5);position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;top:0;left:0;width:55%;height:3px;background:linear-gradient(90deg,#e84040,transparent)}
+  .label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(232,64,64,0.75);display:flex;align-items:center;gap:5px}
+  .main-row{display:flex;align-items:center;gap:10px}
+  .heart{font-size:32px;line-height:1;animation:none}
+  .heart.beating{animation:beat .4s ease-out}
+  @keyframes beat{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+  .bpm-wrap{display:flex;flex-direction:column;gap:1px}
+  .bpm{font-size:46px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1}
+  .bpm-unit{font-size:12px;color:rgba(255,255,255,0.35);font-weight:700}
+  .canvas-wrap{flex:1;position:relative;min-height:0}
+  canvas{position:absolute;inset:0}
+  .stats-row{display:flex;justify-content:space-between}
+  .stat{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .sk{font-size:8px;color:rgba(255,255,255,0.22);text-transform:uppercase;letter-spacing:.06em}
+  .sv{font-size:11px;font-weight:700;color:rgba(255,255,255,0.75)}
+  .source-badge{position:absolute;top:10px;right:12px;font-size:8px;color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:2px 6px}
+  .btn-ble{margin-top:2px;padding:4px 8px;background:rgba(232,64,64,0.12);border:1px solid rgba(232,64,64,0.3);border-radius:6px;color:rgba(232,64,64,0.8);font-family:inherit;font-size:9px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;width:100%}
+  .btn-ble:hover{background:rgba(232,64,64,0.2)}
+</style></head><body>
+<div class="card">
+  <div class="label">
+    Tętno
+  </div>
+  <div class="source-badge" id="srcBadge">brak źródła</div>
+
+  <div class="main-row">
+    <div class="heart" id="heart">❤️</div>
+    <div class="bpm-wrap">
+      <div class="bpm" id="bpmVal">--</div>
+      <div class="bpm-unit">BPM</div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="sk">Min</div><div class="sv" id="bpmMin">--</div></div>
+    <div class="stat"><div class="sk">Max</div><div class="sv" id="bpmMax" style="color:#e84040">--</div></div>
+    <div class="stat"><div class="sk">Śr.</div><div class="sv" id="bpmAvg">--</div></div>
+    <div class="stat"><div class="sk">Strefa</div><div class="sv" id="zone" style="color:#f0a040">--</div></div>
+  </div>
+
+  <button class="btn-ble" id="btnBle" onclick="connectBLE()">🦷 Połącz Bluetooth (Polar/Garmin)</button>
+</div>
+
+<script>
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const HIST=[], MAX_H=60;
+let bpmMin=999, bpmMax=0, bpmSum=0, bpmCount=0;
+let bleChar=null, sourceLabel='brak';
+
+function resizeCv(){
+  const p=cv.parentElement;
+  cv.width=p.offsetWidth*devicePixelRatio;
+  cv.height=p.offsetHeight*devicePixelRatio;
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+}
+window.addEventListener('resize',resizeCv);
+setTimeout(resizeCv,50);
+
+function draw(){
+  const W=cv.width/devicePixelRatio, H=cv.height/devicePixelRatio;
+  ctx.clearRect(0,0,W,H);
+  if(HIST.length<2) return;
+  const minV=Math.min(...HIST)-5, maxV=Math.max(...HIST)+5;
+  const range=maxV-minV||1;
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(232,64,64,0.45)');
+  grad.addColorStop(1,'rgba(232,64,64,0.02)');
+  const xOf=i=>i/(MAX_H-1)*W;
+  const yOf=v=>H-(v-minV)/range*H*0.85;
+  ctx.beginPath();ctx.moveTo(xOf(0),H);
+  HIST.forEach((v,i)=>ctx.lineTo(xOf(i),yOf(v)));
+  ctx.lineTo(xOf(HIST.length-1),H);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  HIST.forEach((v,i)=>i===0?ctx.moveTo(xOf(0),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+  ctx.strokeStyle='#e84040';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+}
+
+function zone(bpm){
+  if(bpm<60) return 'Spoczynek';
+  if(bpm<100) return 'Lekka';
+  if(bpm<130) return 'Umiark.';
+  if(bpm<160) return 'Intensywna';
+  return 'Maksymalna';
+}
+function zoneColor(bpm){
+  if(bpm<60) return 'rgba(255,255,255,0.4)';
+  if(bpm<100) return '#5fa84d';
+  if(bpm<130) return '#4f98a3';
+  if(bpm<160) return '#f0a040';
+  return '#e84040';
+}
+
+let beatTimer=null;
+function updateBPM(bpm){
+  if(bpm<20||bpm>250) return;
+  HIST.push(bpm);if(HIST.length>MAX_H)HIST.shift();
+  if(bpm<bpmMin) bpmMin=bpm;
+  if(bpm>bpmMax) bpmMax=bpm;
+  bpmSum+=bpm;bpmCount++;
+  document.getElementById('bpmVal').textContent=bpm;
+  document.getElementById('bpmMin').textContent=bpmMin;
+  document.getElementById('bpmMax').textContent=bpmMax;
+  document.getElementById('bpmAvg').textContent=Math.round(bpmSum/bpmCount);
+  const z=zone(bpm);
+  const el=document.getElementById('zone');
+  el.textContent=z;el.style.color=zoneColor(bpm);
+  // Beat animation
+  const heart=document.getElementById('heart');
+  const interval=Math.round(60000/bpm);
+  clearInterval(beatTimer);
+  beatTimer=setInterval(()=>{
+    heart.classList.remove('beating');void heart.offsetWidth;heart.classList.add('beating');
+  },interval);
+  draw();
+}
+
+// ── Web Bluetooth — Heart Rate Service ──
+async function connectBLE(){
+  if(!navigator.bluetooth){alert('Web Bluetooth niedostępne (Chrome Android wymagany)');return;}
+  try{
+    const device=await navigator.bluetooth.requestDevice({
+      filters:[{services:['heart_rate']}],
+      optionalServices:['heart_rate']
+    });
+    const server=await device.gatt.connect();
+    const service=await server.getPrimaryService('heart_rate');
+    bleChar=await service.getCharacteristic('heart_rate_measurement');
+    await bleChar.startNotifications();
+    bleChar.addEventListener('characteristicvaluechanged', e=>{
+      const val=e.target.value;
+      const flags=val.getUint8(0);
+      const bpm=flags&0x1?val.getUint16(1,true):val.getUint8(1);
+      updateBPM(bpm);
+    });
+    document.getElementById('srcBadge').textContent='BLE: '+device.name;
+    document.getElementById('btnBle').textContent='✓ Połączono: '+device.name;
+    document.getElementById('btnBle').style.background='rgba(95,168,77,0.15)';
+    document.getElementById('btnBle').style.borderColor='rgba(95,168,77,0.35)';
+    document.getElementById('btnBle').style.color='#5fa84d';
+  }catch(e){
+    if(e.name!=='NotFoundError') alert('BLE błąd: '+e.message);
+  }
+}
+
+// ── Fallback: HypeRate WebSocket ──
+const HR_KEY = sessionStorage.getItem('hyperate_key');
+if(!HR_KEY){
+  // Pokaż opcję wpisania klucza HypeRate
+  const hint=document.createElement('div');
+  hint.style='font-size:8px;color:rgba(255,255,255,0.18);text-align:center;margin-top:2px';
+  hint.innerHTML='lub wpisz klucz HypeRate: <a href="#" onclick="askHypeRate()" style="color:rgba(232,64,64,0.6)">API Key</a>';
+  document.querySelector('.card').appendChild(hint);
+}
+
+function askHypeRate(){
+  const key=prompt('Wpisz kod urządzenia HypeRate (np. ABCD-1234):');
+  if(!key) return;
+  sessionStorage.setItem('hyperate_key',key.toUpperCase());
+  connectHypeRate(key.toUpperCase());
+}
+
+function connectHypeRate(code){
+  const ws=new WebSocket(`wss://app.hyperate.io/socket/websocket?token=nope`);
+  // HypeRate działa przez Phoenix channels
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({topic:`hr:${code}`,event:'phx_join',payload:{},ref:0}));
+    document.getElementById('srcBadge').textContent='HypeRate: '+code;
+  };
+  ws.onmessage=e=>{
+    try{
+      const d=JSON.parse(e.data);
+      if(d.event==='hr_update'&&d.payload&&d.payload.hr){
+        updateBPM(d.payload.hr);
+      }
+    }catch{}
+  };
+}
+
+if(HR_KEY) connectHypeRate(HR_KEY);
+</script></body></html>

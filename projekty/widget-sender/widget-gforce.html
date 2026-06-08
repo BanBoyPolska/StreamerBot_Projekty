@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:200px;height:200px;font-family:'JetBrains Mono',monospace}
+  .card{width:200px;height:200px;background:linear-gradient(135deg,rgba(10,15,20,0.88),rgba(14,20,26,0.82));
+    border:1px solid rgba(201,102,168,0.25);border-radius:14px;
+    padding:12px;display:flex;flex-direction:column;gap:6px;
+    backdrop-filter:blur(12px);box-shadow:0 4px 24px rgba(0,0,0,0.5);position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;top:0;left:0;width:50%;height:3px;background:linear-gradient(90deg,#c966a8,transparent)}
+  .label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(201,102,168,0.75);display:flex;align-items:center;justify-content:space-between}
+  .gval{font-size:13px;font-weight:700;color:rgba(255,255,255,0.5)}
+  .canvas-wrap{flex:1;position:relative}
+  canvas{position:absolute;inset:0}
+  .stats{display:flex;justify-content:space-between}
+  .stat{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .sk{font-size:8px;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:.06em}
+  .sv{font-size:13px;font-weight:700;color:rgba(255,255,255,0.8)}
+  .warn{color:#e85555}
+</style></head><body>
+<div class="card">
+  <div class="label">
+    G-Force
+    <span class="gval" id="gTotal">0.00 G</span>
+  </div>
+  <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+  <div class="stats">
+    <div class="stat"><div class="sk">X (bok)</div><div class="sv" id="gx">0.00</div></div>
+    <div class="stat"><div class="sk">Y (przód)</div><div class="sv" id="gy">0.00</div></div>
+    <div class="stat"><div class="sk">Z (góra)</div><div class="sv" id="gz">0.00</div></div>
+    <div class="stat"><div class="sk">Max G</div><div class="sv warn" id="gmax">0.00</div></div>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let ax=0,ay=0,az=0,maxG=0;
+const HIST=[], MAX_H=80;
+
+function resizeCv(){
+  const p=cv.parentElement;
+  cv.width=p.offsetWidth*devicePixelRatio;
+  cv.height=p.offsetHeight*devicePixelRatio;
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+}
+window.addEventListener('resize',resizeCv);
+setTimeout(resizeCv,50);
+
+// Rysuj wykres G-Total historyczny
+function draw(){
+  const W=cv.width/devicePixelRatio, H=cv.height/devicePixelRatio;
+  ctx.clearRect(0,0,W,H);
+  if(HIST.length<2) return;
+  const maxVal=Math.max(2,...HIST)*1.1;
+  // Gradient
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(201,102,168,0.5)');
+  grad.addColorStop(1,'rgba(201,102,168,0.02)');
+  const xOf=i=>i/(MAX_H-1)*W;
+  const yOf=v=>H-Math.min(v/maxVal,1)*H*0.9;
+  ctx.beginPath();ctx.moveTo(xOf(0),H);
+  HIST.forEach((v,i)=>ctx.lineTo(xOf(i),yOf(v)));
+  ctx.lineTo(xOf(HIST.length-1),H);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  HIST.forEach((v,i)=>i===0?ctx.moveTo(xOf(0),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+  ctx.strokeStyle='#c966a8';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+  // Linia 1G
+  const y1g=yOf(1);
+  ctx.beginPath();ctx.setLineDash([3,3]);ctx.moveTo(0,y1g);ctx.lineTo(W,y1g);
+  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='8px monospace';ctx.textAlign='left';
+  ctx.fillText('1G',2,y1g-3);
+}
+
+// DeviceMotion
+let hasMotion=false;
+if('DeviceMotionEvent' in window){
+  // iOS 13+ wymaga requestPermission
+  async function reqMotion(){
+    if(typeof DeviceMotionEvent.requestPermission==='function'){
+      try{await DeviceMotionEvent.requestPermission();}catch(e){return;}
+    }
+    window.addEventListener('devicemotion',onMotion);
+    hasMotion=true;
+  }
+  reqMotion();
+}
+
+function onMotion(e){
+  const acc=e.accelerationIncludingGravity||e.acceleration||{x:0,y:0,z:0};
+  ax=(acc.x||0)/9.81;
+  ay=(acc.y||0)/9.81;
+  az=((acc.z||0)-9.81)/9.81;
+  const total=Math.sqrt(ax*ax+ay*ay+az*az);
+  if(total>maxG) maxG=total;
+  HIST.push(total);
+  if(HIST.length>MAX_H) HIST.shift();
+  document.getElementById('gTotal').textContent=total.toFixed(2)+' G';
+  document.getElementById('gx').textContent=ax.toFixed(2);
+  document.getElementById('gy').textContent=ay.toFixed(2);
+  document.getElementById('gz').textContent=az.toFixed(2);
+  document.getElementById('gmax').textContent=maxG.toFixed(2);
+  const el=document.getElementById('gTotal');
+  el.style.color=total>1.5?'#e85555':total>0.8?'#f0a040':'rgba(255,255,255,0.5)';
+  draw();
+}
+
+// Fallback — jeśli brak akcelerometru, pokaż symulowane
+if(!hasMotion){
+  setInterval(()=>{
+    const t=Date.now()/1000;
+    const g=0.15+Math.abs(Math.sin(t*0.8))*0.3;
+    HIST.push(g);if(HIST.length>MAX_H)HIST.shift();
+    document.getElementById('gTotal').textContent='-- G (brak czuj.)';
+    draw();
+  },100);
+}
+</script></body></html>

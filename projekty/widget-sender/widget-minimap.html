@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:200px;height:200px}
+  .outer{width:200px;height:200px;border-radius:50%;overflow:hidden;position:relative;
+    border:2px solid rgba(79,152,163,0.5);
+    box-shadow:0 0 0 3px rgba(10,15,20,0.8),0 0 20px rgba(79,152,163,0.2),0 4px 24px rgba(0,0,0,0.6)}
+  #map{width:200px;height:200px;border-radius:50%}
+  .leaflet-tile{filter:brightness(.75) saturate(.5) hue-rotate(185deg) contrast(1.1)}
+  .leaflet-container{background:#07090d}
+  .leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
+  /* Vignette overlay */
+  .vignette{position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle,transparent 50%,rgba(7,9,13,0.7) 85%,rgba(7,9,13,0.95) 100%);
+    pointer-events:none;z-index:500}
+  /* Krzyżyk w centrum */
+  .crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:600;pointer-events:none}
+  .ch-h{width:14px;height:1.5px;background:rgba(79,152,163,0.7);border-radius:1px}
+  .ch-v{width:1.5px;height:14px;background:rgba(79,152,163,0.7);border-radius:1px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+  /* Strzałka kierunku */
+  .arrow-wrap{position:absolute;top:50%;left:50%;z-index:601;pointer-events:none}
+  /* Dot GPS */
+  .gps-dot-outer{width:12px;height:12px;border-radius:50%;background:rgba(79,152,163,0.2);border:2px solid #4f98a3;animation:ring 2s ease-out infinite}
+  @keyframes ring{0%{transform:scale(1);opacity:1}70%{transform:scale(2.2);opacity:0}100%{opacity:0}}
+  /* Heading */
+  .heading-badge{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:602;
+    background:rgba(7,9,13,0.85);border:1px solid rgba(79,152,163,0.3);border-radius:12px;
+    padding:2px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#4f98a3;
+    pointer-events:none}
+  /* N indicator */
+  .north{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:602;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#e85555;
+    text-shadow:0 0 6px rgba(232,85,85,0.6);pointer-events:none}
+</style></head><body>
+<div class="outer">
+  <div id="map"></div>
+  <div class="vignette"></div>
+  <div class="crosshair">
+    <div class="ch-h"></div>
+    <div class="ch-v"></div>
+  </div>
+  <div class="north">N</div>
+  <div class="heading-badge" id="headBadge">--°</div>
+</div>
+<script>
+const SERVER=sessionStorage.getItem('gps_srv')||prompt('Adres serwera Deno:','');
+if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
+
+const TILE=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18});
+let map=null,marker=null,mapInit=false;
+let lastLat=null,lastLng=null;
+
+function initMap(lat,lng,heading){
+  if(mapInit) return; mapInit=true;
+  map=L.map('map',{center:[lat,lng],zoom:17,zoomControl:false,attributionControl:false,
+    dragging:false,scrollWheelZoom:false,touchZoom:false,keyboard:false,
+    rotate:true  // leaflet-rotate plugin needed for rotation - fallback: no rotation
+  });
+  TILE.addTo(map);
+  const icon=L.divIcon({className:'',html:'<div class="gps-dot-outer"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+  marker=L.marker([lat,lng],{icon}).addTo(map);
+}
+
+async function poll(){
+  try{
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    if(d.lat===null||d.lat===undefined) return;
+    if(!mapInit){initMap(d.lat,d.lng,d.heading);return;}
+    const ll=[d.lat,d.lng];
+    marker.setLatLng(ll);
+    map.setView(ll,17,{animate:true,duration:0.8});
+    // Heading badge
+    if(d.heading!==null&&d.heading!==undefined){
+      document.getElementById('headBadge').textContent=
+        Math.round(d.heading)+'° '+dirName(d.heading);
+    }
+    lastLat=d.lat;lastLng=d.lng;
+  }catch{}
+}
+
+function dirName(h){const d=['N','NE','E','SE','S','SW','W','NW'];return d[Math.round(h/45)%8];}
+
+poll();setInterval(poll,3000);
+</script></body></html>

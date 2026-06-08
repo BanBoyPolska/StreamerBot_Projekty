@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:220px;height:220px;font-family:'JetBrains Mono',monospace}
+  .wrap{width:220px;height:220px;position:relative;display:flex;align-items:center;justify-content:center}
+  canvas{position:absolute;inset:0}
+  .center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:20px;pointer-events:none}
+  .val{font-size:38px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1}
+  .unit{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35)}
+  .sub{font-size:9px;color:rgba(255,255,255,0.2);margin-top:2px}
+</style></head><body>
+<div class="wrap">
+  <canvas id="cv" width="220" height="220"></canvas>
+  <div class="center">
+    <div class="val" id="val">0</div>
+    <div class="unit">km/h</div>
+    <div class="sub" id="maxSpd">max: --</div>
+  </div>
+</div>
+<script>
+const SERVER=sessionStorage.getItem('gps_srv')||prompt('Adres serwera Deno:','');
+if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=220,CX=110,CY=115,R=95;
+const MAX_SPD=160;
+const START_ANG=Math.PI*0.75, END_ANG=Math.PI*2.25; // 135° — 405°
+let curSpeed=0, targetSpeed=0, maxSpeed=0;
+
+function draw(spd){
+  ctx.clearRect(0,0,W,W);
+  const pct=Math.min(spd/MAX_SPD,1);
+  const sweepAng=END_ANG-START_ANG;
+
+  // Tło tarczy
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.fillStyle='rgba(10,15,20,0.85)';ctx.fill();
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();
+
+  // Szare tło łuku
+  ctx.beginPath();ctx.arc(CX,CY,R-8,START_ANG,END_ANG);
+  ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=14;ctx.lineCap='round';ctx.stroke();
+
+  // Kolorowy łuk (gradient prędkości)
+  if(pct>0){
+    const grad=ctx.createLinearGradient(CX-R,CY,CX+R,CY);
+    grad.addColorStop(0,'#5fa84d');grad.addColorStop(0.5,'#f0a040');grad.addColorStop(1,'#b84040');
+    ctx.beginPath();ctx.arc(CX,CY,R-8,START_ANG,START_ANG+sweepAng*pct);
+    ctx.strokeStyle=grad;ctx.lineWidth=14;ctx.lineCap='round';ctx.stroke();
+  }
+
+  // Znaczniki
+  for(let i=0;i<=16;i++){
+    const a=START_ANG+sweepAng*(i/16);
+    const major=i%4===0;
+    const r1=R-24,r2=major?R-38:R-30;
+    ctx.beginPath();
+    ctx.moveTo(CX+Math.cos(a)*r1,CY+Math.sin(a)*r1);
+    ctx.lineTo(CX+Math.cos(a)*r2,CY+Math.sin(a)*r2);
+    ctx.strokeStyle=major?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.2)';
+    ctx.lineWidth=major?1.5:0.8;ctx.stroke();
+    if(major){
+      const spVal=Math.round(MAX_SPD*(i/16));
+      ctx.font='9px JetBrains Mono, monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(255,255,255,0.35)';
+      ctx.fillText(spVal,CX+Math.cos(a)*(R-50),CY+Math.sin(a)*(R-50));
+    }
+  }
+
+  // Wskazówka
+  const needleAng=START_ANG+sweepAng*pct;
+  const color=pct<0.5?'#5fa84d':pct<0.8?'#f0a040':'#e85555';
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(needleAng);
+  ctx.beginPath();ctx.moveTo(0,-R+22);ctx.lineTo(3,15);ctx.lineTo(-3,15);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+  ctx.restore();
+
+  // Środek
+  ctx.beginPath();ctx.arc(CX,CY,8,0,Math.PI*2);
+  ctx.fillStyle='#0d1015';ctx.fill();
+  ctx.beginPath();ctx.arc(CX,CY,5,0,Math.PI*2);
+  ctx.fillStyle=color;ctx.fill();
+}
+
+let af;
+function animateTo(t){
+  cancelAnimationFrame(af);
+  function step(){
+    curSpeed+=(t-curSpeed)*0.15;
+    draw(curSpeed);
+    document.getElementById('val').textContent=Math.round(curSpeed);
+    if(Math.abs(curSpeed-t)>0.3) af=requestAnimationFrame(step);
+    else{curSpeed=t;draw(t);document.getElementById('val').textContent=Math.round(t);}
+  }
+  step();
+}
+
+async function poll(){
+  try{
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    const s=d.speed??0;
+    if(s>maxSpeed){maxSpeed=s;document.getElementById('maxSpd').textContent='max: '+s+' km/h';}
+    targetSpeed=s;animateTo(s);
+  }catch{}
+}
+draw(0);poll();setInterval(poll,3000);
+</script></body></html>

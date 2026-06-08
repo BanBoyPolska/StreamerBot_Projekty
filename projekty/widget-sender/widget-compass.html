@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:180px;height:180px;font-family:'JetBrains Mono',monospace}
+  .card{width:180px;height:180px;background:linear-gradient(135deg,rgba(10,15,20,0.88),rgba(14,20,26,0.82));border:1px solid rgba(79,152,163,0.25);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;backdrop-filter:blur(12px);box-shadow:0 4px 24px rgba(0,0,0,0.5)}
+  canvas{position:absolute;inset:0}
+  .center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
+  .deg{font-size:20px;font-weight:800;color:#fff;letter-spacing:-1px}
+  .dir{font-size:11px;font-weight:700;color:#4f98a3;letter-spacing:.1em}
+</style></head><body>
+<div class="card">
+  <canvas id="cv" width="180" height="180"></canvas>
+  <div class="center">
+    <div class="deg" id="degVal">--°</div>
+    <div class="dir" id="dirVal">---</div>
+  </div>
+</div>
+<script>
+const SERVER = sessionStorage.getItem('gps_srv')||prompt('Adres serwera Deno:','');
+if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const W=180,R=88,CX=90,CY=90;
+let heading=0, targetHeading=0;
+
+const DIRS=[['N',0],['NE',45],['E',90],['SE',135],['S',180],['SW',225],['W',270],['NW',315]];
+function dirName(h){const d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];return d[Math.round(h/22.5)%16];}
+
+function draw(){
+  ctx.clearRect(0,0,W,W);
+  // Zewnętrzny krąg
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(79,152,163,0.3)';ctx.lineWidth=1;ctx.stroke();
+  // Wewnętrzny krąg
+  ctx.beginPath();ctx.arc(CX,CY,R-10,0,Math.PI*2);
+  ctx.strokeStyle='rgba(79,152,163,0.1)';ctx.lineWidth=1;ctx.stroke();
+
+  ctx.save();
+  ctx.translate(CX,CY);
+  ctx.rotate((heading-90)*Math.PI/180); // obróć całą tarczę
+
+  // Znaczniki co 10°
+  for(let i=0;i<36;i++){
+    const a=i*10*Math.PI/180;
+    const r1=i%3===0?R-14:R-8;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*R, Math.sin(a)*R);
+    ctx.lineTo(Math.cos(a)*r1, Math.sin(a)*r1);
+    ctx.strokeStyle=i%9===0?'rgba(255,255,255,0.8)':'rgba(255,255,255,0.2)';
+    ctx.lineWidth=i%9===0?1.5:0.8;
+    ctx.stroke();
+  }
+  // Etykiety N/E/S/W
+  ctx.font='bold 11px JetBrains Mono, monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  [['N',0,'#e85555'],['E',90,'rgba(255,255,255,0.7)'],['S',180,'rgba(255,255,255,0.7)'],['W',270,'rgba(255,255,255,0.7)']].forEach(([l,a,c])=>{
+    const rad=a*Math.PI/180;
+    ctx.fillStyle=c;
+    ctx.fillText(l, Math.cos(rad)*(R-22), Math.sin(rad)*(R-22));
+  });
+  ctx.restore();
+
+  // Strzałka — zawsze wskazuje NA PÓŁNOC (nie obraca się)
+  // Igła czerwona (N)
+  ctx.save();ctx.translate(CX,CY);
+  ctx.beginPath();
+  ctx.moveTo(0,-R+18);ctx.lineTo(5,0);ctx.lineTo(0,8);ctx.lineTo(-5,0);ctx.closePath();
+  ctx.fillStyle='#e85555';ctx.fill();
+  // Igła biała (S)
+  ctx.beginPath();
+  ctx.moveTo(0,R-18);ctx.lineTo(5,0);ctx.lineTo(0,-8);ctx.lineTo(-5,0);ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fill();
+  // Środek
+  ctx.beginPath();ctx.arc(0,0,5,0,Math.PI*2);
+  ctx.fillStyle='#0d1015';ctx.fill();
+  ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);
+  ctx.fillStyle='#4f98a3';ctx.fill();
+  ctx.restore();
+}
+
+function lerp(a,b,t){
+  let d=b-a;
+  while(d>180)d-=360;while(d<-180)d+=360;
+  return a+d*t;
+}
+let animFrame;
+function animateTo(target){
+  cancelAnimationFrame(animFrame);
+  function step(){
+    heading=lerp(heading,target,0.12);
+    draw();
+    if(Math.abs(heading-target)>0.3) animFrame=requestAnimationFrame(step);
+    else{heading=target;draw();}
+  }
+  step();
+}
+
+async function poll(){
+  try{
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    const h=d.heading??null;
+    if(h!==null){
+      targetHeading=h;
+      animateTo(h);
+      document.getElementById('degVal').textContent=Math.round(h)+'°';
+      document.getElementById('dirVal').textContent=dirName(h);
+    }
+  }catch{}
+}
+draw();poll();setInterval(poll,3000);
+</script></body></html>
