@@ -314,9 +314,9 @@ async function fetchServerUrlFromGist() {
 
 (function init() {
   // Zawsze pobieraj URL z Gist przy starcie (sessionStorage jako fallback)
-  const _fallbackUrl = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
-  SERVER_URL = _fallbackUrl;
-  document.getElementById('serverUrl').value = _fallbackUrl;
+  // SERVER_URL bedzie ustawiony przez Gist - nie uzywamy sessionStorage
+  SERVER_URL = '';
+  document.getElementById('serverUrl').value = '🔄 pobieram...';
 
   if (AUTO_FETCH_GIST_ID) {
     document.getElementById('autoFetchStatus').textContent = '🔄 Pobieram adres serwera...';
@@ -324,7 +324,6 @@ async function fetchServerUrlFromGist() {
       if (url) {
         SERVER_URL = url;
         document.getElementById('serverUrl').value = url;
-        sessionStorage.setItem('gps_server_url', url);
         document.getElementById('autoFetchStatus').textContent = '✅ ' + url;
         document.getElementById('autoFetchStatus').style.color = '#5fa84d';
       } else {
@@ -351,7 +350,6 @@ function saveGistId() {
       if (url) {
         SERVER_URL = url;
         document.getElementById('serverUrl').value = url;
-        sessionStorage.setItem('gps_server_url', url);
         document.getElementById('autoFetchStatus').textContent = '✅ URL pobrany: ' + url;
         document.getElementById('autoFetchStatus').style.color = '#5fa84d';
       } else {
@@ -366,7 +364,6 @@ function saveGistId() {
 
 function saveServer() {
   SERVER_URL = document.getElementById('serverUrl').value.trim().replace(/\/$/,'') || 'https://gps.banboypolska.deno.net';
-  sessionStorage.setItem('gps_server_url', SERVER_URL);
   sessionStorage.setItem('gps_device_name', document.getElementById('deviceName').value.trim() || 'Telefon');
   log('info', `Serwer: ${SERVER_URL}`);
 }
