@@ -146,7 +146,7 @@
 
   <div class="setup-label" style="margin-top:14px">HypeRate — ID urządzenia ❤️</div>
   <div style="display:flex;gap:8px;align-items:center">
-    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. 3184F" value="3184F" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
+    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. ECB4C" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
     <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus">● Połącz</button>
   </div>
   <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace;margin-top:4px">Znajdź ID w aplikacji HypeRate → Share → Device ID</div>
@@ -286,7 +286,7 @@ const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null,
 (function init() {
   const s = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
   SERVER_URL = s; document.getElementById('serverUrl').value = s; sessionStorage.setItem('gps_server_url', s);
-  const hrKey = sessionStorage.getItem('hyperate_key') || '3184F';
+  const hrKey = sessionStorage.getItem('hyperate_key') || 'ECB4C';
   document.getElementById('hyperateId').value = hrKey;
   setTimeout(() => hyperateConnect(), 800);
   const n = sessionStorage.getItem('gps_device_name');
