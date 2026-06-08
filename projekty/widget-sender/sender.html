@@ -400,30 +400,46 @@ function hyperateConnect() {
   btn.textContent = '⏳ Łączenie…';
   btn.className = 'hyperate-status connecting';
 
-  hyperateWs = new WebSocket(`wss://app.hyperate.io/ws/${code}?token=${token}`);
+  hyperateWs = new WebSocket(`wss://app.hyperate.io/socket/websocket?token=${token}`);
 
   hyperateWs.onopen = () => {
-    btn.textContent = `❤️ ${code} · łącze…`;
-    btn.className = 'hyperate-status connected';
-    log('info', `HypeRate: połączono z ${code}`);
-    // Keepalive ping co 25s
+    // Dolacz do kanalu HR - payload MUSI byc pusty {}
+    hyperateWs.send(JSON.stringify({
+      topic: `hr:${code}`,
+      event: 'phx_join',
+      payload: {},
+      ref: 0
+    }));
+    // Phoenix heartbeat co 15s - wymagany zeby polaczenie nie wygaslo
     hyperateWs._hb = setInterval(() => {
       if (hyperateWs && hyperateWs.readyState === 1) {
-        hyperateWs.send(JSON.stringify({ type: 'ping' }));
+        hyperateWs.send(JSON.stringify({
+          topic: 'phoenix',
+          event: 'heartbeat',
+          payload: {},
+          ref: 0
+        }));
       }
-    }, 25000);
+    }, 15000);
   };
 
   hyperateWs.onmessage = e => {
     try {
       const msg = JSON.parse(e.data);
-      // Nowy format: { hr: 72 } lub stary Phoenix { event: 'hr_update', payload: { hr: 72 } }
-      const hr = msg.hr ?? msg.heart_rate ?? msg.payload?.hr ?? msg.payload?.heart_rate;
-      if (hr != null && hr > 0) {
-        heartRate = hr;
-        btn.textContent = `❤️ ${code} · ${hr} BPM`;
+      // Polaczono z kanalem
+      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
+        btn.textContent = `❤️ ${code} · połączono`;
         btn.className = 'hyperate-status connected';
-        log('info', `HypeRate: ${hr} BPM`);
+        log('info', `HypeRate: dołączono do hr:${code}`);
+      }
+      // Odczyt tetna - event: hr_update, payload: { hr: 72 }
+      if (msg.event === 'hr_update') {
+        const hr = msg.payload?.hr;
+        if (hr != null && hr > 0) {
+          heartRate = hr;
+          btn.textContent = `❤️ ${code} · ${hr} BPM`;
+          btn.className = 'hyperate-status connected';
+        }
       }
     } catch {}
   };
