@@ -136,23 +136,25 @@
 </header>
 
 <div class="setup-box">
+
   <div class="setup-label">Adres serwera (Deno Deploy URL)</div>
   <div class="url-row">
     <input class="url-input" type="url" id="serverUrl" placeholder="https://twoja-nazwa.deno.dev" value="https://gps.banboypolska.deno.net" autocomplete="off" autocorrect="off" spellcheck="false">
-
-  <div class="setup-label" style="margin-top:12px">HypeRate — ID urządzenia ❤️</div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. ECB4C" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
-    <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus">● Połącz</button>
-  </div>
-  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace;margin-top:4px">ID znajdziesz w HypeRate → Share → Device ID</div>
     <button class="btn-save" onclick="saveServer()">Zapisz</button>
   </div>
+
+  <div class="setup-label" style="margin-top:12px">HypeRate — ID urządzenia ❤️</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. ECB4C" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
+    <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus" style="cursor:pointer">● Połącz</button>
+  </div>
+  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace">ID znajdziesz w HypeRate → Share → Device ID</div>
+
+  <div class="setup-label" style="margin-top:12px">Nazwa urządzenia</div>
   <div class="device-row">
     <input class="device-input" type="text" id="deviceName" placeholder="Nazwa urządzenia" value="Telefon BanBoy">
-
-
   </div>
+
 </div>
 
 <div class="stats">
