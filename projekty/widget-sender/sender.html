@@ -39,11 +39,6 @@
     .device-row { display: flex; gap: 8px; margin-top: 8px; }
     .device-input { flex: 1; background: #0a0c0f; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 12px; padding: 8px 12px; outline: none; }
     .device-input:focus { border-color: var(--primary); }
-    .hyperate-input { flex: 1; background: #0a0c0f; border: 1px solid rgba(232,64,64,0.3); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 13px; font-weight: 700; padding: 8px 12px; outline: none; letter-spacing: .05em; text-transform: uppercase; }
-    .hyperate-input:focus { border-color: rgba(232,64,64,0.7); }
-    .hyperate-status { font-size: 10px; font-family: var(--font-mono); padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); white-space:nowrap; }
-    .hyperate-status.connected { background: rgba(95,168,77,0.12); border-color: rgba(95,168,77,0.3); color: #5fa84d; }
-    .hyperate-status.connecting { background: rgba(240,160,64,0.1); border-color: rgba(240,160,64,0.25); color: #f0a040; }
 
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; position: relative; overflow: hidden; }
@@ -120,21 +115,7 @@
     .btn-main:active { transform: scale(0.97); }
     .btn-main-start { background: var(--success); color: #071208; }
     .btn-main-stop  { background: var(--error); color: #fff; }
-  
-/* ── Tabs ── */
-.tabs { display:flex; border-bottom:1px solid var(--border); background:var(--bg); position:sticky; top:0; z-index:100; }
-.tab-btn { flex:1; padding:12px 8px; font-family:var(--font-mono); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; transition:all var(--tr); }
-.tab-btn:hover { color:var(--text); }
-.tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
-.tab-pane { display:none; }
-.tab-pane.active { display:block; }
-#tab-chat.active { display:flex; flex-direction:column; height:calc(100dvh - 112px); }
-.chat-frame { flex:1; border:none; width:100%; background:#000; }
-.chat-header { padding:10px 16px; font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
-.chat-channel { color:var(--primary); font-weight:700; }
-.chat-status { font-size:9px; color:var(--faint); }
-
-</style>
+  </style>
 </head>
 <body>
 
@@ -149,13 +130,6 @@
   </div>
 </header>
 
-<div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('sender')">📡 GPS Sender</button>
-  <button class="tab-btn" onclick="switchTab('chat')">💬 Czat Twitch</button>
-</div>
-
-<div class="tab-pane active" id="tab-sender">
-
 <div class="setup-box">
 
   <div class="setup-label">Adres serwera (Deno Deploy URL)</div>
@@ -166,16 +140,6 @@
   <div id="autoFetchStatus" style="font-size:11px;color:#888;margin-top:4px;font-family:monospace">
     🔄 Pobieram adres serwera...
   </div>
-  
-  <div class="setup-label" style="margin-top:12px">HypeRate ❤️</div>
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-    <input class="hyperate-input" type="text" id="hyperateId" placeholder="Device ID (np. ECB4C)" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()" style="flex:1">
-  </div>
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-    <input class="hyperate-input" type="text" id="hyperateToken" placeholder="API Key (hyperate.io/api)" value="1lfc2EK2YZF6TZe4vQLwAEqIVjKELltOt6dyCvKI" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;font-size:11px;letter-spacing:0">
-    <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus" style="cursor:pointer">● Połącz</button>
-  </div>
-  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace">API Key: hyperate.io → Account → API Key (darmowe)</div>
 
   <div class="setup-label" style="margin-top:12px">Nazwa urządzenia</div>
   <div class="device-row">
@@ -301,35 +265,12 @@
   </div>
 </div>
 
-
-</div><!-- /tab-sender -->
-
-<div class="tab-pane" id="tab-chat">
-  <div class="chat-header">
-    <span>Czat: <span class="chat-channel">banboypolska</span></span>
-    <span class="chat-status" id="chatStatus">● live</span>
-  </div>
-  <iframe class="chat-frame" id="chatFrame"
-    src="https://www.twitch.tv/embed/banboypolska/chat?parent=banboypolska.github.io&parent=localhost&darkpopout"
-    allowfullscreen>
-  </iframe>
-</div><!-- /tab-chat -->
-
 <script>
-
-// ── Tab switching ──
-function switchTab(name) {
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-}
-
 const OWM_KEY = 'fb98ee38b873f8640d3fd0f8a916a908';
 const pad = n => String(n).padStart(2,'0');
 
 let SERVER_URL = 'https://gps.banboypolska.deno.net', sending = false, sendTimer = null;
-let heartRate = null, hyperateWs = null, hyperateConnected = false;
+let heartRate = null;
 let geoWatchId = null, currentPos = null, batteryObj = null;
 let wakeLock = null;
 let weatherData = {}, cityData = {}, lastWeatherLat = null;
@@ -369,13 +310,7 @@ async function fetchServerUrlFromGist() {
         document.getElementById('autoFetchStatus').style.color = '#e8a040';
       }
     });
-  }
-  const hrKey = sessionStorage.getItem('hyperate_key') || 'ECB4C';
-  const hrToken = sessionStorage.getItem('hyperate_token') || '1lfc2EK2YZF6TZe4vQLwAEqIVjKELltOt6dyCvKI';
-  document.getElementById('hyperateId').value = hrKey;
-  document.getElementById('hyperateToken').value = hrToken;
-  // HypeRate NIE łączy się automatycznie — użytkownik klika Połącz ręcznie
-  const n = sessionStorage.getItem('gps_device_name');
+  }  const n = sessionStorage.getItem('gps_device_name');
   if (n) document.getElementById('deviceName').value = n;
 })();
 
@@ -425,76 +360,7 @@ async function initBattery() {
   batteryObj = await navigator.getBattery();
 }
 
-// ── HypeRate WebSocket ──
-function hyperateConnect() {
-  const code = (document.getElementById('hyperateId').value || '').trim().toUpperCase();
-  const token = (document.getElementById('hyperateToken').value || '').trim();
-  if (!code) return;
-  sessionStorage.setItem('hyperate_key', code);
-  if (token) sessionStorage.setItem('hyperate_token', token);
 
-  if (hyperateWs) {
-    hyperateWs.onclose = null;
-    hyperateWs.close();
-    hyperateWs = null;
-  }
-
-  const btn = document.getElementById('hyperateStatus');
-  btn.textContent = '⏳ Łączenie…';
-  btn.className = 'hyperate-status connecting';
-
-  hyperateWs = new WebSocket(`wss://app.hyperate.io/socket/websocket?token=${token}`);
-
-  hyperateWs.onopen = () => {
-    hyperateWs.send(JSON.stringify({
-      topic: `hr:${code}`,
-      event: 'phx_join',
-      payload: {},
-      ref: 0
-    }));
-    hyperateWs._hb = setInterval(() => {
-      if (hyperateWs && hyperateWs.readyState === 1) {
-        hyperateWs.send(JSON.stringify({
-          topic: 'phoenix',
-          event: 'heartbeat',
-          payload: {},
-          ref: 0
-        }));
-      }
-    }, 15000);
-  };
-
-  hyperateWs.onmessage = e => {
-    try {
-      const msg = JSON.parse(e.data);
-      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-        btn.textContent = `❤️ ${code} · połączono`;
-        btn.className = 'hyperate-status connected';
-        log('info', `HypeRate: dołączono do hr:${code}`);
-      }
-      if (msg.event === 'hr_update') {
-        const hr = msg.payload?.hr;
-        if (hr != null && hr > 0) {
-          heartRate = hr;
-          btn.textContent = `❤️ ${code} · ${hr} BPM`;
-          btn.className = 'hyperate-status connected';
-        }
-      }
-    } catch {}
-  };
-
-  hyperateWs.onerror = () => {
-    log('info', 'HypeRate: błąd WebSocket');
-  };
-
-  hyperateWs.onclose = () => {
-    if (hyperateWs?._hb) clearInterval(hyperateWs._hb);
-    heartRate = null;
-    btn.textContent = '● Połącz';
-    btn.className = 'hyperate-status';
-    log('info', 'HypeRate: rozłączono');
-  };
-}
 
 // ── Wake Lock — ekran nie wygasza się ──
 async function acquireWakeLock() {
