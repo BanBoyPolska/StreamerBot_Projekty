@@ -133,7 +133,7 @@
 <div class="setup-box">
   <div class="setup-label">Adres serwera (Deno Deploy URL)</div>
   <div class="url-row">
-    <input class="url-input" type="url" id="serverUrl" placeholder="https://twoja-nazwa.deno.dev" autocomplete="off" autocorrect="off" spellcheck="false">
+    <input class="url-input" type="url" id="serverUrl" placeholder="https://twoja-nazwa.deno.dev" value="https://gps.banboypolska.deno.net" autocomplete="off" autocorrect="off" spellcheck="false">
     <button class="btn-save" onclick="saveServer()">Zapisz</button>
   </div>
   <div class="device-row">
@@ -193,7 +193,7 @@
     <div class="trk-stat">
       <div class="trk-label">Czas</div>
       <div class="trk-val" id="trkTime">00:00:00</div>
-      <div class="trk-unit">hh:mm:ss</div>
+      <div class="trk-unit">hh:mm</div>
     </div>
     <div class="trk-stat">
       <div class="trk-label">Śr. prędkość</div>
@@ -262,7 +262,7 @@
 const OWM_KEY = 'fb98ee38b873f8640d3fd0f8a916a908';
 const pad = n => String(n).padStart(2,'0');
 
-let SERVER_URL = '', sending = false, sendTimer = null;
+let SERVER_URL = 'https://gps.banboypolska.deno.net', sending = false, sendTimer = null;
 let geoWatchId = null, currentPos = null, batteryObj = null;
 let wakeLock = null;
 let weatherData = {}, cityData = {}, lastWeatherLat = null;
@@ -271,14 +271,14 @@ let weatherData = {}, cityData = {}, lastWeatherLat = null;
 const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null, gpxPts:[], timerID:null };
 
 (function init() {
-  const s = sessionStorage.getItem('gps_server_url');
-  if (s) { SERVER_URL = s; document.getElementById('serverUrl').value = s; }
+  const s = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
+  SERVER_URL = s; document.getElementById('serverUrl').value = s; sessionStorage.setItem('gps_server_url', s);
   const n = sessionStorage.getItem('gps_device_name');
   if (n) document.getElementById('deviceName').value = n;
 })();
 
 function saveServer() {
-  SERVER_URL = document.getElementById('serverUrl').value.trim().replace(/\/$/,'');
+  SERVER_URL = document.getElementById('serverUrl').value.trim().replace(/\/$/,'') || 'https://gps.banboypolska.deno.net';
   sessionStorage.setItem('gps_server_url', SERVER_URL);
   sessionStorage.setItem('gps_device_name', document.getElementById('deviceName').value.trim() || 'Telefon');
   log('info', `Serwer: ${SERVER_URL}`);
@@ -448,7 +448,7 @@ function updateTrkUI() {
   const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
   const avgSpd = ms>0 ? (km/(ms/3600000)) : 0;
   document.getElementById('trkDist').textContent = km.toFixed(2);
-  document.getElementById('trkTime').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  document.getElementById('trkTime').textContent = `${pad(h)}:${pad(m)}`;
   document.getElementById('trkAvg').textContent  = avgSpd.toFixed(1);
   document.getElementById('gpxPts').textContent  = `Punkty GPX: ${TRK.gpxPts.length}`;
 }

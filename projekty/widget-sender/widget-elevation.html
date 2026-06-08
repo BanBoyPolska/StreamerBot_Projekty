@@ -45,8 +45,8 @@
 </div>
 
 <script>
-const SERVER = sessionStorage.getItem('gps_srv') || prompt('Adres serwera Deno:','');
-if(SERVER) sessionStorage.setItem('gps_srv', SERVER);
+const SERVER = 'https://gps.banboypolska.deno.net';
+
 
 const MAX_PTS = 300;
 const pts = [];   // {alt, t}

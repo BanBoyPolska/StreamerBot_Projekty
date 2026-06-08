@@ -19,7 +19,7 @@
   </div>
 </div>
 <script>
-const SERVER = sessionStorage.getItem('gps_srv')||prompt('Adres serwera Deno:','');
+const SERVER = 'https://gps.banboypolska.deno.net';
 if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const W=180,R=88,CX=90,CY=90;

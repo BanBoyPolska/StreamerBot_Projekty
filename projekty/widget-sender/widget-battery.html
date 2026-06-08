@@ -23,8 +23,8 @@
   <div class="bar-wrap"><div class="bar-fill" id="bar" style="width:0%;background:#f0a040"></div></div>
 </div>
 <script>
-const SERVER = sessionStorage.getItem('gps_srv') || prompt('Adres serwera Deno:','');
-if(SERVER) sessionStorage.setItem('gps_srv', SERVER);
+const SERVER = 'https://gps.banboypolska.deno.net';
+
 async function poll(){
   try{
     const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();

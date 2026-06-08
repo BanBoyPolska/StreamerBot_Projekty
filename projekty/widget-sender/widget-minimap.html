@@ -47,7 +47,7 @@
   <div class="heading-badge" id="headBadge">--°</div>
 </div>
 <script>
-const SERVER=sessionStorage.getItem('gps_srv')||prompt('Adres serwera Deno:','');
+const SERVER='https://gps.banboypolska.deno.net';
 if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
 
 const TILE=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18});

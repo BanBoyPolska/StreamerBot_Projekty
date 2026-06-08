@@ -28,8 +28,8 @@
   <button class="layer-btn" id="layerBtn" onclick="toggleLayer()">🛰 Satelita</button>
 </div>
 <script>
-const SERVER = sessionStorage.getItem('gps_srv') || prompt('Adres serwera Deno:','');
-if(SERVER) sessionStorage.setItem('gps_srv', SERVER);
+const SERVER = 'https://gps.banboypolska.deno.net';
+
 
 const LAYERS={
   osm:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}),
