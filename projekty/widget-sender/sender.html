@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>GPS Sender</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --color-bg: #0d0f12;
+      --color-surface: #161a1f;
+      --color-border: rgba(255,255,255,0.08);
+      --color-text: #e8eaed;
+      --color-muted: #7a7f89;
+      --color-faint: #3d4147;
+      --color-primary: #4f98a3;
+      --color-success: #5fa84d;
+      --color-warning: #c8a230;
+      --color-error: #b84040;
+      --color-pink: #c966a8;
+      --radius: 12px;
+      --transition: 250ms cubic-bezier(0.16,1,0.3,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--color-bg); color: var(--color-text);
+      font-family: var(--font-body); min-height: 100dvh;
+      display: flex; flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--color-border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; color: var(--color-primary); }
+    .logo-title { font-family: var(--font-mono); font-size: 13px; font-weight: 700; letter-spacing: 0.05em; color: var(--color-text); text-transform: uppercase; }
+    .signal-wrap { display: flex; align-items: center; gap: 6px; }
+    .signal-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-faint); }
+    .signal-dot.active { background: var(--color-success); box-shadow: 0 0 8px var(--color-success); animation: pulse 2s infinite; }
+    .signal-dot.error  { background: var(--color-error); box-shadow: 0 0 6px var(--color-error); animation: none; }
+    .signal-label { font-size: 11px; font-family: var(--font-mono); color: var(--color-muted); }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+    /* ── Setup box ── */
+    .setup-box {
+      margin: 16px; padding: 16px;
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+    }
+    .setup-label { font-size: 11px; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; font-family: var(--font-mono); }
+    .url-row { display: flex; gap: 8px; }
+    .url-input {
+      flex: 1; background: #0a0c0f; border: 1px solid var(--color-border);
+      border-radius: 8px; color: var(--color-text); font-family: var(--font-mono);
+      font-size: 12px; padding: 10px 12px; outline: none; min-width: 0;
+    }
+    .url-input:focus { border-color: var(--color-primary); }
+    .url-input::placeholder { color: var(--color-faint); }
+    .btn-save {
+      background: var(--color-primary); color: #0a1214;
+      border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
+      font-family: var(--font-mono); padding: 10px 14px; cursor: pointer;
+      white-space: nowrap; transition: background var(--transition);
+    }
+    .btn-save:hover { background: #3d8a96; }
+    .device-row { display: flex; gap: 8px; margin-top: 8px; }
+    .device-input {
+      flex: 1; background: #0a0c0f; border: 1px solid var(--color-border);
+      border-radius: 8px; color: var(--color-text); font-family: var(--font-mono);
+      font-size: 12px; padding: 8px 12px; outline: none;
+    }
+    .device-input:focus { border-color: var(--color-primary); }
+
+    /* ── Stats grid ── */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; }
+    .stat-card {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: 14px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent, var(--color-primary)), transparent);
+    }
+    .stat-label { font-size: 10px; font-family: var(--font-mono); color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+    .stat-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700; line-height: 1; color: var(--color-text); }
+    .stat-unit { font-size: 10px; color: var(--color-muted); margin-top: 3px; font-family: var(--font-mono); }
+    .stat-card.gps  { --accent: var(--color-primary); }
+    .stat-card.spd  { --accent: var(--color-success); }
+    .stat-card.bat  { --accent: #f0a040; }
+    .stat-card.acc  { --accent: var(--color-pink); }
+
+    /* Bateria bar */
+    .bat-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .bat-fill { height: 100%; border-radius: 2px; background: var(--color-success); transition: width .5s ease; }
+
+    /* ── Coords full row ── */
+    .coord-card {
+      margin: 0 16px;
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: 14px;
+      position: relative; overflow: hidden;
+    }
+    .coord-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #a066cc, transparent);
+    }
+    .coord-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .coord-item { display: flex; flex-direction: column; gap: 3px; }
+    .coord-key { font-size: 10px; color: var(--color-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+    .coord-val { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: #a066cc; }
+
+    /* ── Log ── */
+    .log-wrap { margin: 10px 16px; flex: 1; }
+    .log-label { font-size: 10px; color: var(--color-faint); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .log-box {
+      background: #080a0d; border: 1px solid var(--color-border);
+      border-radius: 8px; padding: 10px 12px; height: 80px; overflow-y: auto;
+      font-family: var(--font-mono); font-size: 11px; color: var(--color-muted);
+      display: flex; flex-direction: column-reverse;
+    }
+    .log-entry { line-height: 1.6; }
+    .log-ok   { color: var(--color-success); }
+    .log-err  { color: var(--color-error); }
+    .log-info { color: var(--color-primary); }
+
+    /* ── Bottom controls ── */
+    .controls {
+      padding: 14px 16px 28px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .btn-main {
+      width: 100%; padding: 16px;
+      border-radius: var(--radius); border: none; cursor: pointer;
+      font-family: var(--font-mono); font-size: 14px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all var(--transition);
+    }
+    .btn-main:active { transform: scale(0.97); }
+    .btn-start  { background: var(--color-success); color: #071208; }
+    .btn-stop   { background: var(--color-error);   color: #fff; }
+    .send-interval { display: flex; align-items: center; justify-content: space-between; }
+    .send-interval-label { font-size: 11px; color: var(--color-muted); font-family: var(--font-mono); }
+    .interval-select {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: 6px; color: var(--color-text); font-family: var(--font-mono);
+      font-size: 11px; padding: 6px 10px; outline: none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="11" r="3" fill="currentColor" opacity="0.9"/>
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.6"/>
+    </svg>
+    <span class="logo-title">GPS Sender</span>
+  </div>
+  <div class="signal-wrap">
+    <div class="signal-dot" id="signalDot"></div>
+    <span class="signal-label" id="signalLabel">offline</span>
+  </div>
+</header>
+
+<!-- Setup -->
+<div class="setup-box">
+  <div class="setup-label">Adres serwera (Deno Deploy URL)</div>
+  <div class="url-row">
+    <input class="url-input" type="url" id="serverUrl"
+      placeholder="https://twoja-nazwa.deno.dev" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="btn-save" onclick="saveServer()">Zapisz</button>
+  </div>
+  <div class="device-row">
+    <input class="device-input" type="text" id="deviceName" placeholder="Nazwa urządzenia (np. iPhone BanBoy)" value="Telefon BanBoy">
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat-card gps">
+    <div class="stat-label">Prędkość</div>
+    <div class="stat-val" id="sSpeed">--</div>
+    <div class="stat-unit">km/h</div>
+  </div>
+  <div class="stat-card bat">
+    <div class="stat-label">Bateria</div>
+    <div class="stat-val" id="sBat">--</div>
+    <div class="stat-unit" id="sBatStatus">—</div>
+    <div class="bat-bar"><div class="bat-fill" id="sBatBar" style="width:0%"></div></div>
+  </div>
+  <div class="stat-card spd">
+    <div class="stat-label">Temperatura</div>
+    <div class="stat-val" id="sTemp">--</div>
+    <div class="stat-unit" id="sTempDesc">—</div>
+  </div>
+  <div class="stat-card acc">
+    <div class="stat-label">Dokładność GPS</div>
+    <div class="stat-val" id="sAcc">--</div>
+    <div class="stat-unit">m</div>
+  </div>
+</div>
+
+<!-- Coords -->
+<div class="coord-card" style="margin-top:10px">
+  <div class="stat-label">Współrzędne GPS</div>
+  <div class="coord-grid">
+    <div class="coord-item"><div class="coord-key">Szerokość</div><div class="coord-val" id="sLat">--</div></div>
+    <div class="coord-item"><div class="coord-key">Długość</div><div class="coord-val" id="sLng">--</div></div>
+    <div class="coord-item"><div class="coord-key">Wysokość</div><div class="coord-val" id="sAlt">--</div></div>
+    <div class="coord-item"><div class="coord-key">Miasto</div><div class="coord-val" id="sCity">--</div></div>
+  </div>
+</div>
+
+<!-- Log -->
+<div class="log-wrap">
+  <div class="log-label">Log wysyłania</div>
+  <div class="log-box" id="logBox"></div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="send-interval">
+    <span class="send-interval-label">Częstotliwość wysyłania:</span>
+    <select class="interval-select" id="intervalSelect">
+      <option value="2000">Co 2 sek</option>
+      <option value="3000" selected>Co 3 sek</option>
+      <option value="5000">Co 5 sek</option>
+      <option value="10000">Co 10 sek</option>
+    </select>
+  </div>
+  <button class="btn-main btn-start" id="btnMain" onclick="toggleSending()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+    START WYSYŁANIA
+  </button>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  GPS SENDER — BanBoy
+// ══════════════════════════════════════
+const OWM_KEY = 'fb98ee38b873f8640d3fd0f8a916a908';
+
+let SERVER_URL  = '';
+let sending     = false;
+let sendTimer   = null;
+let geoWatchId  = null;
+let currentPos  = null;
+let batteryObj  = null;
+let weatherData = {};
+let cityData    = {};
+let lastWeatherLat = null;
+
+// ── Wczytaj zapisany URL ──
+(function init() {
+  const saved = sessionStorage.getItem('gps_server_url');
+  if (saved) { SERVER_URL = saved; document.getElementById('serverUrl').value = saved; }
+  const name = sessionStorage.getItem('gps_device_name');
+  if (name) document.getElementById('deviceName').value = name;
+})();
+
+function saveServer() {
+  SERVER_URL = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+  const name = document.getElementById('deviceName').value.trim() || 'Telefon';
+  sessionStorage.setItem('gps_server_url', SERVER_URL);
+  sessionStorage.setItem('gps_device_name', name);
+  log('info', `Serwer: ${SERVER_URL}`);
+}
+
+// ── LOG ──
+function log(type, msg) {
+  const box = document.getElementById('logBox');
+  const t = new Date().toLocaleTimeString('pl');
+  const el = document.createElement('div');
+  el.className = `log-entry log-${type}`;
+  el.textContent = `${t}  ${msg}`;
+  box.prepend(el);
+  while (box.children.length > 30) box.removeChild(box.lastChild);
+}
+
+// ── Sygnał ──
+function setSignal(state) {
+  const dot = document.getElementById('signalDot');
+  const lbl = document.getElementById('signalLabel');
+  dot.className = 'signal-dot ' + (state === 'ok' ? 'active' : state === 'err' ? 'error' : '');
+  lbl.textContent = state === 'ok' ? 'online' : state === 'err' ? 'błąd' : 'offline';
+}
+
+// ── Bateria ──
+async function initBattery() {
+  if (!navigator.getBattery) return;
+  batteryObj = await navigator.getBattery();
+}
+
+// ── GPS watch ──
+function startGPS() {
+  if (!navigator.geolocation) { log('err', 'GPS niedostępny'); return; }
+  geoWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      currentPos = pos;
+      updateUI(pos);
+      fetchWeatherIfNeeded(pos.coords.latitude, pos.coords.longitude);
+      fetchCityIfNeeded(pos.coords.latitude, pos.coords.longitude);
+    },
+    err => log('err', `GPS: ${err.message}`),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+  );
+}
+
+function stopGPS() {
+  if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
+}
+
+// ── UI update ──
+function updateUI(pos) {
+  const c = pos.coords;
+  const kmh = c.speed ? Math.round(c.speed * 3.6) : 0;
+  document.getElementById('sSpeed').textContent = kmh;
+  document.getElementById('sAcc').textContent   = Math.round(c.accuracy);
+  document.getElementById('sLat').textContent   = c.latitude.toFixed(5) + '°';
+  document.getElementById('sLng').textContent   = c.longitude.toFixed(5) + '°';
+  document.getElementById('sAlt').textContent   = c.altitude ? Math.round(c.altitude) + ' m' : 'N/A';
+  if (batteryObj) {
+    const pct = Math.round(batteryObj.level * 100);
+    document.getElementById('sBat').textContent = pct;
+    document.getElementById('sBatStatus').textContent = batteryObj.charging ? '⚡ ładowanie' : 'rozładowywanie';
+    document.getElementById('sBatBar').style.width = pct + '%';
+    document.getElementById('sBatBar').style.background = pct <= 15 ? '#b84040' : pct <= 30 ? '#c8a230' : '#5fa84d';
+  }
+  document.getElementById('sTemp').textContent   = weatherData.temp ?? '--';
+  document.getElementById('sTempDesc').textContent = weatherData.desc ?? '—';
+  document.getElementById('sCity').textContent   = cityData.city ?? '--';
+}
+
+// ── Pogoda ──
+let weatherTimer = null;
+async function fetchWeatherIfNeeded(lat, lng) {
+  if (lastWeatherLat !== null &&
+      Math.abs(lat - lastWeatherLat) < 0.01 && !weatherTimer) return;
+  lastWeatherLat = lat;
+  clearTimeout(weatherTimer);
+  try {
+    const r = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${OWM_KEY}&units=metric&lang=pl`);
+    const d = await r.json();
+    const isDay = Date.now() > d.sys.sunrise*1000 && Date.now() < d.sys.sunset*1000;
+    weatherData = {
+      temp: Math.round(d.main.temp),
+      feelsLike: Math.round(d.main.feels_like),
+      desc: d.weather[0].description,
+      icon: getWeatherIcon(d.weather[0].id, isDay)
+    };
+    weatherTimer = setTimeout(() => { weatherTimer = null; }, 300000);
+  } catch(e) { /* ciche */ }
+}
+
+let cityTimer = null, lastCityLat = null;
+async function fetchCityIfNeeded(lat, lng) {
+  if (lastCityLat !== null && Math.abs(lat - lastCityLat) < 0.01) return;
+  lastCityLat = lat;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=pl`,
+      { headers: {'User-Agent':'OBS-GPS-Sender/1.0'} });
+    const d = await r.json();
+    const a = d.address || {};
+    cityData = {
+      city: a.city || a.town || a.village || a.county || '?',
+      country: [a.state, a.country].filter(Boolean).join(', ')
+    };
+  } catch(e) { /* ciche */ }
+}
+
+function getWeatherIcon(code, isDay) {
+  if (code>=200&&code<300) return '⛈️';
+  if (code>=300&&code<400) return '🌦️';
+  if (code>=500&&code<600) return code===500?(isDay?'🌦️':'🌧️'):code<=504?'🌧️':'🌨️';
+  if (code>=600&&code<700) return '❄️';
+  if (code>=700&&code<800) return '🌫️';
+  if (code===800) return isDay?'☀️':'🌙';
+  if (code===801) return isDay?'🌤️':'🌙';
+  if (code<=804) return '☁️';
+  return '🌡️';
+}
+
+// ── WYSYŁANIE DO BACKENDU ──
+async function pushData() {
+  if (!SERVER_URL || !currentPos) return;
+  const c = currentPos.coords;
+  const payload = {
+    lat: c.latitude,
+    lng: c.longitude,
+    alt: c.altitude || null,
+    accuracy: Math.round(c.accuracy),
+    speed: c.speed ? Math.round(c.speed * 3.6) : 0,
+    heading: c.heading || null,
+    battery: batteryObj ? Math.round(batteryObj.level * 100) : null,
+    charging: batteryObj ? batteryObj.charging : false,
+    city: cityData.city || '—',
+    country: cityData.country || '',
+    temp: weatherData.temp || null,
+    tempDesc: weatherData.desc ? `${weatherData.desc} · odcz. ${weatherData.feelsLike}°` : '—',
+    weatherIcon: weatherData.icon || '⏳',
+    deviceName: document.getElementById('deviceName').value.trim() || 'Telefon',
+    lastUpdate: new Date().toISOString()
+  };
+  try {
+    const r = await fetch(SERVER_URL + '/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (r.ok) {
+      setSignal('ok');
+      log('ok', `✓ wysłano · GPS ±${payload.accuracy}m · ${payload.speed} km/h`);
+    } else {
+      setSignal('err');
+      log('err', `Serwer: HTTP ${r.status}`);
+    }
+  } catch(e) {
+    setSignal('err');
+    log('err', `Błąd połączenia: ${e.message}`);
+  }
+}
+
+// ── TOGGLE START/STOP ──
+function toggleSending() {
+  if (!sending) {
+    if (!SERVER_URL) {
+      saveServer();
+      if (!SERVER_URL) { log('err', 'Podaj adres serwera!'); return; }
+    }
+    sending = true;
+    startGPS();
+    initBattery();
+    const ms = parseInt(document.getElementById('intervalSelect').value);
+    sendTimer = setInterval(pushData, ms);
+    document.getElementById('btnMain').className = 'btn-main btn-stop';
+    document.getElementById('btnMain').innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      STOP WYSYŁANIA`;
+    log('info', `▶ Start wysyłania co ${parseInt(document.getElementById('intervalSelect').value)/1000}s`);
+  } else {
+    sending = false;
+    clearInterval(sendTimer);
+    stopGPS();
+    setSignal('off');
+    document.getElementById('btnMain').className = 'btn-main btn-start';
+    document.getElementById('btnMain').innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+      START WYSYŁANIA`;
+    log('info', '■ Zatrzymano wysyłanie');
+  }
+}
+</script>
+</body>
+</html>
