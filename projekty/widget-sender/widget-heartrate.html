@@ -92,7 +92,7 @@ const badge = document.getElementById('srcBadge');
 
 function connectHypeRate(code){
   badge.textContent='⏳ Łączenie…';badge.className='src connecting';
-  const ws=new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');
+  const ws=new WebSocket('wss://app.hyperate.io/socket/websocket?token=public');
   ws.onopen=()=>{
     ws.send(JSON.stringify({topic:`hr:${code}`,event:'phx_join',payload:{},ref:0}));
     setInterval(()=>{if(ws.readyState===1)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:0}));},25000);
@@ -109,7 +109,7 @@ function connectHypeRate(code){
       }
     }catch{}
   };
-  ws.onclose=()=>{badge.textContent='✗ Rozłączono';badge.className='src';setTimeout(()=>connectHypeRate(code),5000);};
+  ws.onclose=()=>{badge.textContent='⏳ Ponawiam…';badge.className='src connecting';setTimeout(()=>connectHypeRate(code),5000);};
   ws.onerror=()=>{badge.textContent='✗ Błąd';badge.className='src';};
 }
 
