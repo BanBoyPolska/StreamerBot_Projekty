@@ -43,4 +43,33 @@ function draw(){const W=cv.width/devicePixelRatio,H=cv.height/devicePixelRatio;c
 function onMotion(e){const a=e.accelerationIncludingGravity||{x:0,y:0,z:0};const ax=(a.x||0)/9.81,ay=(a.y||0)/9.81,az=((a.z||0)-9.81)/9.81;const tot=Math.sqrt(ax*ax+ay*ay+az*az);if(tot>maxG)maxG=tot;HIST.push(tot);if(HIST.length>MAX_H)HIST.shift();const el=document.getElementById('gTotal');el.textContent=tot.toFixed(2);el.style.color=tot>1.5?'#e84040':tot>0.8?'#f0a040':'#fff';document.getElementById('gx').textContent=ax.toFixed(2);document.getElementById('gy').textContent=ay.toFixed(2);document.getElementById('gz').textContent=az.toFixed(2);document.getElementById('gmax').textContent=maxG.toFixed(2);draw();}
 async function initMotion(){if(!('DeviceMotionEvent' in window))return;if(typeof DeviceMotionEvent.requestPermission==='function'){try{await DeviceMotionEvent.requestPermission();}catch{return;}}window.addEventListener('devicemotion',onMotion);}
 initMotion();
+
+// ── WIDGET VISIBILITY (panel moderacji) ──
+(function initVisibility() {
+  const WIDGET_KEY = 'gforce';
+  let _visServer = '';
+
+  async function checkVisibility() {
+    if (!_visServer) return;
+    try {
+      const r = await fetch(_visServer + '/widgets', {cache: 'no-cache'});
+      const state = await r.json();
+      const visible = state[WIDGET_KEY] !== false;
+      document.body.style.opacity = visible ? '1' : '0';
+      document.body.style.pointerEvents = visible ? '' : 'none';
+    } catch {}
+  }
+
+  // Czekaj az SERVER bedzie znany (ustawiony przez _initServerUrl)
+  function waitForServer() {
+    if (typeof SERVER !== 'undefined' && SERVER && !SERVER.includes('deno.net')) {
+      _visServer = SERVER;
+      checkVisibility();
+      setInterval(checkVisibility, 2000);
+    } else {
+      setTimeout(waitForServer, 500);
+    }
+  }
+  waitForServer();
+})();
 </script></body></html>

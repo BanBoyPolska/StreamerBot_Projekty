@@ -90,4 +90,33 @@ let af;
 function animateTo(t){cancelAnimationFrame(af);function step(){curS+=(t-curS)*0.15;draw(curS);document.getElementById('val').textContent=Math.round(curS);if(Math.abs(curS-t)>0.3)af=requestAnimationFrame(step);else{curS=t;draw(t);document.getElementById('val').textContent=Math.round(t);}}step();}
 async function poll(){try{const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();const s=d.speed??0;if(s>maxS){maxS=s;document.getElementById('maxV').textContent=s;}sumS+=s;cntS++;document.getElementById('avgV').textContent=(sumS/cntS).toFixed(1);animateTo(s);}catch{}}
 draw(0);_initServerUrl().then(() => { poll();setInterval(poll,3000); });
+
+// ── WIDGET VISIBILITY (panel moderacji) ──
+(function initVisibility() {
+  const WIDGET_KEY = 'speedometer';
+  let _visServer = '';
+
+  async function checkVisibility() {
+    if (!_visServer) return;
+    try {
+      const r = await fetch(_visServer + '/widgets', {cache: 'no-cache'});
+      const state = await r.json();
+      const visible = state[WIDGET_KEY] !== false;
+      document.body.style.opacity = visible ? '1' : '0';
+      document.body.style.pointerEvents = visible ? '' : 'none';
+    } catch {}
+  }
+
+  // Czekaj az SERVER bedzie znany (ustawiony przez _initServerUrl)
+  function waitForServer() {
+    if (typeof SERVER !== 'undefined' && SERVER && !SERVER.includes('deno.net')) {
+      _visServer = SERVER;
+      checkVisibility();
+      setInterval(checkVisibility, 2000);
+    } else {
+      setTimeout(waitForServer, 500);
+    }
+  }
+  waitForServer();
+})();
 </script></body></html>

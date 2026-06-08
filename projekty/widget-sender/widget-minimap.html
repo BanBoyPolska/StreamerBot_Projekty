@@ -102,4 +102,33 @@ async function poll(){
 function dirName(h){const d=['N','NE','E','SE','S','SW','W','NW'];return d[Math.round(h/45)%8];}
 
 _initServerUrl().then(() => { poll();setInterval(poll,3000); });
+
+// ── WIDGET VISIBILITY (panel moderacji) ──
+(function initVisibility() {
+  const WIDGET_KEY = 'minimap';
+  let _visServer = '';
+
+  async function checkVisibility() {
+    if (!_visServer) return;
+    try {
+      const r = await fetch(_visServer + '/widgets', {cache: 'no-cache'});
+      const state = await r.json();
+      const visible = state[WIDGET_KEY] !== false;
+      document.body.style.opacity = visible ? '1' : '0';
+      document.body.style.pointerEvents = visible ? '' : 'none';
+    } catch {}
+  }
+
+  // Czekaj az SERVER bedzie znany (ustawiony przez _initServerUrl)
+  function waitForServer() {
+    if (typeof SERVER !== 'undefined' && SERVER && !SERVER.includes('deno.net')) {
+      _visServer = SERVER;
+      checkVisibility();
+      setInterval(checkVisibility, 2000);
+    } else {
+      setTimeout(waitForServer, 500);
+    }
+  }
+  waitForServer();
+})();
 </script></body></html>

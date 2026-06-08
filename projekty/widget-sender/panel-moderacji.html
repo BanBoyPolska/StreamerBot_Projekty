@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OBS Widget Panel — Moderacja</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #58a6ff;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 24px;
+  }
+  .status-bar {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #484f58; flex-shrink: 0; }
+  .dot.online { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+  .dot.offline { background: #f85149; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .2s;
+  }
+  .card.active { border-color: #3fb950; }
+  .card.inactive { border-color: #f85149; opacity: .6; }
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .icon { font-size: 22px; }
+  .name { font-size: 14px; font-weight: 600; }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .toggle-label { font-size: 12px; color: #8b949e; }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute;
+    inset: 0;
+    background: #484f58;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .slider:before {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    left: 3px; top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .2s;
+  }
+  input:checked + .slider { background: #3fb950; }
+  input:checked + .slider:before { transform: translateX(20px); }
+  .btn-all {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #e6edf3;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-all:hover { background: #30363d; }
+  .btn-all.green { border-color: #3fb950; color: #3fb950; }
+  .btn-all.red { border-color: #f85149; color: #f85149; }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  #serverInput {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    padding: 8px 12px;
+    font-size: 13px;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  .server-row { margin-bottom: 20px; }
+  .server-label { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<h1>🎮 OBS Widget Panel</h1>
+<p class="subtitle">Zarządzaj widocznością widgetów w OBS — zmiany działają natychmiast</p>
+
+<div class="server-row">
+  <div class="server-label">ADRES SERWERA GPS</div>
+  <input id="serverInput" type="text" placeholder="Pobieranie z Gist..." readonly>
+</div>
+
+<div class="status-bar">
+  <div class="dot" id="statusDot"></div>
+  <span id="statusText">Łączenie z serwerem...</span>
+</div>
+
+<div class="actions">
+  <button class="btn-all green" onclick="setAll(true)">✅ Włącz wszystkie</button>
+  <button class="btn-all red" onclick="setAll(false)">❌ Wyłącz wszystkie</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+let SERVER = '';
+
+const WIDGETS = [
+  { key: 'speed',       name: 'Prędkość',    icon: '🚀' },
+  { key: 'speedometer', name: 'Licznik',      icon: '🎯' },
+  { key: 'battery',     name: 'Bateria',      icon: '🔋' },
+  { key: 'weather',     name: 'Pogoda',       icon: '🌤' },
+  { key: 'location',    name: 'Lokalizacja',  icon: '📍' },
+  { key: 'map',         name: 'Mapa',         icon: '🗺' },
+  { key: 'minimap',     name: 'Mini mapa',    icon: '🔎' },
+  { key: 'tracker',     name: 'Tracker',      icon: '📈' },
+  { key: 'elevation',   name: 'Wysokość',     icon: '⛰' },
+  { key: 'compass',     name: 'Kompas',       icon: '🧭' },
+  { key: 'gforce',      name: 'G-Force',      icon: '💥' },
+  { key: 'heartrate',   name: 'Tętno',        icon: '❤️' },
+];
+
+let state = {};
+
+// Pobierz SERVER URL z Gist
+async function fetchServerUrl() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { Accept: 'application/vnd.github.v3+json' }
+    });
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (file) {
+      const parsed = JSON.parse(file.content);
+      if (parsed.url) {
+        SERVER = parsed.url;
+        document.getElementById('serverInput').value = SERVER;
+      }
+    }
+  } catch(e) {}
+}
+
+// Zbuduj karty
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  WIDGETS.forEach(w => {
+    const on = state[w.key] !== false;
+    const card = document.createElement('div');
+    card.className = 'card ' + (on ? 'active' : 'inactive');
+    card.id = 'card-' + w.key;
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="icon">${w.icon}</span>
+        <span class="name">${w.name}</span>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">${on ? 'Widoczny' : 'Ukryty'}</span>
+        <label class="toggle">
+          <input type="checkbox" id="tog-${w.key}" ${on ? 'checked' : ''}
+            onchange="toggle('${w.key}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// Wysylaj zmiane do serwera
+async function toggle(key, value) {
+  state[key] = value;
+  updateCard(key, value);
+  if (!SERVER) return;
+  try {
+    await fetch(SERVER + '/widgets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: value })
+    });
+  } catch(e) {}
+}
+
+function updateCard(key, on) {
+  const card = document.getElementById('card-' + key);
+  if (!card) return;
+  card.className = 'card ' + (on ? 'active' : 'inactive');
+  card.querySelector('.toggle-label').textContent = on ? 'Widoczny' : 'Ukryty';
+}
+
+async function setAll(value) {
+  const update = {};
+  WIDGETS.forEach(w => { update[w.key] = value; state[w.key] = value; });
+  WIDGETS.forEach(w => updateCard(w.key, value));
+  WIDGETS.forEach(w => {
+    const cb = document.getElementById('tog-' + w.key);
+    if (cb) cb.checked = value;
+  });
+  if (!SERVER) return;
+  try {
+    await fetch(SERVER + '/widgets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
+    });
+  } catch(e) {}
+}
+
+// Polling - pobieraj stan z serwera co 3 sek
+async function pollState() {
+  if (!SERVER) return;
+  try {
+    const r = await fetch(SERVER + '/widgets', {cache: 'no-cache'});
+    if (!r.ok) throw new Error();
+    const newState = await r.json();
+    const changed = JSON.stringify(newState) !== JSON.stringify(state);
+    state = newState;
+    if (changed) buildGrid();
+    document.getElementById('statusDot').className = 'dot online';
+    document.getElementById('statusText').textContent = 'Połączono z serwerem GPS';
+  } catch {
+    document.getElementById('statusDot').className = 'dot offline';
+    document.getElementById('statusText').textContent = 'Brak połączenia z serwerem';
+  }
+}
+
+// Init
+(async function init() {
+  await fetchServerUrl();
+  await pollState();
+  buildGrid();
+  setInterval(pollState, 3000);
+})();
+</script>
+</body>
+</html>
