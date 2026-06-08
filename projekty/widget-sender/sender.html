@@ -139,17 +139,19 @@
   <div class="setup-label">Adres serwera (Deno Deploy URL)</div>
   <div class="url-row">
     <input class="url-input" type="url" id="serverUrl" placeholder="https://twoja-nazwa.deno.dev" value="https://gps.banboypolska.deno.net" autocomplete="off" autocorrect="off" spellcheck="false">
+
+  <div class="setup-label" style="margin-top:12px">HypeRate — ID urządzenia ❤️</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. ECB4C" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
+    <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus">● Połącz</button>
+  </div>
+  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace;margin-top:4px">ID znajdziesz w HypeRate → Share → Device ID</div>
     <button class="btn-save" onclick="saveServer()">Zapisz</button>
   </div>
   <div class="device-row">
     <input class="device-input" type="text" id="deviceName" placeholder="Nazwa urządzenia" value="Telefon BanBoy">
 
-  <div class="setup-label" style="margin-top:14px">HypeRate — ID urządzenia ❤️</div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. ECB4C" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
-    <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus">● Połącz</button>
-  </div>
-  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace;margin-top:4px">Znajdź ID w aplikacji HypeRate → Share → Device ID</div>
+
   </div>
 </div>
 
@@ -345,12 +347,12 @@ function hyperateConnect() {
   const code = (document.getElementById('hyperateId').value || '').trim().toUpperCase();
   if (!code) return;
   sessionStorage.setItem('hyperate_key', code);
-  if (hyperateWs) { hyperateWs.close(); hyperateWs = null; }
+  if (hyperateWs) { try { hyperateWs._intentionalClose = true; hyperateWs.close(); } catch {} hyperateWs = null; }
 
   const btn = document.getElementById('hyperateStatus');
   btn.textContent = '⏳ Łączenie…'; btn.className = 'hyperate-status connecting';
 
-  hyperateWs = new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');
+  hyperateWs = new WebSocket('wss://app.hyperate.io/socket/websocket?token=public');
 
   hyperateWs.onopen = () => {
     hyperateWs.send(JSON.stringify({ topic: `hr:${code}`, event: 'phx_join', payload: {}, ref: 0 }));
@@ -377,11 +379,18 @@ function hyperateConnect() {
   };
 
   hyperateWs.onerror = () => { btn.textContent = '✗ Błąd połączenia'; btn.className = 'hyperate-status'; };
+  let _intentionalClose = false;
   hyperateWs.onclose = () => {
-    hyperateConnected = false; heartRate = null;
-    btn.textContent = '● Połącz'; btn.className = 'hyperate-status';
-    log('info', 'HypeRate rozłączono');
+    if (_intentionalClose) return;
+    hyperateConnected = false;
+    btn.textContent = '⏳ Ponawiam…'; btn.className = 'hyperate-status connecting';
+    log('info', 'HypeRate rozłączono — ponawianie za 5s');
+    setTimeout(() => {
+      if (!hyperateConnected) hyperateConnect();
+    }, 5000);
   };
+  // Intentional close przy nowym połączeniu
+  if (hyperateWs) { _intentionalClose = true; }
 }
 
 // ── Wake Lock — ekran nie wygasza się ──
