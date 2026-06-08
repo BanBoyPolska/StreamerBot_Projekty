@@ -95,6 +95,35 @@
   }
   input:checked + .slider { background: #3fb950; }
   input:checked + .slider:before { transform: translateX(20px); }
+
+  /* Tabs */
+  .tabs { display:flex; gap:4px; margin-bottom:20px; }
+  .tab { padding:8px 18px; border-radius:6px; border:1px solid #30363d;
+    background:#21262d; color:#8b949e; font-size:13px; cursor:pointer; transition:.15s; }
+  .tab.active { background:#58a6ff22; border-color:#58a6ff; color:#58a6ff; }
+  .section { display:none; }
+  .section.active { display:block; }
+
+  /* Layout canvas */
+  .canvas-wrap { position:relative; width:100%; padding-bottom:56.25%; background:#0a0d0a;
+    border:1px solid #30363d; border-radius:8px; overflow:hidden; margin-bottom:12px; }
+  .canvas-inner { position:absolute; inset:0; }
+  .w-proxy { position:absolute; background:rgba(88,166,255,0.15); border:1.5px solid #58a6ff88;
+    border-radius:6px; cursor:grab; user-select:none; display:flex; align-items:center;
+    justify-content:center; font-size:10px; color:#58a6ff; font-weight:600;
+    text-align:center; transition:border-color .15s, background .15s; box-sizing:border-box; }
+  .w-proxy:hover { background:rgba(88,166,255,0.28); border-color:#58a6ff; }
+  .w-proxy.dragging { cursor:grabbing; background:rgba(88,166,255,0.4); border-color:#58a6ff;
+    box-shadow:0 4px 20px rgba(88,166,255,0.3); z-index:100; }
+  .w-proxy.hidden-w { opacity:0.25; border-color:#f8514944; background:rgba(248,81,73,0.08); }
+  .btn-apply { padding:9px 20px; border-radius:6px; border:none; background:#238636;
+    color:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:background .15s; }
+  .btn-apply:hover { background:#2ea043; }
+  .btn-reset { padding:9px 16px; border-radius:6px; border:1px solid #30363d;
+    background:#21262d; color:#8b949e; font-size:13px; cursor:pointer; margin-left:8px; }
+  .layout-actions { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .layout-info { font-size:11px; color:#8b949e; }
+
   .btn-all {
     padding: 8px 16px;
     border-radius: 6px;
@@ -143,12 +172,36 @@
   <span id="statusText">Łączenie z serwerem...</span>
 </div>
 
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('widgets')">🎛 Widgety</button>
+  <button class="tab" onclick="switchTab('layout')">📐 Układ OBS</button>
+</div>
+
+<div id="sec-widgets" class="section active">
 <div class="actions">
   <button class="btn-all green" onclick="setAll(true)">✅ Włącz wszystkie</button>
   <button class="btn-all red" onclick="setAll(false)">❌ Wyłącz wszystkie</button>
 </div>
 
-<div class="grid" id="grid"></div>
+<div class="grid" id="grid">
+</div><!-- end sec-widgets -->
+
+<div id="sec-layout" class="section">
+  <p style="font-size:13px;color:#8b949e;margin-bottom:14px">
+    Przeciągaj widgety aby zmienić ich układ w OBS. Kliknij <b>Zastosuj</b> aby zapisać.
+  </p>
+  <div class="canvas-wrap">
+    <div class="canvas-inner" id="layoutCanvas"></div>
+  </div>
+  <div class="layout-actions">
+    <button class="btn-apply" onclick="applyLayout()">✅ Zastosuj układ</button>
+    <button class="btn-reset" onclick="resetLayout()">↩ Resetuj</button>
+    <span class="layout-info" id="layoutInfo"></span>
+  </div>
+</div>
+
+</div>
 
 <script>
 const GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
@@ -279,6 +332,133 @@ async function pollState() {
   buildGrid();
   setInterval(pollState, 3000);
 })();
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['widgets','layout'][i] === name));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  if (name === 'layout') renderCanvas();
+}
+
+// ── LAYOUT ──
+const CANVAS_W = 1920, CANVAS_H = 1080;
+
+const DEFAULT_LAYOUT = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}};
+
+let currentLayout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+
+const WIDGET_LABELS = {
+  'w-speed':'🚀 Prędkość','w-battery':'🔋 Bateria','w-weather':'🌤 Pogoda',
+  'w-location':'📍 Lokalizacja','w-tracker':'📈 Tracker','w-heartrate':'❤️ Tętno',
+  'w-gforce':'💥 G-Force','w-elevation':'⛰ Wysokość','w-compass':'🧭 Kompas',
+  'w-speedo':'🎯 Licznik','w-map':'🗺 Mapa'
+};
+
+function renderCanvas() {
+  const canvas = document.getElementById('layoutCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width / CANVAS_W;
+  const scaleY = rect.height / CANVAS_H;
+  canvas.innerHTML = '';
+
+  Object.entries(currentLayout).forEach(([id, pos]) => {
+    const isHidden = state[id.replace('w-','')] === false ||
+      (id === 'w-heartrate' && state['heartrate'] === false) ||
+      (id === 'w-speedo' && state['speedometer'] === false);
+
+    const el = document.createElement('div');
+    el.className = 'w-proxy' + (isHidden ? ' hidden-w' : '');
+    el.id = 'proxy-' + id;
+    el.title = WIDGET_LABELS[id] || id;
+    el.style.left   = (pos.left   * scaleX) + 'px';
+    el.style.top    = (pos.top    * scaleY) + 'px';
+    el.style.width  = (pos.width  * scaleX) + 'px';
+    el.style.height = (pos.height * scaleY) + 'px';
+    el.innerHTML = `<span style="padding:2px 4px;pointer-events:none">${WIDGET_LABELS[id]||id}</span>`;
+
+    // Drag logic
+    let startX, startY, startLeft, startTop;
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      el.classList.add('dragging');
+      startX = e.clientX; startY = e.clientY;
+      startLeft = pos.left; startTop = pos.top;
+
+      function onMove(e) {
+        const dx = (e.clientX - startX) / scaleX;
+        const dy = (e.clientY - startY) / scaleY;
+        const newLeft = Math.max(0, Math.min(CANVAS_W - pos.width,  Math.round(startLeft + dx)));
+        const newTop  = Math.max(0, Math.min(CANVAS_H - pos.height, Math.round(startTop  + dy)));
+        currentLayout[id].left = newLeft;
+        currentLayout[id].top  = newTop;
+        el.style.left = (newLeft * scaleX) + 'px';
+        el.style.top  = (newTop  * scaleY) + 'px';
+        document.getElementById('layoutInfo').textContent = `${WIDGET_LABELS[id]}: ${newLeft}x${newTop}`;
+      }
+      function onUp() {
+        el.classList.remove('dragging');
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+
+    // Touch support
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      startLeft = pos.left; startTop = pos.top;
+      el.classList.add('dragging');
+    }, {passive:false});
+    el.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const dx = (t.clientX - startX) / scaleX;
+      const dy = (t.clientY - startY) / scaleY;
+      const newLeft = Math.max(0, Math.min(CANVAS_W - pos.width,  Math.round(startLeft + dx)));
+      const newTop  = Math.max(0, Math.min(CANVAS_H - pos.height, Math.round(startTop  + dy)));
+      currentLayout[id].left = newLeft;
+      currentLayout[id].top  = newTop;
+      el.style.left = (newLeft * scaleX) + 'px';
+      el.style.top  = (newTop  * scaleY) + 'px';
+    }, {passive:false});
+    el.addEventListener('touchend', e => {
+      el.classList.remove('dragging');
+    });
+
+    canvas.appendChild(el);
+  });
+}
+
+async function applyLayout() {
+  if (!SERVER) { alert('Brak połączenia z serwerem!'); return; }
+  try {
+    await fetch(SERVER + '/layout', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(currentLayout)
+    });
+    document.getElementById('layoutInfo').textContent = '✅ Układ zastosowany!';
+    setTimeout(() => document.getElementById('layoutInfo').textContent = '', 3000);
+  } catch {
+    document.getElementById('layoutInfo').textContent = '❌ Błąd zapisu';
+  }
+}
+
+function resetLayout() {
+  currentLayout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+  renderCanvas();
+  document.getElementById('layoutInfo').textContent = 'Układ zresetowany — kliknij Zastosuj aby zapisać';
+}
+
+// Przerysuj canvas przy zmianie rozmiaru okna
+window.addEventListener('resize', () => {
+  if (document.getElementById('sec-layout').classList.contains('active')) renderCanvas();
+});
+
 </script>
 </body>
 </html>

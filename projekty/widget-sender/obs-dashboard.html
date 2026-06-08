@@ -539,6 +539,29 @@ function updateMap(d){
 initMap();
 
 
+
+// ── LAYOUT POLLING ──
+let _lastLayoutHash = '';
+async function pollLayout() {
+  if (!SERVER) return;
+  try {
+    const r = await fetch(SERVER + '/layout', {cache: 'no-cache'});
+    if (!r.ok) return;
+    const layout = await r.json();
+    const hash = JSON.stringify(layout);
+    if (hash === _lastLayoutHash) return;
+    _lastLayoutHash = hash;
+    Object.entries(layout).forEach(([id, pos]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (pos.left  !== undefined) el.style.left   = pos.left   + 'px';
+      if (pos.top   !== undefined) el.style.top    = pos.top    + 'px';
+      if (pos.width !== undefined) el.style.width  = pos.width  + 'px';
+      if (pos.height!== undefined) el.style.height = pos.height + 'px';
+    });
+  } catch {}
+}
+
 // ── WIDGET VISIBILITY POLLING ──
 async function pollWidgetVisibility() {
   if (!SERVER) return;
@@ -565,6 +588,8 @@ _initServerUrl().then(() => {
   setInterval(poll, INTERVAL);
   pollWidgetVisibility();
   setInterval(pollWidgetVisibility, 2000);
+  pollLayout();
+  setInterval(pollLayout, 1000);
 });
 
 </script>
