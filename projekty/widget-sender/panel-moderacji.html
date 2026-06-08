@@ -139,11 +139,9 @@ const WIDGET_LABELS = {
 async function fetchServerUrl() {
   document.getElementById('statusText').textContent = '🔄 Pobieranie adresu z Gist...';
   try {
-    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{Accept:'application/vnd.github.v3+json'}});
-    const d = await r.json();
-    const f = d.files['obs-gps-server-url.json'];
-    if(f){
-      const p=JSON.parse(f.content);
+    const r = await fetch('https://gist.githubusercontent.com/BanBoyPolska/b8194117c4bb29f977bec88ec9a5c592/raw/obs-gps-server-url.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok){
+      const p=await r.json();
       if(p.url && p.url.length > 5){
         SERVER=p.url;
         document.getElementById('serverInput').value=SERVER;

@@ -298,16 +298,10 @@ const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null,
 const AUTO_FETCH_GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
 
 async function fetchServerUrlFromGist() {
-  if (!AUTO_FETCH_GIST_ID) return null;
   try {
-    const r = await fetch(`https://api.github.com/gists/${AUTO_FETCH_GIST_ID}`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json' }
-    });
+    const r = await fetch('https://gist.githubusercontent.com/BanBoyPolska/b8194117c4bb29f977bec88ec9a5c592/raw/obs-gps-server-url.json?t='+Date.now(), {cache:'no-store'});
     if (!r.ok) return null;
-    const data = await r.json();
-    const file = data.files['obs-gps-server-url.json'];
-    if (!file) return null;
-    const parsed = JSON.parse(file.content);
+    const parsed = await r.json();
     return parsed.url || null;
   } catch { return null; }
 }
