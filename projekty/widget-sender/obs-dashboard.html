@@ -401,8 +401,7 @@ function updateHeartRate(d) {
   document.getElementById('hrAvg').textContent=Math.round(hrSum/hrCnt);
   const z=zoneStr(hr);const zEl=document.getElementById('hrZone');zEl.textContent=z;zEl.style.color=zoneCol(hr);
   const hrt=document.getElementById('hrHeart');
-  clearInterval(hrBeatTimer);hrBeatTimer=_initServerUrl().then(() => {
-setInterval(()=>{hrt.classList.remove('beat');void hrt.offsetWidth;hrt.classList.add('beat');},Math.round(60000/hr));
+  clearInterval(hrBeatTimer);hrBeatTimer=setInterval(()=>{hrt.classList.remove('beat');void hrt.offsetWidth;hrt.classList.add('beat');},Math.round(60000/hr));
   document.getElementById('hrSrc').textContent=`HR·${hr}bpm`;
   drawHr();
 }
@@ -540,9 +539,10 @@ function updateMap(d){
 initMap();
 
 // ── START ──
-poll();
-setInterval(poll, INTERVAL);
+_initServerUrl().then(() => {
+  poll();
+  setInterval(poll, INTERVAL);
+});
 
-}); // end _initServerUrl
 </script>
 </body></html>
