@@ -151,7 +151,7 @@
     <input class="hyperate-input" type="text" id="hyperateId" placeholder="Device ID (np. ECB4C)" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()" style="flex:1">
   </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-    <input class="hyperate-input" type="text" id="hyperateToken" placeholder="API Key (hyperate.io/api)" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;font-size:11px;letter-spacing:0">
+    <input class="hyperate-input" type="text" id="hyperateToken" placeholder="API Key (hyperate.io/api)" value="1lfc2EK2YZF6TZe4vQLwAEqIVjKELltOt6dyCvKI" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;font-size:11px;letter-spacing:0">
     <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus" style="cursor:pointer">● Połącz</button>
   </div>
   <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace">API Key: hyperate.io → Account → API Key (darmowe)</div>
@@ -327,7 +327,7 @@ async function fetchServerUrlFromGist() {
     });
   }
   const hrKey = sessionStorage.getItem('hyperate_key') || 'ECB4C';
-  const hrToken = sessionStorage.getItem('hyperate_token') || '';
+  const hrToken = sessionStorage.getItem('hyperate_token') || '1lfc2EK2YZF6TZe4vQLwAEqIVjKELltOt6dyCvKI';
   document.getElementById('hyperateId').value = hrKey;
   document.getElementById('hyperateToken').value = hrToken;
   // HypeRate NIE łączy się automatycznie — użytkownik klika Połącz ręcznie
