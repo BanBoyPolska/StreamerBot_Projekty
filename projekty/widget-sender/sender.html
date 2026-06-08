@@ -313,20 +313,26 @@ async function fetchServerUrlFromGist() {
 }
 
 (function init() {
-  // Jesli jest GIST_ID - sprobuj pobrac URL automatycznie
+  // Zawsze pobieraj URL z Gist przy starcie (sessionStorage jako fallback)
+  const _fallbackUrl = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
+  SERVER_URL = _fallbackUrl;
+  document.getElementById('serverUrl').value = _fallbackUrl;
+
   if (AUTO_FETCH_GIST_ID) {
+    document.getElementById('autoFetchStatus').textContent = '🔄 Pobieram adres serwera...';
     fetchServerUrlFromGist().then(url => {
       if (url) {
         SERVER_URL = url;
         document.getElementById('serverUrl').value = url;
         sessionStorage.setItem('gps_server_url', url);
-        document.getElementById('autoFetchStatus').textContent = '✅ URL pobrany automatycznie';
+        document.getElementById('autoFetchStatus').textContent = '✅ ' + url;
         document.getElementById('autoFetchStatus').style.color = '#5fa84d';
+      } else {
+        document.getElementById('autoFetchStatus').textContent = '⚠ Gist niedostepny, uzyto ostatniego adresu';
+        document.getElementById('autoFetchStatus').style.color = '#e8a040';
       }
     });
   }
-  const s = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
-  SERVER_URL = s; document.getElementById('serverUrl').value = s; sessionStorage.setItem('gps_server_url', s);
   const hrKey = sessionStorage.getItem('hyperate_key') || 'ECB4C';
   const hrToken = sessionStorage.getItem('hyperate_token') || '';
   document.getElementById('hyperateId').value = hrKey;
