@@ -108,9 +108,18 @@ draw(0);_initServerUrl().then(() => { poll();setInterval(poll,3000); });
   }
 
   // Czekaj az SERVER bedzie znany (ustawiony przez _initServerUrl)
+  let _waitTries = 0;
   function waitForServer() {
-    if (typeof SERVER !== 'undefined' && SERVER && !SERVER.includes('deno.net')) {
-      _visServer = SERVER;
+    _waitTries++;
+    const s = (typeof SERVER !== 'undefined') ? SERVER : '';
+    const ready = s && !s.includes('deno.net') && !s.includes('pobieram');
+    if (ready) {
+      _visServer = s;
+      checkVisibility();
+      setInterval(checkVisibility, 2000);
+    } else if (_waitTries > 8) {
+      // Fallback: uzyj localhost jesli Gist nie odpowiedzial
+      _visServer = 'http://localhost:1985';
       checkVisibility();
       setInterval(checkVisibility, 2000);
     } else {

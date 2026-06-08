@@ -538,10 +538,33 @@ function updateMap(d){
 }
 initMap();
 
+
+// ── WIDGET VISIBILITY POLLING ──
+async function pollWidgetVisibility() {
+  if (!SERVER) return;
+  try {
+    const r = await fetch(SERVER + '/widgets', {cache: 'no-cache'});
+    if (!r.ok) return;
+    const state = await r.json();
+    const MAP = {"speed": "w-speed", "battery": "w-battery", "weather": "w-weather", "location": "w-location", "tracker": "w-tracker", "heartrate": "w-heartrate", "gforce": "w-gforce", "elevation": "w-elevation", "compass": "w-compass", "speedometer": "w-speedo", "map": "w-map"};
+    Object.entries(MAP).forEach(([key, elId]) => {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      const visible = state[key] !== false;
+      el.style.transition = 'opacity 0.3s, transform 0.3s';
+      el.style.opacity = visible ? '1' : '0';
+      el.style.pointerEvents = visible ? '' : 'none';
+      el.style.transform = visible ? '' : 'scale(0.95)';
+    });
+  } catch {}
+}
+
 // ── START ──
 _initServerUrl().then(() => {
   poll();
   setInterval(poll, INTERVAL);
+  pollWidgetVisibility();
+  setInterval(pollWidgetVisibility, 2000);
 });
 
 </script>
