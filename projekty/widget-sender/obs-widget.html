@@ -13,7 +13,6 @@
       --font-mono: 'JetBrains Mono', monospace;
       --bg:        #0d0f12;
       --surface:   #131619;
-      --surface2:  #171a1d;
       --border:    rgba(255,255,255,0.07);
       --text:      #e8eaed;
       --muted:     #6c7280;
@@ -28,91 +27,47 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 420px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 13px; display: flex; flex-direction: column; }
 
-    body {
-      background: var(--bg); color: var(--text);
-      font-family: var(--font-body); font-size: 13px;
-      display: flex; flex-direction: column;
-    }
-
-    /* ── Header ── */
-    .header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px 8px;
-      border-bottom: 1px solid var(--border);
-    }
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); }
     .logo { display: flex; align-items: center; gap: 8px; color: var(--primary); }
-    .logo-text { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text); }
+    .logo-text { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing:.07em; text-transform: uppercase; color: var(--text); }
     .header-right { display: flex; align-items: center; gap: 8px; }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
-    .status-dot.live { background: var(--success); box-shadow: 0 0 8px var(--success); animation: blink 1.8s ease-in-out infinite; }
+    .status-dot.live  { background: var(--success); box-shadow: 0 0 8px var(--success); animation: blink 1.8s ease-in-out infinite; }
     .status-dot.stale { background: var(--warning); }
     .status-dot.err   { background: var(--error); }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
     .clock { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
     .device-label { font-family: var(--font-mono); font-size: 10px; color: var(--primary); }
+    .btn-cfg { font-size: 9px; font-family: var(--font-mono); color: var(--faint); background: none; border: 1px solid var(--faint); border-radius: 4px; padding: 2px 6px; cursor: pointer; transition: color var(--tr); }
+    .btn-cfg:hover { color: var(--muted); }
 
-    /* ── Grid ── */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px 0; }
+    /* Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px 10px; }
 
-    /* ── Tile ── */
-    .tile {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 11px 13px;
-      position: relative; overflow: hidden;
-    }
-    .tile::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, var(--accent, var(--primary)), transparent);
-    }
-    .tile-label {
-      font-size: 9px; font-family: var(--font-mono); font-weight: 600;
-      text-transform: uppercase; letter-spacing: .09em; color: var(--muted);
-      display: flex; align-items: center; gap: 5px; margin-bottom: 6px;
-    }
-    .tile-val { font-family: var(--font-mono); font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); }
+    /* Tile */
+    .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; position: relative; overflow: hidden; }
+    .tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent, var(--primary)), transparent); }
+    .tile-label { font-size: 9px; font-family: var(--font-mono); font-weight: 600; text-transform: uppercase; letter-spacing:.09em; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+    .tile-val  { font-family: var(--font-mono); font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); }
     .tile-unit { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: var(--font-mono); }
     .tile-sub  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .tile-full { grid-column: 1 / -1; }
 
     .tile-spd  { --accent: var(--success); }
     .tile-bat  { --accent: #f0a040; }
     .tile-temp { --accent: #e87038; }
     .tile-acc  { --accent: var(--pink); }
+    .tile-city { --accent: var(--primary); }
+    .tile-map  { --accent: var(--primary); }
 
-    /* Bateria bar */
-    .bat-bar   { height: 3px; background: rgba(255,255,255,.05); border-radius: 2px; margin-top: 7px; overflow: hidden; }
-    .bat-fill  { height: 100%; border-radius: 2px; background: var(--success); transition: width .8s ease; }
+    /* Bat bar */
+    .bat-bar  { height: 3px; background: rgba(255,255,255,.05); border-radius: 2px; margin-top: 7px; overflow: hidden; }
+    .bat-fill { height: 100%; border-radius: 2px; background: var(--success); transition: width .8s ease; }
 
-    /* ── Koordynaty full-width ── */
-    .tile-full { grid-column: 1 / -1; }
-    .coords-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 6px; }
-    .coord-key { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
-    .coord-val { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: #a066cc; }
-
-    /* ── Tracker ── */
-    .tile-tracker { grid-column: 1 / -1; --accent: var(--pink); }
-    .tracker-row {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px; margin-top: 6px;
-    }
-    .trk-stat { display: flex; flex-direction: column; gap: 2px; }
-    .trk-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-    .trk-val   { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--text); }
-    .trk-unit  { font-size: 9px; color: var(--muted); }
-    .tracker-badges { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 8px; border-radius: 20px; font-size: 9px;
-      font-family: var(--font-mono); font-weight: 700; text-transform: uppercase;
-      letter-spacing: .06em; border: 1px solid transparent;
-    }
-    .badge-idle    { background: rgba(255,255,255,.04); color: var(--muted); border-color: var(--faint); }
-    .badge-running { background: rgba(95,168,77,.1); color: var(--success); border-color: rgba(95,168,77,.3); animation: blink 1.8s ease-in-out infinite; }
-    .badge-paused  { background: rgba(200,162,48,.1); color: var(--warning); border-color: rgba(200,162,48,.3); }
-    .gpx-info { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
-
-    /* ── Mapa ── */
-    .tile-map { grid-column: 1 / -1; --accent: var(--primary); }
+    /* Mapa */
     .map-wrap { width: 100%; height: 200px; border-radius: calc(var(--radius) - 3px); overflow: hidden; margin-top: 8px; position: relative; border: 1px solid var(--border); }
     #map { width: 100%; height: 100%; }
     .leaflet-tile { filter: brightness(.8) saturate(.6) hue-rotate(185deg); }
@@ -122,57 +77,18 @@
     .leaflet-control-attribution a { color: var(--primary) !important; }
     .gps-pulse-outer { width: 18px; height: 18px; border-radius: 50%; background: rgba(79,152,163,.2); border: 2px solid var(--primary); animation: gps-ring 2s ease-out infinite; }
     @keyframes gps-ring { 0%{transform:scale(1);opacity:1} 70%{transform:scale(2.2);opacity:0} 100%{transform:scale(1);opacity:0} }
-    .map-layer-btn {
-      position: absolute; top: 8px; right: 8px; z-index: 1000;
-      background: rgba(13,15,18,.9); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--primary); font-size: 9px;
-      font-family: var(--font-mono); font-weight: 700; padding: 4px 8px;
-      cursor: pointer; text-transform: uppercase; letter-spacing: .05em;
-      transition: background var(--tr);
-    }
+    .map-layer-btn { position: absolute; top: 8px; right: 8px; z-index: 1000; background: rgba(13,15,18,.9); border: 1px solid var(--border); border-radius: 6px; color: var(--primary); font-size: 9px; font-family: var(--font-mono); font-weight: 700; padding: 4px 8px; cursor: pointer; text-transform: uppercase; letter-spacing:.05em; transition: background var(--tr); }
     .map-layer-btn:hover { background: rgba(23,26,29,.95); }
 
-    /* ── Setup overlay ── */
-    .setup-overlay {
-      position: fixed; inset: 0; background: rgba(5,7,9,.97);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 16px; z-index: 2000; padding: 24px;
-    }
+    /* Setup overlay */
+    .setup-overlay { position: fixed; inset: 0; background: rgba(5,7,9,.97); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 2000; padding: 24px; }
     .setup-overlay.hidden { display: none; }
-    .setup-logo { display: flex; align-items: center; gap: 10px; color: var(--primary); margin-bottom: 4px; }
     .setup-title { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text); }
     .setup-sub { font-size: 12px; color: var(--muted); text-align: center; max-width: 300px; }
-    .setup-input {
-      width: 100%; max-width: 340px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); font-family: var(--font-mono);
-      font-size: 13px; padding: 12px 14px; outline: none;
-    }
+    .setup-input { width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 12px 14px; outline: none; }
     .setup-input:focus { border-color: var(--primary); }
-    .setup-btn {
-      width: 100%; max-width: 340px; padding: 14px;
-      background: var(--primary); color: #071215; border: none;
-      border-radius: 8px; font-family: var(--font-mono); font-size: 13px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-      cursor: pointer; transition: background var(--tr);
-    }
+    .setup-btn { width: 100%; max-width: 340px; padding: 14px; background: var(--primary); color: #071215; border: none; border-radius: 8px; font-family: var(--font-mono); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing:.06em; cursor: pointer; transition: background var(--tr); }
     .setup-btn:hover { background: #3d8a96; }
-
-    /* ── Footer ── */
-    .footer {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 7px 14px 10px; margin-top: 8px;
-      border-top: 1px solid var(--border);
-    }
-    .footer-time { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
-    .footer-info { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
-    .footer-city { font-family: var(--font-mono); font-size: 11px; color: var(--primary); }
-    .btn-cfg {
-      font-size: 9px; font-family: var(--font-mono); color: var(--faint);
-      background: none; border: 1px solid var(--faint); border-radius: 4px;
-      padding: 2px 6px; cursor: pointer; transition: color var(--tr);
-    }
-    .btn-cfg:hover { color: var(--muted); }
 
     /* Animowane cyfry */
     @keyframes num-pop { 0%{opacity:.3;transform:scale(.92)} 100%{opacity:1;transform:scale(1)} }
@@ -183,25 +99,19 @@
 
 <!-- Setup overlay -->
 <div class="setup-overlay" id="setupOverlay">
-  <div class="setup-logo">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="11" r="3.5" fill="currentColor" opacity="0.9"/>
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.6"/>
-    </svg>
+  <div style="color:var(--primary)">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="11" r="3.5" fill="currentColor" opacity="0.9"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.6"/></svg>
   </div>
   <div class="setup-title">OBS GPS Widget</div>
-  <div class="setup-sub">Wpisz adres serwera Deno Deploy, który skonfigurowałeś</div>
+  <div class="setup-sub">Wpisz adres serwera Deno Deploy</div>
   <input class="setup-input" type="url" id="setupUrl" placeholder="https://twoja-nazwa.deno.dev" autocomplete="off" spellcheck="false">
   <button class="setup-btn" onclick="applyServer()">Połącz z serwerem</button>
 </div>
 
-<!-- Widget -->
+<!-- Header -->
 <div class="header">
   <div class="logo">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="11" r="3" fill="currentColor" opacity="0.9"/>
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.6"/>
-    </svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="11" r="3" fill="currentColor" opacity="0.9"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.6"/></svg>
     <span class="logo-text">GPS Widget</span>
   </div>
   <div class="header-right">
@@ -246,61 +156,18 @@
     <div class="tile-sub" id="tempDesc">—</div>
   </div>
 
-  <!-- Dokładność GPS -->
-  <div class="tile tile-acc">
+  <!-- Miasto -->
+  <div class="tile tile-city">
     <div class="tile-label">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-      Dokładność
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="11" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+      Lokalizacja
     </div>
-    <div class="tile-val" id="accVal">--</div>
-    <div class="tile-unit">m</div>
-  </div>
-
-  <!-- Współrzędne -->
-  <div class="tile tile-full">
-    <div class="tile-label">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-      Współrzędne GPS
-    </div>
-    <div class="coords-row">
-      <div><div class="coord-key">Szerokość</div><div class="coord-val" id="latVal">—</div></div>
-      <div><div class="coord-key">Długość</div><div class="coord-val" id="lngVal">—</div></div>
-      <div><div class="coord-key">Wysokość</div><div class="coord-val" id="altVal">—</div></div>
-      <div><div class="coord-key">Kierunek</div><div class="coord-val" id="headVal">—</div></div>
-    </div>
-  </div>
-
-  <!-- Tracker -->
-  <div class="tile tile-tracker">
-    <div class="tile-label">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Tracker trasy
-      <div class="tracker-badges">
-        <span class="badge badge-idle" id="trackerBadge">⬛ IDLE</span>
-        <span class="gpx-info" id="gpxInfo">Punkty GPX: 0</span>
-      </div>
-    </div>
-    <div class="tracker-row">
-      <div class="trk-stat">
-        <div class="trk-label">Dystans</div>
-        <div class="trk-val" id="trkDist">0.00</div>
-        <div class="trk-unit">km</div>
-      </div>
-      <div class="trk-stat">
-        <div class="trk-label">Czas</div>
-        <div class="trk-val" id="trkTime">00:00:00</div>
-        <div class="trk-unit">hh:mm:ss</div>
-      </div>
-      <div class="trk-stat">
-        <div class="trk-label">Śr. prędkość</div>
-        <div class="trk-val" id="trkAvg">0.0</div>
-        <div class="trk-unit">km/h</div>
-      </div>
-    </div>
+    <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;line-height:1.3;color:var(--text)" id="cityVal">—</div>
+    <div class="tile-sub" id="countryVal">—</div>
   </div>
 
   <!-- Mapa -->
-  <div class="tile tile-map">
+  <div class="tile tile-full tile-map">
     <div class="tile-label">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
       Mapa na żywo
@@ -313,41 +180,27 @@
 
 </div>
 
-<div class="footer">
-  <div class="footer-time" id="footerTime">--:--:--</div>
-  <div class="footer-city" id="footerCity">—</div>
-  <div class="footer-info" id="footerInfo">oczekiwanie na dane…</div>
-</div>
-
 <script>
-// ══════════════════════════════════════
-//  OBS GPS WIDGET — Backend Receiver
-// ══════════════════════════════════════
 let SERVER_URL = '';
 let fetchTimer = null;
 let map = null, gpsMarker = null, accCircle = null, routeLine = null;
-let mapInit = false;
-let currentLayer = 'osm';
+let mapInit = false, currentLayer = 'osm';
 let lastLat = null, lastLng = null;
 const ROUTE_PTS = [];
 
 const LAYERS = {
-  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution:'© OSM', maxZoom:19 }),
-  sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution:'© Esri', maxZoom:19 })
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OSM', maxZoom:19 }),
+  sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'© Esri', maxZoom:19 })
 };
 
-// ── Setup ──
 (function(){
   const saved = sessionStorage.getItem('obs_server_url');
   if (saved) { SERVER_URL = saved; document.getElementById('setupOverlay').classList.add('hidden'); startPolling(); }
 })();
 
 function showSetup() { document.getElementById('setupOverlay').classList.remove('hidden'); }
-
 function applyServer() {
-  const v = document.getElementById('setupUrl').value.trim().replace(/\/$/, '');
+  const v = document.getElementById('setupUrl').value.trim().replace(/\/$/,'');
   if (!v) return;
   SERVER_URL = v;
   sessionStorage.setItem('obs_server_url', v);
@@ -355,7 +208,6 @@ function applyServer() {
   startPolling();
 }
 
-// ── Polling backendu ──
 function startPolling() {
   if (fetchTimer) clearInterval(fetchTimer);
   fetchOnce();
@@ -365,110 +217,69 @@ function startPolling() {
 async function fetchOnce() {
   if (!SERVER_URL) return;
   try {
-    const r = await fetch(SERVER_URL + '/data', { cache: 'no-cache' });
+    const r = await fetch(SERVER_URL + '/data', { cache:'no-cache' });
     if (!r.ok) { setStatus('err'); return; }
-    const d = await r.json();
-    applyData(d);
-  } catch(e) {
-    setStatus('err');
-    document.getElementById('footerInfo').textContent = 'Brak połączenia z serwerem';
-  }
+    applyData(await r.json());
+  } catch { setStatus('err'); }
 }
 
-// ── Aktualizacja UI z danymi ──
 function applyData(d) {
   const ago = d.lastUpdate ? Math.round((Date.now() - new Date(d.lastUpdate).getTime()) / 1000) : 999;
   setStatus(ago < 15 ? 'live' : ago < 60 ? 'stale' : 'err');
 
-  // Device
   document.getElementById('deviceLabel').textContent = d.deviceName || '—';
 
-  // Prędkość
-  setAnimated('speedVal', d.speed ?? '--', true);
+  setAnim('speedVal', d.speed ?? '--');
 
-  // Bateria
   if (d.battery !== null && d.battery !== undefined) {
-    setAnimated('batVal', d.battery, true);
+    setAnim('batVal', d.battery);
     document.getElementById('batStatus').textContent = d.charging ? '⚡ ładowanie' : 'rozładowywanie';
     const bar = document.getElementById('batBar');
     bar.style.width = d.battery + '%';
     bar.style.background = d.battery <= 15 ? '#b84040' : d.battery <= 30 ? '#c8a230' : '#5fa84d';
   }
 
-  // Temperatura
   if (d.temp !== null && d.temp !== undefined) {
-    setAnimated('tempVal', d.temp, true);
+    setAnim('tempVal', d.temp);
     document.getElementById('tempDesc').textContent = d.tempDesc || '—';
   }
 
-  // Dokładność
-  setAnimated('accVal', d.accuracy ?? '--', true);
+  document.getElementById('cityVal').textContent    = d.city    || '—';
+  document.getElementById('countryVal').textContent = d.country || '—';
 
-  // Współrzędne
   if (d.lat !== null && d.lat !== undefined) {
-    document.getElementById('latVal').textContent = d.lat.toFixed(5) + '°';
-    document.getElementById('lngVal').textContent = d.lng.toFixed(5) + '°';
-    document.getElementById('altVal').textContent = d.alt ? Math.round(d.alt) + ' m' : 'N/A';
-    document.getElementById('headVal').textContent = d.heading ? Math.round(d.heading) + '°' : 'N/A';
     updateMap(d.lat, d.lng, d.accuracy || 10);
   }
-
-  // Tracker
-  const badge = document.getElementById('trackerBadge');
-  if (d.trackerState === 'running') {
-    badge.className = 'badge badge-running'; badge.textContent = '▶ LIVE';
-  } else if (d.trackerState === 'paused') {
-    badge.className = 'badge badge-paused'; badge.textContent = '⏸ PAUZA';
-  } else {
-    badge.className = 'badge badge-idle'; badge.textContent = '⬛ IDLE';
-  }
-  setAnimated('trkDist', (d.trackerDist ?? 0).toFixed(2), false);
-  document.getElementById('trkTime').textContent   = d.trackerTime    || '00:00:00';
-  document.getElementById('trkAvg').textContent    = (d.trackerAvgSpeed ?? 0).toFixed(1);
-  document.getElementById('gpxInfo').textContent   = `Punkty GPX: ${d.gpxPoints || 0}`;
-
-  // Miasto
-  document.getElementById('footerCity').textContent = [d.city, d.country].filter(Boolean).join(', ') || '—';
-  document.getElementById('footerInfo').textContent = ago < 15 ? `Odczyt ${ago}s temu` : `⚠ ostatni odczyt ${ago}s temu`;
 }
 
-function setAnimated(id, val, check) {
+function setAnim(id, val) {
   const el = document.getElementById(id);
-  if (check && el.textContent !== String(val)) {
+  if (el.textContent !== String(val)) {
     el.textContent = val;
     el.classList.remove('num-updated');
     void el.offsetWidth;
     el.classList.add('num-updated');
-  } else {
-    el.textContent = val;
   }
 }
 
-// ── Status dot ──
 function setStatus(s) {
-  const dot = document.getElementById('statusDot');
-  dot.className = 'status-dot' + (s !== 'off' ? ' ' + s : '');
+  document.getElementById('statusDot').className = 'status-dot' + (s !== 'off' ? ' '+s : '');
 }
 
-// ── Zegar ──
 function tickClock() {
-  const now = new Date();
-  const t = now.toLocaleTimeString('pl', { hour12: false });
+  const t = new Date().toLocaleTimeString('pl', { hour12:false });
   document.getElementById('clockVal').textContent = t;
-  document.getElementById('footerTime').textContent = t;
 }
 setInterval(tickClock, 1000); tickClock();
 
-// ── Mapa ──
 function initMap(lat, lng) {
-  if (mapInit) return;
-  mapInit = true;
+  if (mapInit) return; mapInit = true;
   map = L.map('map', { center:[lat,lng], zoom:15, zoomControl:true, attributionControl:true, dragging:true, scrollWheelZoom:true });
   LAYERS.osm.addTo(map);
   const icon = L.divIcon({ className:'', html:'<div class="gps-pulse-outer"></div>', iconSize:[18,18], iconAnchor:[9,9] });
-  gpsMarker  = L.marker([lat,lng], { icon }).addTo(map);
-  accCircle  = L.circle([lat,lng], { radius:10, color:'#4f98a3', fillColor:'#4f98a3', fillOpacity:.08, weight:1 }).addTo(map);
-  routeLine  = L.polyline([], { color:'#c966a8', weight:3, opacity:.85, lineJoin:'round' }).addTo(map);
+  gpsMarker = L.marker([lat,lng], { icon }).addTo(map);
+  accCircle = L.circle([lat,lng], { radius:10, color:'#4f98a3', fillColor:'#4f98a3', fillOpacity:.08, weight:1 }).addTo(map);
+  routeLine = L.polyline([], { color:'#c966a8', weight:3, opacity:.85, lineJoin:'round' }).addTo(map);
 }
 
 function updateMap(lat, lng, acc) {
@@ -477,9 +288,7 @@ function updateMap(lat, lng, acc) {
   gpsMarker.setLatLng(ll);
   accCircle.setLatLng(ll).setRadius(Math.max(acc, 5));
   if (!map._moved) map.setView(ll, map.getZoom(), { animate:true, duration:.8 });
-
-  // Dodaj punkt trasy jeśli się przesunął
-  if (lastLat === null || Math.abs(lat - lastLat) > 0.00005 || Math.abs(lng - lastLng) > 0.00005) {
+  if (lastLat === null || Math.abs(lat-lastLat) > 0.00005 || Math.abs(lng-lastLng) > 0.00005) {
     ROUTE_PTS.push(ll);
     if (ROUTE_PTS.length > 2000) ROUTE_PTS.shift();
     routeLine.setLatLngs(ROUTE_PTS);
@@ -490,12 +299,10 @@ function updateMap(lat, lng, acc) {
 function toggleLayer() {
   if (!mapInit) return;
   if (currentLayer === 'osm') {
-    LAYERS.osm.remove(); LAYERS.sat.addTo(map);
-    currentLayer = 'sat';
+    LAYERS.osm.remove(); LAYERS.sat.addTo(map); currentLayer = 'sat';
     document.getElementById('layerBtn').textContent = '🗺 Mapa';
   } else {
-    LAYERS.sat.remove(); LAYERS.osm.addTo(map);
-    currentLayer = 'osm';
+    LAYERS.sat.remove(); LAYERS.osm.addTo(map); currentLayer = 'osm';
     document.getElementById('layerBtn').textContent = '🛰 Satelita';
   }
 }
