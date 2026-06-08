@@ -142,7 +142,10 @@
     <input class="url-input" type="url" id="serverUrl" placeholder="https://twoja-nazwa.deno.dev" value="https://gps.banboypolska.deno.net" autocomplete="off" autocorrect="off" spellcheck="false">
     <button class="btn-save" onclick="saveServer()">Zapisz</button>
   </div>
-
+  <div id="autoFetchStatus" style="font-size:11px;color:#888;margin-top:4px;font-family:monospace">
+    🔄 Pobieram adres serwera...
+  </div>
+  
   <div class="setup-label" style="margin-top:12px">HypeRate ❤️</div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
     <input class="hyperate-input" type="text" id="hyperateId" placeholder="Device ID (np. ECB4C)" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()" style="flex:1">
@@ -290,7 +293,38 @@ let weatherData = {}, cityData = {}, lastWeatherLat = null;
 // ── Tracker state ──
 const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null, gpxPts:[], timerID:null };
 
+
+// ── AUTO-FETCH SERVER URL z GitHub Gist ──
+const AUTO_FETCH_GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+
+async function fetchServerUrlFromGist() {
+  if (!AUTO_FETCH_GIST_ID) return null;
+  try {
+    const r = await fetch(`https://api.github.com/gists/${AUTO_FETCH_GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (!file) return null;
+    const parsed = JSON.parse(file.content);
+    return parsed.url || null;
+  } catch { return null; }
+}
+
 (function init() {
+  // Jesli jest GIST_ID - sprobuj pobrac URL automatycznie
+  if (AUTO_FETCH_GIST_ID) {
+    fetchServerUrlFromGist().then(url => {
+      if (url) {
+        SERVER_URL = url;
+        document.getElementById('serverUrl').value = url;
+        sessionStorage.setItem('gps_server_url', url);
+        document.getElementById('autoFetchStatus').textContent = '✅ URL pobrany automatycznie';
+        document.getElementById('autoFetchStatus').style.color = '#5fa84d';
+      }
+    });
+  }
   const s = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
   SERVER_URL = s; document.getElementById('serverUrl').value = s; sessionStorage.setItem('gps_server_url', s);
   const hrKey = sessionStorage.getItem('hyperate_key') || 'ECB4C';
@@ -301,6 +335,28 @@ const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null,
   const n = sessionStorage.getItem('gps_device_name');
   if (n) document.getElementById('deviceName').value = n;
 })();
+
+function saveGistId() {
+  const gid = document.getElementById('gistId').value.trim();
+  localStorage.setItem('gist_id', gid);
+  if (gid) {
+    document.getElementById('autoFetchStatus').textContent = '🔄 Gist ID zapisany — pobieram URL...';
+    fetchServerUrlFromGist().then(url => {
+      if (url) {
+        SERVER_URL = url;
+        document.getElementById('serverUrl').value = url;
+        sessionStorage.setItem('gps_server_url', url);
+        document.getElementById('autoFetchStatus').textContent = '✅ URL pobrany: ' + url;
+        document.getElementById('autoFetchStatus').style.color = '#5fa84d';
+      } else {
+        document.getElementById('autoFetchStatus').textContent = '❌ Nie udalo sie pobrac URL z Gist';
+        document.getElementById('autoFetchStatus').style.color = '#e84040';
+      }
+    });
+  } else {
+    document.getElementById('autoFetchStatus').textContent = '🔄 Pobieram adres serwera...';
+  }
+}
 
 function saveServer() {
   SERVER_URL = document.getElementById('serverUrl').value.trim().replace(/\/$/,'') || 'https://gps.banboypolska.deno.net';
