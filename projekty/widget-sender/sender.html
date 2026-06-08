@@ -39,6 +39,11 @@
     .device-row { display: flex; gap: 8px; margin-top: 8px; }
     .device-input { flex: 1; background: #0a0c0f; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 12px; padding: 8px 12px; outline: none; }
     .device-input:focus { border-color: var(--primary); }
+    .hyperate-input { flex: 1; background: #0a0c0f; border: 1px solid rgba(232,64,64,0.3); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 13px; font-weight: 700; padding: 8px 12px; outline: none; letter-spacing: .05em; text-transform: uppercase; }
+    .hyperate-input:focus { border-color: rgba(232,64,64,0.7); }
+    .hyperate-status { font-size: 10px; font-family: var(--font-mono); padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); white-space:nowrap; }
+    .hyperate-status.connected { background: rgba(95,168,77,0.12); border-color: rgba(95,168,77,0.3); color: #5fa84d; }
+    .hyperate-status.connecting { background: rgba(240,160,64,0.1); border-color: rgba(240,160,64,0.25); color: #f0a040; }
 
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; position: relative; overflow: hidden; }
@@ -138,6 +143,13 @@
   </div>
   <div class="device-row">
     <input class="device-input" type="text" id="deviceName" placeholder="Nazwa urządzenia" value="Telefon BanBoy">
+
+  <div class="setup-label" style="margin-top:14px">HypeRate — ID urządzenia ❤️</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. 3184F" value="3184F" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
+    <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus">● Połącz</button>
+  </div>
+  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace;margin-top:4px">Znajdź ID w aplikacji HypeRate → Share → Device ID</div>
   </div>
 </div>
 
@@ -263,6 +275,7 @@ const OWM_KEY = 'fb98ee38b873f8640d3fd0f8a916a908';
 const pad = n => String(n).padStart(2,'0');
 
 let SERVER_URL = 'https://gps.banboypolska.deno.net', sending = false, sendTimer = null;
+let heartRate = null, hyperateWs = null, hyperateConnected = false;
 let geoWatchId = null, currentPos = null, batteryObj = null;
 let wakeLock = null;
 let weatherData = {}, cityData = {}, lastWeatherLat = null;
@@ -273,6 +286,9 @@ const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null,
 (function init() {
   const s = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
   SERVER_URL = s; document.getElementById('serverUrl').value = s; sessionStorage.setItem('gps_server_url', s);
+  const hrKey = sessionStorage.getItem('hyperate_key') || '3184F';
+  document.getElementById('hyperateId').value = hrKey;
+  setTimeout(() => hyperateConnect(), 800);
   const n = sessionStorage.getItem('gps_device_name');
   if (n) document.getElementById('deviceName').value = n;
 })();
@@ -301,6 +317,50 @@ function setSignal(s) {
 async function initBattery() {
   if (!navigator.getBattery) return;
   batteryObj = await navigator.getBattery();
+}
+
+// ── HypeRate WebSocket ──
+function hyperateConnect() {
+  const code = (document.getElementById('hyperateId').value || '').trim().toUpperCase();
+  if (!code) return;
+  sessionStorage.setItem('hyperate_key', code);
+  if (hyperateWs) { hyperateWs.close(); hyperateWs = null; }
+
+  const btn = document.getElementById('hyperateStatus');
+  btn.textContent = '⏳ Łączenie…'; btn.className = 'hyperate-status connecting';
+
+  hyperateWs = new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');
+
+  hyperateWs.onopen = () => {
+    hyperateWs.send(JSON.stringify({ topic: `hr:${code}`, event: 'phx_join', payload: {}, ref: 0 }));
+    // Heartbeat co 25s
+    setInterval(() => {
+      if (hyperateWs && hyperateWs.readyState === 1)
+        hyperateWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 0 }));
+    }, 25000);
+  };
+
+  hyperateWs.onmessage = e => {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.event === 'phx_reply' && d.payload?.status === 'ok') {
+        hyperateConnected = true;
+        btn.textContent = `❤️ ${code} • --`; btn.className = 'hyperate-status connected';
+        log('info', `HypeRate połączono: ${code}`);
+      }
+      if (d.event === 'hr_update' && d.payload?.hr != null) {
+        heartRate = d.payload.hr;
+        btn.textContent = `❤️ ${code} • ${heartRate} BPM`; btn.className = 'hyperate-status connected';
+      }
+    } catch {}
+  };
+
+  hyperateWs.onerror = () => { btn.textContent = '✗ Błąd połączenia'; btn.className = 'hyperate-status'; };
+  hyperateWs.onclose = () => {
+    hyperateConnected = false; heartRate = null;
+    btn.textContent = '● Połącz'; btn.className = 'hyperate-status';
+    log('info', 'HypeRate rozłączono');
+  };
 }
 
 // ── Wake Lock — ekran nie wygasza się ──
@@ -560,6 +620,7 @@ async function pushData() {
     trackerAvgSpeed: parseFloat(document.getElementById('trkAvg').textContent),
     gpxPoints: TRK.gpxPts.length,
     deviceName: document.getElementById('deviceName').value.trim()||'Telefon',
+    heartRate: heartRate,
     feelsLike: weatherData.feelsLike || null,
     weatherIconCode: weatherData.iconCode || null,
     humidity: weatherData.humidity || null,

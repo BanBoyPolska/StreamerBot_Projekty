@@ -9,7 +9,9 @@
   .card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e84040 0%,rgba(232,64,64,0.1) 70%,transparent 100%)}
   .top{display:flex;align-items:center;justify-content:space-between}
   .label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#e84040;opacity:.85}
-  .src{font-size:9px;color:rgba(255,255,255,.2);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:2px 7px}
+  .src{font-size:9px;color:rgba(255,255,255,.2);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:2px 7px;transition:all .3s}
+  .src.connected{color:#5fa84d;background:rgba(95,168,77,0.1);border-color:rgba(95,168,77,0.25)}
+  .src.connecting{color:#f0a040;background:rgba(240,160,64,0.08);border-color:rgba(240,160,64,0.2)}
   .main-row{display:flex;align-items:center;gap:12px}
   .heart{font-size:36px;line-height:1}
   .heart.beat{animation:beat .35s ease-out}
@@ -19,16 +21,15 @@
   .bpm-unit{font-size:16px;font-weight:700;color:rgba(255,255,255,0.4)}
   .chart-wrap{flex:1;position:relative;min-height:0}
   canvas{position:absolute;inset:0;width:100%;height:100%}
-  .bottom{display:flex;justify-content:space-between;align-items:center}
+  .bottom{display:flex;justify-content:space-between}
   .stat{display:flex;flex-direction:column;align-items:center;gap:1px}
   .sk{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.25)}
   .sv{font-size:14px;font-weight:700;color:#fff}
-  .btn-ble{padding:4px 10px;background:rgba(232,64,64,0.1);border:1px solid rgba(232,64,64,0.3);border-radius:6px;color:rgba(232,64,64,0.8);font-family:inherit;font-size:9px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 </style></head><body>
 <div class="card">
   <div class="top">
     <div class="label">Tętno</div>
-    <div class="src" id="srcBadge">brak źródła</div>
+    <div class="src" id="srcBadge">HypeRate…</div>
   </div>
   <div class="main-row">
     <div class="heart" id="heart">❤️</div>
@@ -43,20 +44,74 @@
     <div class="stat"><div class="sk">Max</div><div class="sv" id="bMax" style="color:#e84040">--</div></div>
     <div class="stat"><div class="sk">Śr.</div><div class="sv" id="bAvg">--</div></div>
     <div class="stat"><div class="sk">Strefa</div><div class="sv" id="zone" style="color:#f0a040;font-size:11px">--</div></div>
-    <button class="btn-ble" onclick="connectBLE()">🦷 BLE</button>
   </div>
 </div>
 <script>
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const HIST=[],MAX_H=60;let bMin=999,bMax=0,bSum=0,bCnt=0,beatTimer=null;
+
 function resize(){const p=cv.parentElement;cv.width=p.offsetWidth*devicePixelRatio;cv.height=p.offsetHeight*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);}
 window.addEventListener('resize',resize);setTimeout(resize,50);
-function draw(){const W=cv.width/devicePixelRatio,H=cv.height/devicePixelRatio;ctx.clearRect(0,0,W,H);if(HIST.length<2)return;const mn=Math.min(...HIST)-5,mx=Math.max(...HIST)+5,range=mx-mn||1;const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(232,64,64,0.5)');gr.addColorStop(1,'rgba(232,64,64,0.02)');const xOf=i=>i/(MAX_H-1)*W,yOf=v=>H-(v-mn)/range*H*.85;ctx.beginPath();ctx.moveTo(xOf(0),H);HIST.forEach((v,i)=>ctx.lineTo(xOf(i),yOf(v)));ctx.lineTo(xOf(HIST.length-1),H);ctx.closePath();ctx.fillStyle=gr;ctx.fill();ctx.beginPath();HIST.forEach((v,i)=>i===0?ctx.moveTo(xOf(0),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));ctx.strokeStyle='#e84040';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();}
+
+function draw(){
+  const W=cv.width/devicePixelRatio,H=cv.height/devicePixelRatio;
+  ctx.clearRect(0,0,W,H);if(HIST.length<2)return;
+  const mn=Math.min(...HIST)-5,mx=Math.max(...HIST)+5,range=mx-mn||1;
+  const gr=ctx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,'rgba(232,64,64,0.5)');gr.addColorStop(1,'rgba(232,64,64,0.02)');
+  const xOf=i=>i/(MAX_H-1)*W,yOf=v=>H-(v-mn)/range*H*.85;
+  ctx.beginPath();ctx.moveTo(xOf(0),H);
+  HIST.forEach((v,i)=>ctx.lineTo(xOf(i),yOf(v)));
+  ctx.lineTo(xOf(HIST.length-1),H);ctx.closePath();ctx.fillStyle=gr;ctx.fill();
+  ctx.beginPath();HIST.forEach((v,i)=>i===0?ctx.moveTo(xOf(0),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+  ctx.strokeStyle='#e84040';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+}
+
 function zone(b){if(b<60)return'Spoczynek';if(b<100)return'Lekka';if(b<130)return'Umiark.';if(b<160)return'Intensyw.';return'Maksym.';}
 function zoneColor(b){if(b<60)return'rgba(255,255,255,0.4)';if(b<100)return'#5fa84d';if(b<130)return'#4f98a3';if(b<160)return'#f0a040';return'#e84040';}
-function updateBPM(b){if(b<20||b>250)return;HIST.push(b);if(HIST.length>MAX_H)HIST.shift();if(b<bMin)bMin=b;if(b>bMax)bMax=b;bSum+=b;bCnt++;document.getElementById('bpmVal').textContent=b;document.getElementById('bMin').textContent=bMin;document.getElementById('bMax').textContent=bMax;document.getElementById('bAvg').textContent=Math.round(bSum/bCnt);const z=zone(b);const el=document.getElementById('zone');el.textContent=z;el.style.color=zoneColor(b);const hrt=document.getElementById('heart');clearInterval(beatTimer);beatTimer=setInterval(()=>{hrt.classList.remove('beat');void hrt.offsetWidth;hrt.classList.add('beat');},Math.round(60000/b));draw();}
-async function connectBLE(){if(!navigator.bluetooth){alert('Wymagany Chrome na Androidzie');return;}try{const dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});const srv=await dev.gatt.connect();const svc=await srv.getPrimaryService('heart_rate');const ch=await svc.getCharacteristic('heart_rate_measurement');await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value,f=v.getUint8(0),b=f&1?v.getUint16(1,true):v.getUint8(1);updateBPM(b);});document.getElementById('srcBadge').textContent='BLE: '+dev.name;}catch(e){if(e.name!=='NotFoundError')alert('BLE: '+e.message);}}
-// HypeRate fallback
-const HRK=sessionStorage.getItem('hyperate_key');if(HRK)connectHypeRate(HRK);
-function connectHypeRate(code){const ws=new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');ws.onopen=()=>{ws.send(JSON.stringify({topic:`hr:${code}`,event:'phx_join',payload:{},ref:0}));document.getElementById('srcBadge').textContent='HypeRate: '+code;};ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.event==='hr_update'&&d.payload?.hr)updateBPM(d.payload.hr);}catch{}}}
+
+function updateBPM(b){
+  if(b<20||b>250)return;
+  HIST.push(b);if(HIST.length>MAX_H)HIST.shift();
+  if(b<bMin)bMin=b;if(b>bMax)bMax=b;bSum+=b;bCnt++;
+  document.getElementById('bpmVal').textContent=b;
+  document.getElementById('bMin').textContent=bMin;
+  document.getElementById('bMax').textContent=bMax;
+  document.getElementById('bAvg').textContent=Math.round(bSum/bCnt);
+  const z=zone(b);const el=document.getElementById('zone');
+  el.textContent=z;el.style.color=zoneColor(b);
+  const hrt=document.getElementById('heart');
+  clearInterval(beatTimer);
+  beatTimer=setInterval(()=>{hrt.classList.remove('beat');void hrt.offsetWidth;hrt.classList.add('beat');},Math.round(60000/b));
+  draw();
+}
+
+// ── HypeRate WebSocket ──
+const HR_CODE = sessionStorage.getItem('hyperate_key') || '3184F';
+const badge = document.getElementById('srcBadge');
+
+function connectHypeRate(code){
+  badge.textContent='⏳ Łączenie…';badge.className='src connecting';
+  const ws=new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({topic:`hr:${code}`,event:'phx_join',payload:{},ref:0}));
+    setInterval(()=>{if(ws.readyState===1)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:0}));},25000);
+  };
+  ws.onmessage=e=>{
+    try{
+      const d=JSON.parse(e.data);
+      if(d.event==='phx_reply'&&d.payload?.status==='ok'){
+        badge.textContent=`❤️ ${code}`;badge.className='src connected';
+      }
+      if(d.event==='hr_update'&&d.payload?.hr!=null){
+        updateBPM(d.payload.hr);
+        badge.textContent=`❤️ ${code} · ${d.payload.hr}`;
+      }
+    }catch{}
+  };
+  ws.onclose=()=>{badge.textContent='✗ Rozłączono';badge.className='src';setTimeout(()=>connectHypeRate(code),5000);};
+  ws.onerror=()=>{badge.textContent='✗ Błąd';badge.className='src';};
+}
+
+connectHypeRate(HR_CODE);
 </script></body></html>
