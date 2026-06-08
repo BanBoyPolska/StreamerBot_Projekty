@@ -124,10 +124,30 @@
 .tab-pane{display:none;}
 .tab-pane.active{display:block;}
 #tab-chat.active{display:flex;flex-direction:column;height:calc(100dvh - 110px);}
-.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;}
-.chat-info{padding:10px 16px;font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
-.chat-channel{color:var(--primary);font-weight:700;}
-.chat-frame{flex:1;border:none;width:100%;background:#0e0e10;}
+
+/* ── IRC Chat ── */
+.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.chat-topbar{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
+.chat-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;}
+.chat-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);}
+.chat-dot.live{background:var(--error);box-shadow:0 0 6px var(--error);animation:pulse 2s infinite;}
+.chat-status-txt{font-family:var(--font-mono);font-size:9px;color:var(--faint);}
+.chat-messages{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth;}
+.chat-messages::-webkit-scrollbar{width:3px;}
+.chat-messages::-webkit-scrollbar-track{background:transparent;}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--faint);border-radius:2px;}
+.chat-msg{font-size:13px;line-height:1.5;word-break:break-word;}
+.chat-msg .msg-time{font-family:var(--font-mono);font-size:9px;color:var(--faint);margin-right:6px;}
+.chat-msg .msg-user{font-weight:700;margin-right:4px;}
+.chat-msg .msg-text{color:var(--text);}
+.chat-system{font-family:var(--font-mono);font-size:10px;color:var(--faint);padding:4px 0;font-style:italic;}
+.chat-input-row{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;}
+.chat-input{flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;outline:none;}
+.chat-input:focus{border-color:var(--primary);}
+.chat-input::placeholder{color:var(--faint);}
+.chat-send{background:var(--primary);color:#0a1214;border:none;border-radius:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:9px 14px;cursor:pointer;white-space:nowrap;transition:background var(--tr);}
+.chat-send:hover{background:#3d8a96;}
+.chat-send:disabled{opacity:.35;cursor:default;}
 
 </style>
 </head>
@@ -287,14 +307,20 @@
 </div><!-- /tab-sender -->
 <div class="tab-pane" id="tab-chat">
   <div class="chat-wrap">
-    <div class="chat-info">
-      <span>💬 Czat: <span class="chat-channel">banboypolska</span></span>
-      <span style="font-size:9px;color:var(--faint)">Twitch Live Chat</span>
+    <div class="chat-topbar">
+      <div class="chat-title">
+        <div class="chat-dot" id="chatDot"></div>
+        💬 banboypolska
+      </div>
+      <span class="chat-status-txt" id="chatStatusTxt">łączenie...</span>
     </div>
-    <iframe class="chat-frame"
-      src="https://www.twitch.tv/embed/banboypolska/chat?parent=banboypolska.github.io&parent=localhost&parent=127.0.0.1&darkpopout"
-      allowfullscreen>
-    </iframe>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-system">Łączenie z czatem Twitch...</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chatInput" type="text" placeholder="Wyślij wiadomość... (wymagane konto Twitch)" maxlength="500" disabled>
+      <button class="chat-send" id="chatSendBtn" onclick="chatSend()" disabled>Wyślij</button>
+    </div>
   </div>
 </div><!-- /tab-chat -->
 <script>
@@ -304,7 +330,157 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  // Uruchom czat przy pierwszym otwarciu zakładki
+  if (name === 'chat' && !chatStarted) {
+    chatStarted = true;
+    connectChat();
+  }
 }
+
+
+// ── Twitch IRC Chat (anonimowy odczyt + opcjonalnie wysyłanie) ──
+const TWITCH_CHANNEL = 'banboypolska';
+let chatWs = null, chatConnected = false;
+let chatAutoScroll = true;
+
+// Paleta kolorów dla nazw użytkowników
+const USER_COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9','#82E0AA','#F0B27A','#AED6F1','#A9DFBF','#FAD7A0'];
+const userColorMap = {};
+function getUserColor(name) {
+  if (!userColorMap[name]) {
+    let hash = 0;
+    for (let c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
+    userColorMap[name] = USER_COLORS[hash % USER_COLORS.length];
+  }
+  return userColorMap[name];
+}
+
+function chatAddMsg(user, text, color) {
+  const box = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'chat-msg';
+  const now = new Date();
+  const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const userColor = color || getUserColor(user);
+  el.innerHTML = `<span class="msg-time">${t}</span><span class="msg-user" style="color:${userColor}">${escHtml(user)}</span><span class="msg-text">${escHtml(text)}</span>`;
+  box.appendChild(el);
+  // Ogranicz do 200 wiadomości
+  while (box.children.length > 200) box.removeChild(box.firstChild);
+  if (chatAutoScroll) box.scrollTop = box.scrollHeight;
+}
+
+function chatAddSystem(msg) {
+  const box = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'chat-system';
+  el.textContent = msg;
+  box.appendChild(el);
+  if (chatAutoScroll) box.scrollTop = box.scrollHeight;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function parseTwitchIRC(line) {
+  // Parsuj tagi: @key=value;key2=value2 :user!user@host PRIVMSG #channel :message
+  let tags = {};
+  if (line.startsWith('@')) {
+    const spaceIdx = line.indexOf(' ');
+    line.slice(1, spaceIdx).split(';').forEach(t => {
+      const [k,v] = t.split('=');
+      tags[k] = v || '';
+    });
+    line = line.slice(spaceIdx + 1);
+  }
+  const parts = line.split(' ');
+  const prefix = parts[0].startsWith(':') ? parts.shift().slice(1) : null;
+  const command = parts.shift();
+  const params = [];
+  while (parts.length) {
+    if (parts[0].startsWith(':')) { params.push(parts.join(' ').slice(1)); break; }
+    params.push(parts.shift());
+  }
+  const nick = prefix ? prefix.split('!')[0] : null;
+  return { tags, command, params, nick };
+}
+
+function connectChat() {
+  if (chatWs) { chatWs.onclose = null; chatWs.close(); }
+  const dot = document.getElementById('chatDot');
+  const status = document.getElementById('chatStatusTxt');
+  dot.className = 'chat-dot';
+  status.textContent = 'łączenie...';
+
+  chatWs = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+  chatWs.onopen = () => {
+    // Logowanie anonimowe - tylko odczyt
+    chatWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+    chatWs.send('NICK justinfan' + Math.floor(Math.random() * 80000 + 1000));
+    chatWs.send('JOIN #' + TWITCH_CHANNEL);
+  };
+
+  chatWs.onmessage = e => {
+    for (const line of e.data.split('\r\n')) {
+      if (!line.trim()) continue;
+      // PING/PONG keepalive
+      if (line.startsWith('PING')) { chatWs.send('PONG :tmi.twitch.tv'); continue; }
+      const msg = parseTwitchIRC(line);
+      if (msg.command === '001') {
+        chatConnected = true;
+        dot.className = 'chat-dot live';
+        status.textContent = 'połączono';
+        chatAddSystem('✅ Połączono z czatem #' + TWITCH_CHANNEL);
+      }
+      if (msg.command === 'PRIVMSG') {
+        const text = msg.params[1] || '';
+        const user = msg.tags['display-name'] || msg.nick || '?';
+        const color = msg.tags['color'] || null;
+        chatAddMsg(user, text, color);
+      }
+      if (msg.command === 'NOTICE' && msg.params[1]) {
+        chatAddSystem('ℹ️ ' + msg.params[1]);
+      }
+      if (msg.command === 'USERNOTICE') {
+        const sysMsg = msg.tags['system-msg']?.replace(/\\s/g,' ') || '';
+        if (sysMsg) chatAddSystem('⭐ ' + sysMsg);
+      }
+    }
+  };
+
+  chatWs.onerror = () => {
+    dot.className = 'chat-dot';
+    status.textContent = 'błąd połączenia';
+    chatAddSystem('❌ Błąd WebSocket');
+  };
+
+  chatWs.onclose = () => {
+    chatConnected = false;
+    dot.className = 'chat-dot';
+    status.textContent = 'rozłączono – rekonekt za 5s';
+    setTimeout(connectChat, 5000);
+  };
+}
+
+function chatSend() {
+  // Placeholder - wysyłanie wymaga tokenu OAuth
+  chatAddSystem('ℹ️ Wysyłanie wymaga zalogowania (OAuth) – obecnie tylko odczyt');
+}
+
+// Autoscroll: zatrzymaj gdy użytkownik scrolluje w górę
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('chatMessages');
+  if (box) {
+    box.addEventListener('scroll', () => {
+      chatAutoScroll = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+    });
+  }
+});
+
+// Połącz gdy zakładka czatu jest otwarta po raz pierwszy
+let chatStarted = false;
+const _origSwitchTab = typeof switchTab !== 'undefined' ? switchTab : null;
 
 const OWM_KEY = 'fb98ee38b873f8640d3fd0f8a916a908';
 const pad = n => String(n).padStart(2,'0');
