@@ -30,7 +30,24 @@
   <div class="chart-wrap"><canvas id="cv"></canvas></div>
 </div>
 <script>
-const SERVER='https://gps.banboypolska.deno.net';
+let SERVER='https://gps.banboypolska.deno.net';
+
+// ── AUTO-FETCH SERVER URL z GitHub Gist ──
+const _GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+async function _initServerUrl() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${_GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (file) {
+      const parsed = JSON.parse(file.content);
+      if (parsed.url) { SERVER = parsed.url; }
+    }
+  } catch(e) {}
+}
+
 const MAX_PTS=300, pts=[];
 let totalGain=0, lastAlt=null;
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
@@ -82,5 +99,5 @@ async function poll(){
     draw();
   }catch{}
 }
-poll();setInterval(poll,3000);
+_initServerUrl().then(() => { poll();setInterval(poll,3000); });
 </script></body></html>

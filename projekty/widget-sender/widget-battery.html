@@ -29,7 +29,24 @@
   <div class="bar-wrap"><div class="bar" id="bar" style="width:0%;background:#f0a040"></div></div>
 </div>
 <script>
-const SERVER='https://gps.banboypolska.deno.net';
+let SERVER='https://gps.banboypolska.deno.net';
+
+// ── AUTO-FETCH SERVER URL z GitHub Gist ──
+const _GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+async function _initServerUrl() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${_GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (file) {
+      const parsed = JSON.parse(file.content);
+      if (parsed.url) { SERVER = parsed.url; }
+    }
+  } catch(e) {}
+}
+
 async function poll(){
   try{
     const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
@@ -41,5 +58,5 @@ async function poll(){
     bar.style.background=p<=15?'#e84040':p<=30?'#f0a040':'#5fa84d';
   }catch{}
 }
-poll();setInterval(poll,3000);
+_initServerUrl().then(() => { poll();setInterval(poll,3000); });
 </script></body></html>

@@ -272,7 +272,24 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 </div>
 
 <script>
-const SERVER = 'https://gps.banboypolska.deno.net'; // ← ZMIEŃ na swój adres Cloudflare Tunnel
+let SERVER = 'https://gps.banboypolska.deno.net'; // ← ZMIEŃ na swój adres Cloudflare Tunnel
+
+// ── AUTO-FETCH SERVER URL z GitHub Gist ──
+const _GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+async function _initServerUrl() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${_GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (file) {
+      const parsed = JSON.parse(file.content);
+      if (parsed.url) { SERVER = parsed.url; }
+    }
+  } catch(e) {}
+}
+
 const INTERVAL = 5000;
 
 // ── Stan ──
@@ -384,7 +401,8 @@ function updateHeartRate(d) {
   document.getElementById('hrAvg').textContent=Math.round(hrSum/hrCnt);
   const z=zoneStr(hr);const zEl=document.getElementById('hrZone');zEl.textContent=z;zEl.style.color=zoneCol(hr);
   const hrt=document.getElementById('hrHeart');
-  clearInterval(hrBeatTimer);hrBeatTimer=setInterval(()=>{hrt.classList.remove('beat');void hrt.offsetWidth;hrt.classList.add('beat');},Math.round(60000/hr));
+  clearInterval(hrBeatTimer);hrBeatTimer=_initServerUrl().then(() => {
+setInterval(()=>{hrt.classList.remove('beat');void hrt.offsetWidth;hrt.classList.add('beat');},Math.round(60000/hr));
   document.getElementById('hrSrc').textContent=`HR·${hr}bpm`;
   drawHr();
 }
@@ -524,5 +542,7 @@ initMap();
 // ── START ──
 poll();
 setInterval(poll, INTERVAL);
+
+}); // end _initServerUrl
 </script>
 </body></html>

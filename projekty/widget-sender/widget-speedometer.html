@@ -30,7 +30,24 @@
   </div>
 </div>
 <script>
-const SERVER='https://gps.banboypolska.deno.net';
+let SERVER='https://gps.banboypolska.deno.net';
+
+// ── AUTO-FETCH SERVER URL z GitHub Gist ──
+const _GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+async function _initServerUrl() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${_GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (file) {
+      const parsed = JSON.parse(file.content);
+      if (parsed.url) { SERVER = parsed.url; }
+    }
+  } catch(e) {}
+}
+
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const W=210,CX=105,CY=108,R=90,MAX_SPD=160;
 const START=Math.PI*0.75,END=Math.PI*2.25,SWEEP=END-START;
@@ -72,5 +89,5 @@ function draw(s){
 let af;
 function animateTo(t){cancelAnimationFrame(af);function step(){curS+=(t-curS)*0.15;draw(curS);document.getElementById('val').textContent=Math.round(curS);if(Math.abs(curS-t)>0.3)af=requestAnimationFrame(step);else{curS=t;draw(t);document.getElementById('val').textContent=Math.round(t);}}step();}
 async function poll(){try{const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();const s=d.speed??0;if(s>maxS){maxS=s;document.getElementById('maxV').textContent=s;}sumS+=s;cntS++;document.getElementById('avgV').textContent=(sumS/cntS).toFixed(1);animateTo(s);}catch{}}
-draw(0);poll();setInterval(poll,3000);
+draw(0);_initServerUrl().then(() => { poll();setInterval(poll,3000); });
 </script></body></html>

@@ -47,7 +47,24 @@
   <div class="heading-badge" id="headBadge">--°</div>
 </div>
 <script>
-const SERVER='https://gps.banboypolska.deno.net';
+let SERVER='https://gps.banboypolska.deno.net';
+
+// ── AUTO-FETCH SERVER URL z GitHub Gist ──
+const _GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+async function _initServerUrl() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${_GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    const data = await r.json();
+    const file = data.files['obs-gps-server-url.json'];
+    if (file) {
+      const parsed = JSON.parse(file.content);
+      if (parsed.url) { SERVER = parsed.url; }
+    }
+  } catch(e) {}
+}
+
 if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
 
 const TILE=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18});
@@ -84,5 +101,5 @@ async function poll(){
 
 function dirName(h){const d=['N','NE','E','SE','S','SW','W','NW'];return d[Math.round(h/45)%8];}
 
-poll();setInterval(poll,3000);
+_initServerUrl().then(() => { poll();setInterval(poll,3000); });
 </script></body></html>
