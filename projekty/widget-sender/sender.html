@@ -407,7 +407,7 @@ function hyperateConnect() {
     hyperateWs.send(JSON.stringify({
       topic: `hr:${code}`,
       event: 'phx_join',
-      payload: {},
+      payload: { token: token },
       ref: 0
     }));
     // Phoenix heartbeat co 25s (wymagany żeby połączenie nie wygasło)
