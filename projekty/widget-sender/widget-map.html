@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:380px;height:340px;-webkit-font-smoothing:antialiased}
+  .wrap{width:380px;height:340px;border-radius:16px;overflow:hidden;border:1px solid rgba(79,152,163,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.6);position:relative;background:#0a0c0f}
+  #map{width:100%;height:100%}
+  .leaflet-tile{filter:brightness(.8) saturate(.55) hue-rotate(185deg)}
+  .leaflet-container{background:#090b0e}
+  .leaflet-control-zoom a{background:#131619!important;color:#e8eaed!important;border-color:rgba(255,255,255,0.07)!important;font-size:14px!important}
+  .leaflet-control-attribution{background:rgba(9,11,14,.85)!important;color:rgba(255,255,255,.25)!important;font-size:8px!important}
+  .leaflet-control-attribution a{color:#4f98a3!important}
+  .gps-dot{width:14px;height:14px;border-radius:50%;background:rgba(79,152,163,.2);border:2px solid #4f98a3;animation:ring 2s ease-out infinite}
+  @keyframes ring{0%{transform:scale(1);opacity:1}70%{transform:scale(2.4);opacity:0}100%{transform:scale(1);opacity:0}}
+  .layer-btn{position:absolute;bottom:10px;right:10px;z-index:1000;background:rgba(10,12,15,.85);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#4f98a3;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;padding:4px 10px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase}
+  .status-pill{position:absolute;top:10px;left:10px;z-index:1000;background:rgba(10,12,15,.85);border-radius:20px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:5px}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:#3d4147}
+  .status-dot.live{background:#5fa84d;box-shadow:0 0 6px #5fa84d;animation:blink 1.8s ease-in-out infinite}
+  .status-dot.stale{background:#c8a230} .status-dot.err{background:#b84040}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+</style></head><body>
+<div class="wrap">
+  <div id="map"></div>
+  <div class="status-pill"><div class="status-dot" id="dot"></div><span id="lbl">init…</span></div>
+  <button class="layer-btn" id="layerBtn" onclick="toggleLayer()">🛰 Satelita</button>
+</div>
+<script>
+const SERVER = sessionStorage.getItem('gps_srv') || prompt('Adres serwera Deno:','');
+if(SERVER) sessionStorage.setItem('gps_srv', SERVER);
+
+const LAYERS={
+  osm:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}),
+  sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19})
+};
+let map=null,marker=null,circle=null,route=null,mapInit=false,layer='osm',lastLat=null,lastLng=null;
+const PTS=[];
+
+function initMap(lat,lng){
+  if(mapInit)return; mapInit=true;
+  map=L.map('map',{center:[lat,lng],zoom:15,zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:false});
+  LAYERS.osm.addTo(map);
+  const icon=L.divIcon({className:'',html:'<div class="gps-dot"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+  marker=L.marker([lat,lng],{icon}).addTo(map);
+  circle=L.circle([lat,lng],{radius:10,color:'#4f98a3',fillColor:'#4f98a3',fillOpacity:.08,weight:1}).addTo(map);
+  route=L.polyline([],{color:'#c966a8',weight:3,opacity:.8,lineJoin:'round'}).addTo(map);
+}
+
+function setStatus(s,txt){
+  document.getElementById('dot').className='status-dot'+(s?' '+s:'');
+  document.getElementById('lbl').textContent=txt;
+}
+
+async function poll(){
+  try{
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    if(d.lat===null||d.lat===undefined){setStatus('err','brak GPS');return;}
+    const ago=d.lastUpdate?Math.round((Date.now()-new Date(d.lastUpdate).getTime())/1000):999;
+    setStatus(ago<15?'live':ago<60?'stale':'err', ago<15?`±${d.accuracy??'?'}m`:`${ago}s temu`);
+    if(!mapInit){initMap(d.lat,d.lng);return;}
+    const ll=[d.lat,d.lng];
+    marker.setLatLng(ll); circle.setLatLng(ll).setRadius(Math.max(d.accuracy||10,5));
+    if(!map._moved) map.setView(ll,map.getZoom(),{animate:true,duration:.8});
+    if(lastLat===null||Math.abs(d.lat-lastLat)>0.00005||Math.abs(d.lng-lastLng)>0.00005){
+      PTS.push(ll); if(PTS.length>2000)PTS.shift(); route.setLatLngs(PTS);
+      lastLat=d.lat; lastLng=d.lng;
+    }
+  }catch{setStatus('err','brak serwera')}
+}
+poll(); setInterval(poll,3000);
+
+function toggleLayer(){
+  if(!mapInit)return;
+  if(layer==='osm'){LAYERS.osm.remove();LAYERS.sat.addTo(map);layer='sat';document.getElementById('layerBtn').textContent='🗺 Mapa';}
+  else{LAYERS.sat.remove();LAYERS.osm.addTo(map);layer='osm';document.getElementById('layerBtn').textContent='🛰 Satelita';}
+}
+</script>
+</body></html>

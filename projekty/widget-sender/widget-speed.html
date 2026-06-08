@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:transparent;overflow:hidden;width:220px;height:110px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
+  .card{
+    width:220px;height:110px;
+    background:linear-gradient(135deg,rgba(10,15,18,0.88) 0%,rgba(14,20,24,0.82) 100%);
+    border:1px solid rgba(95,168,77,0.25);
+    border-radius:14px;
+    padding:14px 18px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    backdrop-filter:blur(12px);
+    box-shadow:0 4px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);
+    position:relative;overflow:hidden;
+  }
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#5fa84d,transparent)}
+  .label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(95,168,77,0.7)}
+  .val-row{display:flex;align-items:baseline;gap:8px}
+  .val{font-size:52px;font-weight:800;line-height:1;color:#fff;letter-spacing:-2px}
+  .unit{font-size:14px;font-weight:700;color:rgba(255,255,255,0.4)}
+  .sub{font-size:10px;color:rgba(255,255,255,0.25)}
+</style></head><body>
+<div class="card">
+  <div class="label">Prędkość</div>
+  <div class="val-row">
+    <div class="val" id="val">--</div>
+    <div class="unit">km/h</div>
+  </div>
+  <div class="sub" id="sub">oczekiwanie na GPS…</div>
+</div>
+<script>
+const SERVER = sessionStorage.getItem('gps_srv') || prompt('Adres serwera Deno:','');
+if(SERVER) sessionStorage.setItem('gps_srv', SERVER);
+async function poll(){
+  try{
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    document.getElementById('val').textContent = d.speed??'--';
+    const ago=d.lastUpdate?Math.round((Date.now()-new Date(d.lastUpdate).getTime())/1000):null;
+    document.getElementById('sub').textContent = ago!==null?`GPS ±${d.accuracy??'?'}m · ${ago}s temu`:'brak danych';
+  }catch{}
+}
+poll(); setInterval(poll,3000);
+</script>
+</body></html>
