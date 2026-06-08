@@ -400,25 +400,16 @@ function hyperateConnect() {
   btn.textContent = '⏳ Łączenie…';
   btn.className = 'hyperate-status connecting';
 
-  hyperateWs = new WebSocket(`wss://app.hyperate.io/socket/websocket?token=${token}`);
+  hyperateWs = new WebSocket(`wss://app.hyperate.io/ws/${code}?token=${token}`);
 
   hyperateWs.onopen = () => {
-    // Dołącz do kanału HR
-    hyperateWs.send(JSON.stringify({
-      topic: `hr:${code}`,
-      event: 'phx_join',
-      payload: { token: token },
-      ref: 0
-    }));
-    // Phoenix heartbeat co 25s (wymagany żeby połączenie nie wygasło)
+    btn.textContent = `❤️ ${code} · łącze…`;
+    btn.className = 'hyperate-status connected';
+    log('info', `HypeRate: połączono z ${code}`);
+    // Keepalive ping co 25s
     hyperateWs._hb = setInterval(() => {
       if (hyperateWs && hyperateWs.readyState === 1) {
-        hyperateWs.send(JSON.stringify({
-          topic: 'phoenix',
-          event: 'heartbeat',
-          payload: {},
-          ref: 0
-        }));
+        hyperateWs.send(JSON.stringify({ type: 'ping' }));
       }
     }, 25000);
   };
@@ -426,20 +417,13 @@ function hyperateConnect() {
   hyperateWs.onmessage = e => {
     try {
       const msg = JSON.parse(e.data);
-      // Połączono z kanałem
-      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-        btn.textContent = `❤️ ${code} · łącze…`;
+      // Nowy format: { hr: 72 } lub stary Phoenix { event: 'hr_update', payload: { hr: 72 } }
+      const hr = msg.hr ?? msg.heart_rate ?? msg.payload?.hr ?? msg.payload?.heart_rate;
+      if (hr != null && hr > 0) {
+        heartRate = hr;
+        btn.textContent = `❤️ ${code} · ${hr} BPM`;
         btn.className = 'hyperate-status connected';
-        log('info', `HypeRate: dołączono do hr:${code}`);
-      }
-      // Odczyt tętna
-      if (msg.event === 'hr_update') {
-        const hr = msg.payload?.hr ?? msg.payload?.heart_rate;
-        if (hr != null) {
-          heartRate = hr;
-          btn.textContent = `❤️ ${code} · ${hr} BPM`;
-          btn.className = 'hyperate-status connected';
-        }
+        log('info', `HypeRate: ${hr} BPM`);
       }
     } catch {}
   };
