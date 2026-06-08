@@ -4,108 +4,73 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:transparent;overflow:hidden;width:220px;height:220px;font-family:'JetBrains Mono',monospace}
-  .wrap{width:220px;height:220px;position:relative;display:flex;align-items:center;justify-content:center}
+  html,body{background:transparent;overflow:hidden;width:220px;height:230px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
+  .wrap{display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:4px}
+  .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-44%);z-index:2;text-align:center;pointer-events:none}
+  .val{font-size:44px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1}
+  .unit{font-size:12px;font-weight:700;color:rgba(255,255,255,0.4)}
+  .canvas-wrap{position:relative;width:210px;height:210px}
   canvas{position:absolute;inset:0}
-  .center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:20px;pointer-events:none}
-  .val{font-size:38px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1}
-  .unit{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35)}
-  .sub{font-size:9px;color:rgba(255,255,255,0.2);margin-top:2px}
+  .bottom{background:rgba(8,12,16,0.88);border:1.5px solid rgba(95,168,77,0.3);border-radius:10px;width:190px;padding:6px 12px;display:flex;justify-content:space-between}
+  .info{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .ik{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.28)}
+  .iv{font-size:15px;font-weight:800;color:#fff}
 </style></head><body>
 <div class="wrap">
-  <canvas id="cv" width="220" height="220"></canvas>
-  <div class="center">
-    <div class="val" id="val">0</div>
-    <div class="unit">km/h</div>
-    <div class="sub" id="maxSpd">max: --</div>
+  <div class="canvas-wrap">
+    <canvas id="cv" width="210" height="210"></canvas>
+    <div class="center">
+      <div class="val" id="val">0</div>
+      <div class="unit">km/h</div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="info"><div class="ik">Max</div><div class="iv" id="maxV" style="color:#e87038">--</div></div>
+    <div class="info"><div class="ik">Śr.</div><div class="iv" id="avgV">--</div></div>
   </div>
 </div>
 <script>
 const SERVER='https://gps.banboypolska.deno.net';
-if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-const W=220,CX=110,CY=115,R=95;
-const MAX_SPD=160;
-const START_ANG=Math.PI*0.75, END_ANG=Math.PI*2.25; // 135° — 405°
-let curSpeed=0, targetSpeed=0, maxSpeed=0;
-
-function draw(spd){
+const W=210,CX=105,CY=108,R=90,MAX_SPD=160;
+const START=Math.PI*0.75,END=Math.PI*2.25,SWEEP=END-START;
+let curS=0,maxS=0,sumS=0,cntS=0;
+function draw(s){
   ctx.clearRect(0,0,W,W);
-  const pct=Math.min(spd/MAX_SPD,1);
-  const sweepAng=END_ANG-START_ANG;
-
+  const pct=Math.min(s/MAX_SPD,1);
   // Tło tarczy
   ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
-  ctx.fillStyle='rgba(10,15,20,0.85)';ctx.fill();
-  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,R);
+  bg.addColorStop(0,'rgba(14,20,12,0.95)');bg.addColorStop(1,'rgba(8,12,8,0.95)');
+  ctx.fillStyle=bg;ctx.fill();
   ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();
-
-  // Szare tło łuku
-  ctx.beginPath();ctx.arc(CX,CY,R-8,START_ANG,END_ANG);
-  ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=14;ctx.lineCap='round';ctx.stroke();
-
-  // Kolorowy łuk (gradient prędkości)
-  if(pct>0){
-    const grad=ctx.createLinearGradient(CX-R,CY,CX+R,CY);
-    grad.addColorStop(0,'#5fa84d');grad.addColorStop(0.5,'#f0a040');grad.addColorStop(1,'#b84040');
-    ctx.beginPath();ctx.arc(CX,CY,R-8,START_ANG,START_ANG+sweepAng*pct);
-    ctx.strokeStyle=grad;ctx.lineWidth=14;ctx.lineCap='round';ctx.stroke();
+  // Szary łuk tła
+  ctx.beginPath();ctx.arc(CX,CY,R-10,START,END);ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=16;ctx.lineCap='round';ctx.stroke();
+  // Kolorowy łuk
+  if(pct>0.005){
+    const gr=ctx.createLinearGradient(CX-R,CY,CX+R,CY);
+    gr.addColorStop(0,'#5fa84d');gr.addColorStop(0.5,'#f0a040');gr.addColorStop(1,'#e84040');
+    ctx.beginPath();ctx.arc(CX,CY,R-10,START,START+SWEEP*pct);
+    ctx.strokeStyle=gr;ctx.lineWidth=16;ctx.lineCap='round';ctx.stroke();
   }
-
-  // Znaczniki
+  // Znaczniki + etykiety
   for(let i=0;i<=16;i++){
-    const a=START_ANG+sweepAng*(i/16);
-    const major=i%4===0;
-    const r1=R-24,r2=major?R-38:R-30;
-    ctx.beginPath();
-    ctx.moveTo(CX+Math.cos(a)*r1,CY+Math.sin(a)*r1);
-    ctx.lineTo(CX+Math.cos(a)*r2,CY+Math.sin(a)*r2);
-    ctx.strokeStyle=major?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.2)';
-    ctx.lineWidth=major?1.5:0.8;ctx.stroke();
-    if(major){
-      const spVal=Math.round(MAX_SPD*(i/16));
-      ctx.font='9px JetBrains Mono, monospace';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillStyle='rgba(255,255,255,0.35)';
-      ctx.fillText(spVal,CX+Math.cos(a)*(R-50),CY+Math.sin(a)*(R-50));
-    }
+    const a=START+SWEEP*(i/16),major=i%4===0;
+    ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-28),CY+Math.sin(a)*(R-28));ctx.lineTo(CX+Math.cos(a)*(R-major?40:33),CY+Math.sin(a)*(R-major?40:33));
+    ctx.strokeStyle=major?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.25)';ctx.lineWidth=major?1.5:0.8;ctx.stroke();
+    if(major){ctx.font='bold 10px JetBrains Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillText(Math.round(MAX_SPD*(i/16)),CX+Math.cos(a)*(R-52),CY+Math.sin(a)*(R-52));}
   }
-
   // Wskazówka
-  const needleAng=START_ANG+sweepAng*pct;
-  const color=pct<0.5?'#5fa84d':pct<0.8?'#f0a040':'#e85555';
-  ctx.save();ctx.translate(CX,CY);ctx.rotate(needleAng);
-  ctx.beginPath();ctx.moveTo(0,-R+22);ctx.lineTo(3,15);ctx.lineTo(-3,15);ctx.closePath();
-  ctx.fillStyle=color;ctx.fill();
-  ctx.restore();
-
+  const na=START+SWEEP*pct, nc=pct<0.5?'#5fa84d':pct<0.8?'#f0a040':'#e84040';
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(na);
+  ctx.beginPath();ctx.moveTo(0,-R+24);ctx.lineTo(3.5,12);ctx.lineTo(-3.5,12);ctx.closePath();
+  ctx.fillStyle=nc;ctx.shadowColor=nc;ctx.shadowBlur=10;ctx.fill();ctx.restore();
   // Środek
-  ctx.beginPath();ctx.arc(CX,CY,8,0,Math.PI*2);
-  ctx.fillStyle='#0d1015';ctx.fill();
-  ctx.beginPath();ctx.arc(CX,CY,5,0,Math.PI*2);
-  ctx.fillStyle=color;ctx.fill();
+  ctx.beginPath();ctx.arc(CX,CY,8,0,Math.PI*2);ctx.fillStyle='#0a1008';ctx.shadowBlur=0;ctx.fill();
+  ctx.beginPath();ctx.arc(CX,CY,4.5,0,Math.PI*2);ctx.fillStyle=nc;ctx.fill();
 }
-
 let af;
-function animateTo(t){
-  cancelAnimationFrame(af);
-  function step(){
-    curSpeed+=(t-curSpeed)*0.15;
-    draw(curSpeed);
-    document.getElementById('val').textContent=Math.round(curSpeed);
-    if(Math.abs(curSpeed-t)>0.3) af=requestAnimationFrame(step);
-    else{curSpeed=t;draw(t);document.getElementById('val').textContent=Math.round(t);}
-  }
-  step();
-}
-
-async function poll(){
-  try{
-    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
-    const s=d.speed??0;
-    if(s>maxSpeed){maxSpeed=s;document.getElementById('maxSpd').textContent='max: '+s+' km/h';}
-    targetSpeed=s;animateTo(s);
-  }catch{}
-}
+function animateTo(t){cancelAnimationFrame(af);function step(){curS+=(t-curS)*0.15;draw(curS);document.getElementById('val').textContent=Math.round(curS);if(Math.abs(curS-t)>0.3)af=requestAnimationFrame(step);else{curS=t;draw(t);document.getElementById('val').textContent=Math.round(t);}}step();}
+async function poll(){try{const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();const s=d.speed??0;if(s>maxS){maxS=s;document.getElementById('maxV').textContent=s;}sumS+=s;cntS++;document.getElementById('avgV').textContent=(sumS/cntS).toFixed(1);animateTo(s);}catch{}}
 draw(0);poll();setInterval(poll,3000);
 </script></body></html>

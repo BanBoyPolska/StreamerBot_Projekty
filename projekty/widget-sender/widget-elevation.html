@@ -4,195 +4,83 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:transparent;overflow:hidden;width:380px;height:180px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
-  .card{
-    width:380px;height:180px;
-    background:linear-gradient(135deg,rgba(10,15,20,0.90) 0%,rgba(13,19,25,0.85) 100%);
-    border:1px solid rgba(90,140,220,0.28);
-    border-radius:14px;
-    padding:12px 16px 10px;
-    display:flex;flex-direction:column;gap:8px;
-    backdrop-filter:blur(14px);
-    box-shadow:0 4px 28px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.04);
-    position:relative;overflow:hidden;
-  }
-  .card::before{content:'';position:absolute;top:0;left:0;width:45%;height:3px;background:linear-gradient(90deg,#5a8cdc,transparent)}
-  .header{display:flex;align-items:center;justify-content:space-between}
-  .label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(90,140,220,0.75);display:flex;align-items:center;gap:5px}
-  .stats-row{display:flex;gap:18px}
-  .stat{display:flex;flex-direction:column;gap:1px}
-  .sk{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.22)}
-  .sv{font-size:13px;font-weight:700;color:rgba(255,255,255,0.85)}
+  html,body{background:transparent;overflow:hidden;width:400px;height:180px;-webkit-font-smoothing:antialiased}
+  body{font-family:'JetBrains Mono',monospace}
+  .card{width:400px;height:180px;background:rgba(8,12,18,0.92);border:1.5px solid rgba(90,140,220,0.4);border-radius:16px;padding:14px 18px 10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 20px rgba(0,0,0,0.6);position:relative;overflow:hidden}
+  .card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#5a8cdc 0%,rgba(90,140,220,0.1) 70%,transparent 100%)}
+  .top{display:flex;justify-content:space-between;align-items:center}
+  .label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5a8cdc;opacity:.85}
+  .stats{display:flex;gap:20px}
+  .stat{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+  .sk{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.28)}
+  .sv{font-size:17px;font-weight:800;color:#fff}
   .chart-wrap{flex:1;position:relative;min-height:0}
   canvas{position:absolute;inset:0;width:100%;height:100%}
 </style></head><body>
 <div class="card">
-  <div class="header">
-    <div class="label">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(90,140,220,0.75)" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Profil wysokości
-    </div>
-    <div class="stats-row">
-      <div class="stat"><div class="sk">Aktualna</div><div class="sv" id="sCur">-- m</div></div>
+  <div class="top">
+    <div class="label">📈 Profil wysokości</div>
+    <div class="stats">
+      <div class="stat"><div class="sk">Teraz</div><div class="sv" id="sCur" style="color:#fff">-- m</div></div>
       <div class="stat"><div class="sk">Max</div><div class="sv" id="sMax" style="color:#5fa84d">-- m</div></div>
       <div class="stat"><div class="sk">Min</div><div class="sv" id="sMin" style="color:#c966a8">-- m</div></div>
       <div class="stat"><div class="sk">Przewyższenie</div><div class="sv" id="sGain" style="color:#f0a040">+0 m</div></div>
     </div>
   </div>
-  <div class="chart-wrap">
-    <canvas id="cv"></canvas>
-  </div>
+  <div class="chart-wrap"><canvas id="cv"></canvas></div>
 </div>
-
 <script>
-const SERVER = 'https://gps.banboypolska.deno.net';
-
-
-const MAX_PTS = 300;
-const pts = [];   // {alt, t}
-let totalGain = 0;
-let lastAlt = null;
-
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
-
-function resize() {
-  const wrap = cv.parentElement;
-  cv.width  = wrap.offsetWidth  * devicePixelRatio;
-  cv.height = wrap.offsetHeight * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  draw();
+const SERVER='https://gps.banboypolska.deno.net';
+const MAX_PTS=300, pts=[];
+let totalGain=0, lastAlt=null;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+function resize(){const p=cv.parentElement;cv.width=p.offsetWidth*devicePixelRatio;cv.height=p.offsetHeight*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);draw();}
+window.addEventListener('resize',resize);setTimeout(resize,100);
+function fmtTime(iso){return new Date(iso).toLocaleTimeString('pl',{hour:'2-digit',minute:'2-digit',hour12:false});}
+function draw(){
+  const W=cv.width/devicePixelRatio,H=cv.height/devicePixelRatio;
+  ctx.clearRect(0,0,W,H);
+  if(pts.length<2){ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='12px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText('oczekiwanie na dane GPS…',W/2,H/2);return;}
+  const alts=pts.map(p=>p.alt),minA=Math.min(...alts),maxA=Math.max(...alts),range=maxA-minA||1;
+  const PL=2,PR=40,PT=6,PB=18,cW=W-PL-PR,cH=H-PT-PB;
+  const xOf=i=>PL+(i/(pts.length-1))*cW, yOf=a=>PT+cH-((a-minA)/range)*cH;
+  const grad=ctx.createLinearGradient(0,PT,0,PT+cH);
+  grad.addColorStop(0,'rgba(90,140,220,0.5)');grad.addColorStop(1,'rgba(90,140,220,0.02)');
+  ctx.beginPath();ctx.moveTo(xOf(0),PT+cH);
+  pts.forEach((p,i)=>ctx.lineTo(xOf(i),yOf(p.alt)));
+  ctx.lineTo(xOf(pts.length-1),PT+cH);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOf(0),yOf(p.alt)):ctx.lineTo(xOf(i),yOf(p.alt)));
+  ctx.strokeStyle='#5a8cdc';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+  // Aktualny punkt
+  const lx=xOf(pts.length-1),ly=yOf(pts[pts.length-1].alt);
+  ctx.beginPath();ctx.arc(lx,ly,4,0,Math.PI*2);ctx.fillStyle='#5a8cdc';ctx.fill();
+  ctx.beginPath();ctx.arc(lx,ly,8,0,Math.PI*2);ctx.strokeStyle='rgba(90,140,220,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+  // Skala Y
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 10px JetBrains Mono,monospace';ctx.textAlign='left';
+  [[maxA,PT+10],[minA,PT+cH]].forEach(([a,y])=>ctx.fillText(Math.round(a)+'m',W-PR+4,y));
+  // Czas
+  ctx.fillStyle='rgba(255,255,255,0.25)';ctx.font='9px JetBrains Mono,monospace';
+  ctx.textAlign='left';ctx.fillText(fmtTime(pts[0].t),PL,H-4);
+  ctx.textAlign='right';ctx.fillText(fmtTime(pts[pts.length-1].t),PL+cW,H-4);
 }
-window.addEventListener('resize', resize);
-setTimeout(resize, 100);
-
-function draw() {
-  const W = cv.width  / devicePixelRatio;
-  const H = cv.height / devicePixelRatio;
-  ctx.clearRect(0, 0, W, H);
-  if (pts.length < 2) {
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.font = '11px JetBrains Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('oczekiwanie na dane GPS…', W/2, H/2);
-    return;
-  }
-
-  const alts = pts.map(p => p.alt);
-  const minA = Math.min(...alts);
-  const maxA = Math.max(...alts);
-  const range = maxA - minA || 1;
-
-  // padding
-  const PL=2, PR=2, PT=8, PB=20;
-  const cW = W-PL-PR;
-  const cH = H-PT-PB;
-
-  // ── Gradient wypełnienia pod krzywą ──
-  const grad = ctx.createLinearGradient(0, PT, 0, PT+cH);
-  grad.addColorStop(0,   'rgba(90,140,220,0.45)');
-  grad.addColorStop(0.6, 'rgba(90,140,220,0.12)');
-  grad.addColorStop(1,   'rgba(90,140,220,0.02)');
-
-  const xOf = i => PL + (i/(pts.length-1))*cW;
-  const yOf = a => PT + cH - ((a-minA)/range)*cH;
-
-  // Wypełnienie
-  ctx.beginPath();
-  ctx.moveTo(xOf(0), PT+cH);
-  pts.forEach((p,i) => ctx.lineTo(xOf(i), yOf(p.alt)));
-  ctx.lineTo(xOf(pts.length-1), PT+cH);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Linia
-  ctx.beginPath();
-  pts.forEach((p,i) => i===0 ? ctx.moveTo(xOf(0),yOf(p.alt)) : ctx.lineTo(xOf(i),yOf(p.alt)));
-  ctx.strokeStyle = '#5a8cdc';
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
-
-  // Punkt bieżący
-  const lx = xOf(pts.length-1);
-  const ly = yOf(pts[pts.length-1].alt);
-  ctx.beginPath();
-  ctx.arc(lx, ly, 4, 0, Math.PI*2);
-  ctx.fillStyle = '#5a8cdc';
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(lx, ly, 7, 0, Math.PI*2);
-  ctx.strokeStyle = 'rgba(90,140,220,0.35)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Linia max (zielona przerywana)
-  const yMax = yOf(maxA);
-  ctx.beginPath();
-  ctx.setLineDash([4,4]);
-  ctx.moveTo(PL, yMax); ctx.lineTo(PL+cW, yMax);
-  ctx.strokeStyle = 'rgba(95,168,77,0.35)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Skala Y — 3 poziomy
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.font = `${9 * devicePixelRatio / devicePixelRatio}px JetBrains Mono, monospace`;
-  ctx.textAlign = 'right';
-  const levels = [minA, minA+range*0.5, maxA];
-  levels.forEach(a => {
-    const y = yOf(a);
-    ctx.fillText(Math.round(a)+'m', W-2, y+3);
-  });
-
-  // Oś czasu (tylko start i koniec)
-  if (pts.length >= 2) {
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.textAlign = 'left';
-    ctx.fillText(fmtTime(pts[0].t), PL, H-4);
-    ctx.textAlign = 'right';
-    ctx.fillText(fmtTime(pts[pts.length-1].t), W-PR, H-4);
-  }
-}
-
-function fmtTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('pl', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
-}
-
-async function poll() {
-  try {
-    const d = await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
-    if (d.alt === null || d.alt === undefined) return;
-
-    const alt = Math.round(d.alt * 10) / 10;
-
-    // Zlicz przewyższenie (tylko wzrosty)
-    if (lastAlt !== null && alt > lastAlt) {
-      totalGain += alt - lastAlt;
+async function poll(){
+  try{
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    if(d.alt==null) return;
+    const alt=Math.round(d.alt*10)/10;
+    if(lastAlt!==null&&alt>lastAlt) totalGain+=alt-lastAlt;
+    lastAlt=alt;
+    if(pts.length===0||Math.abs(alt-pts[pts.length-1].alt)>=0.5){
+      pts.push({alt,t:d.lastUpdate||new Date().toISOString()});
+      if(pts.length>MAX_PTS) pts.shift();
     }
-    lastAlt = alt;
-
-    // Dodaj punkt (max co 3s, deduplikacja)
-    if (pts.length === 0 || Math.abs(alt - pts[pts.length-1].alt) >= 0.5) {
-      pts.push({ alt, t: d.lastUpdate || new Date().toISOString() });
-      if (pts.length > MAX_PTS) pts.shift();
-    }
-
-    // Statystyki
-    const alts = pts.map(p => p.alt);
-    document.getElementById('sCur').textContent  = alt + ' m';
-    document.getElementById('sMax').textContent  = Math.max(...alts) + ' m';
-    document.getElementById('sMin').textContent  = Math.min(...alts) + ' m';
-    document.getElementById('sGain').textContent = '+' + Math.round(totalGain) + ' m';
-
+    const alts=pts.map(p=>p.alt);
+    document.getElementById('sCur').textContent=alt+' m';
+    document.getElementById('sMax').textContent=Math.max(...alts)+' m';
+    document.getElementById('sMin').textContent=Math.min(...alts)+' m';
+    document.getElementById('sGain').textContent='+'+Math.round(totalGain)+' m';
     draw();
-  } catch {}
+  }catch{}
 }
-
-poll();
-setInterval(poll, 3000);
-</script>
-</body></html>
+poll();setInterval(poll,3000);
+</script></body></html>

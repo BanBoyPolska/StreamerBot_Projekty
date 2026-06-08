@@ -4,96 +4,55 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:transparent;overflow:hidden;width:260px;height:150px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
-  .card{
-    width:260px;height:150px;
-    background:linear-gradient(135deg,rgba(10,15,18,0.88) 0%,rgba(14,20,24,0.82) 100%);
-    border:1px solid rgba(232,112,56,0.3);
-    border-radius:14px;
-    padding:14px 18px;
-    display:flex;flex-direction:column;justify-content:space-between;
-    backdrop-filter:blur(12px);
-    box-shadow:0 4px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);
-    position:relative;overflow:hidden;
-  }
-  .card::before{content:'';position:absolute;top:0;left:0;right:60%;height:3px;background:linear-gradient(90deg,#e87038,transparent)}
-  .label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(232,112,56,0.75)}
-  .main-row{display:flex;align-items:center;gap:0px}
-  .icon-wrap{position:relative;width:72px;height:72px;margin-right:4px;flex-shrink:0}
-  .icon-wrap img{width:72px;height:72px;object-fit:contain;image-rendering:crisp-edges;filter:drop-shadow(0 0 8px rgba(232,112,56,0.4))}
-  .icon-wrap .icon-glow{position:absolute;inset:0;background:radial-gradient(circle,rgba(232,112,56,0.12) 0%,transparent 70%);pointer-events:none}
-  .icon-placeholder{width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:40px}
-  .temps{display:flex;flex-direction:column;gap:2px}
-  .temp-main{display:flex;align-items:baseline;gap:4px}
-  .val{font-size:52px;font-weight:800;line-height:1;color:#fff;letter-spacing:-2px}
-  .unit{font-size:16px;font-weight:700;color:rgba(255,255,255,0.35)}
-  .desc{font-size:11px;color:rgba(232,112,56,0.8);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;margin-top:4px;text-transform:capitalize}
+  html,body{background:transparent;overflow:hidden;width:240px;height:130px;-webkit-font-smoothing:antialiased}
+  body{font-family:'JetBrains Mono',monospace}
+  .card{width:240px;height:130px;background:rgba(16,11,8,0.92);border:1.5px solid rgba(232,112,56,0.4);border-radius:16px;padding:14px 20px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 20px rgba(0,0,0,0.6);position:relative;overflow:hidden}
+  .card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#e87038 0%,rgba(232,112,56,0.1) 70%,transparent 100%)}
+  .label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#e87038;opacity:.85}
+  .main{display:flex;align-items:center;gap:4px}
+  .icon{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(232,112,56,0.35))}
+  .icon-fallback{width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:42px;line-height:1}
+  .temps{display:flex;flex-direction:column;gap:0px}
+  .val-row{display:flex;align-items:baseline;gap:6px}
+  .val{font-size:58px;font-weight:800;line-height:1;color:#fff;letter-spacing:-3px}
+  .unit{font-size:18px;font-weight:700;color:rgba(255,255,255,0.45)}
+  .desc{font-size:12px;color:rgba(255,255,255,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;text-transform:capitalize}
 </style></head><body>
 <div class="card">
   <div class="label">Pogoda</div>
-
-  <div class="main-row">
-    <div class="icon-wrap">
-      <img id="wIcon" src="" alt="" style="display:none">
-      <div class="icon-placeholder" id="wEmoji">⏳</div>
-      <div class="icon-glow"></div>
+  <div class="main">
+    <div id="iconWrap">
+      <div class="icon-fallback" id="iconEmoji">⏳</div>
     </div>
     <div class="temps">
-      <div class="temp-main">
+      <div class="val-row">
         <div class="val" id="val">--</div>
         <div class="unit">°C</div>
       </div>
     </div>
   </div>
-
-  <div class="desc" id="desc">oczekiwanie na dane…</div>
-
-
+  <div class="desc" id="desc">oczekiwanie…</div>
 </div>
 <script>
-const SERVER = 'https://gps.banboypolska.deno.net';
-
-
-// Ikonka OWM — oficjalny CDN @2x (50x50 → skalujemy CSS do 72px)
-// URL: https://openweathermap.org/img/wn/{icon}@2x.png
-function setIcon(iconCode) {
-  if (!iconCode) return;
-  const img = document.getElementById('wIcon');
-  const emoji = document.getElementById('wEmoji');
-  const url = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
-  img.onload = () => {
-    img.style.display = '';
-    emoji.style.display = 'none';
-  };
-  img.onerror = () => {
-    // Fallback do emoji jeśli CDN niedostępny
-    img.style.display = 'none';
-    emoji.style.display = '';
-  };
-  img.src = url;
+const SERVER='https://gps.banboypolska.deno.net';
+let lastIcon='';
+function setIcon(code){
+  if(!code||code===lastIcon) return; lastIcon=code;
+  const wrap=document.getElementById('iconWrap');
+  const img=document.createElement('img');
+  img.className='icon';
+  img.onload=()=>{ wrap.innerHTML=''; wrap.appendChild(img); };
+  img.onerror=()=>{}; 
+  img.src=`https://openweathermap.org/img/wn/${code}@2x.png`;
 }
-
 async function poll(){
   try{
-    const d = await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
-
-    // Temperatura
-    document.getElementById('val').textContent   = d.temp ?? '--';
-
-    // Opis
-    document.getElementById('desc').textContent  = d.tempDesc || '—';
-
-    // Ikona OWM
-    if (d.weatherIconCode) {
-      setIcon(d.weatherIconCode);
-    } else if (d.weatherIcon) {
-      // Fallback: emoji z sendera
-      document.getElementById('wEmoji').textContent = d.weatherIcon;
-    }
-
-    // Dane dodatkowe
+    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
+    document.getElementById('val').textContent=d.temp??'--';
+    document.getElementById('desc').textContent=d.tempDesc||'—';
+    if(d.weatherIconCode) setIcon(d.weatherIconCode);
+    else document.getElementById('iconEmoji').textContent=d.weatherIcon||'🌡️';
   }catch{}
 }
-poll(); setInterval(poll,3000);
-</script>
-</body></html>
+poll();setInterval(poll,3000);
+</script></body></html>

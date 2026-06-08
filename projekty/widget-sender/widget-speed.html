@@ -4,27 +4,34 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:transparent;overflow:hidden;width:220px;height:110px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
+  html,body{background:transparent;overflow:hidden;width:240px;height:120px;-webkit-font-smoothing:antialiased}
+  body{font-family:'JetBrains Mono',monospace}
   .card{
-    width:220px;height:110px;
-    background:linear-gradient(135deg,rgba(10,15,18,0.88) 0%,rgba(14,20,24,0.82) 100%);
-    border:1px solid rgba(95,168,77,0.25);
-    border-radius:14px;
-    padding:14px 18px;
+    width:240px;height:120px;
+    background:rgba(10,16,12,0.92);
+    border:1.5px solid rgba(95,168,77,0.4);
+    border-radius:16px;padding:14px 20px;
     display:flex;flex-direction:column;justify-content:space-between;
-    backdrop-filter:blur(12px);
-    box-shadow:0 4px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow:0 2px 20px rgba(0,0,0,0.6),inset 0 1px 0 rgba(95,168,77,0.08);
     position:relative;overflow:hidden;
   }
-  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#5fa84d,transparent)}
-  .label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(95,168,77,0.7)}
-  .val-row{display:flex;align-items:baseline;gap:8px}
-  .val{font-size:52px;font-weight:800;line-height:1;color:#fff;letter-spacing:-2px}
-  .unit{font-size:14px;font-weight:700;color:rgba(255,255,255,0.4)}
-  .sub{font-size:10px;color:rgba(255,255,255,0.25)}
+  .card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,#5fa84d 0%,rgba(95,168,77,0.1) 70%,transparent 100%)}
+  .top{display:flex;align-items:center;justify-content:space-between}
+  .label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5fa84d;opacity:.85}
+  .dot{width:7px;height:7px;border-radius:50%;background:#3d4147}
+  .dot.live{background:#5fa84d;box-shadow:0 0 8px #5fa84d;animation:blink 1.8s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .val-row{display:flex;align-items:baseline;gap:10px}
+  .val{font-size:64px;font-weight:800;line-height:1;color:#fff;letter-spacing:-3px}
+  .unit{font-size:18px;font-weight:700;color:rgba(255,255,255,0.45)}
+  .sub{font-size:11px;color:rgba(255,255,255,0.3)}
 </style></head><body>
 <div class="card">
-  <div class="label">Prędkość</div>
+  <div class="top">
+    <div class="label">Prędkość</div>
+    <div class="dot" id="dot"></div>
+  </div>
   <div class="val-row">
     <div class="val" id="val">--</div>
     <div class="unit">km/h</div>
@@ -32,16 +39,16 @@
   <div class="sub" id="sub">oczekiwanie na GPS…</div>
 </div>
 <script>
-const SERVER = 'https://gps.banboypolska.deno.net';
-
+const SERVER='https://gps.banboypolska.deno.net';
 async function poll(){
   try{
     const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
-    document.getElementById('val').textContent = d.speed??'--';
+    document.getElementById('val').textContent=d.speed??'--';
     const ago=d.lastUpdate?Math.round((Date.now()-new Date(d.lastUpdate).getTime())/1000):null;
-    document.getElementById('sub').textContent = ago!==null?`GPS ±${d.accuracy??'?'}m · ${ago}s temu`:'brak danych';
-  }catch{}
+    const live=ago!==null&&ago<15;
+    document.getElementById('dot').className='dot'+(live?' live':'');
+    document.getElementById('sub').textContent=live?`GPS ±${d.accuracy??'?'}m · ${ago}s temu`:'brak sygnału';
+  }catch{document.getElementById('dot').className='dot';}
 }
-poll(); setInterval(poll,3000);
-</script>
-</body></html>
+poll();setInterval(poll,3000);
+</script></body></html>

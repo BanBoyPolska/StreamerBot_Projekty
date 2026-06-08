@@ -4,110 +4,63 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:transparent;overflow:hidden;width:180px;height:180px;font-family:'JetBrains Mono',monospace}
-  .card{width:180px;height:180px;background:linear-gradient(135deg,rgba(10,15,20,0.88),rgba(14,20,26,0.82));border:1px solid rgba(79,152,163,0.25);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;backdrop-filter:blur(12px);box-shadow:0 4px 24px rgba(0,0,0,0.5)}
-  canvas{position:absolute;inset:0}
-  .center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
-  .deg{font-size:20px;font-weight:800;color:#fff;letter-spacing:-1px}
-  .dir{font-size:11px;font-weight:700;color:#4f98a3;letter-spacing:.1em}
+  html,body{background:transparent;overflow:hidden;width:180px;height:200px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
+  .wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
+  canvas{filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4))}
+  .bottom{background:rgba(8,12,16,0.88);border:1.5px solid rgba(79,152,163,0.35);border-radius:10px;width:160px;padding:6px 0;display:flex;justify-content:center;gap:20px}
+  .info{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .ik{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.28)}
+  .iv{font-size:18px;font-weight:800;color:#fff}
 </style></head><body>
-<div class="card">
-  <canvas id="cv" width="180" height="180"></canvas>
-  <div class="center">
-    <div class="deg" id="degVal">--°</div>
-    <div class="dir" id="dirVal">---</div>
+<div class="wrap">
+  <canvas id="cv" width="170" height="170"></canvas>
+  <div class="bottom">
+    <div class="info"><div class="ik">Kierunek</div><div class="iv" id="degVal">--°</div></div>
+    <div class="info"><div class="ik">Strona</div><div class="iv" id="dirVal" style="color:#4f98a3">--</div></div>
   </div>
 </div>
 <script>
-const SERVER = 'https://gps.banboypolska.deno.net';
-if(SERVER) sessionStorage.setItem('gps_srv',SERVER);
-const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-const W=180,R=88,CX=90,CY=90;
-let heading=0, targetHeading=0;
-
-const DIRS=[['N',0],['NE',45],['E',90],['SE',135],['S',180],['SW',225],['W',270],['NW',315]];
-function dirName(h){const d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];return d[Math.round(h/22.5)%16];}
-
+const SERVER='https://gps.banboypolska.deno.net';
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=170,CX=85,CY=85,R=80;
+let heading=0;
+const DNAMES=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function dirName(h){return DNAMES[Math.round(h/22.5)%16];}
 function draw(){
   ctx.clearRect(0,0,W,W);
-  // Zewnętrzny krąg
+  // Tło
   ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
-  ctx.strokeStyle='rgba(79,152,163,0.3)';ctx.lineWidth=1;ctx.stroke();
-  // Wewnętrzny krąg
-  ctx.beginPath();ctx.arc(CX,CY,R-10,0,Math.PI*2);
-  ctx.strokeStyle='rgba(79,152,163,0.1)';ctx.lineWidth=1;ctx.stroke();
-
-  ctx.save();
-  ctx.translate(CX,CY);
-  ctx.rotate((heading-90)*Math.PI/180); // obróć całą tarczę
-
-  // Znaczniki co 10°
+  const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,R);
+  bg.addColorStop(0,'rgba(15,22,30,0.95)');bg.addColorStop(1,'rgba(8,12,16,0.95)');
+  ctx.fillStyle=bg;ctx.fill();
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.strokeStyle='rgba(79,152,163,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.save();ctx.translate(CX,CY);ctx.rotate((heading-90)*Math.PI/180);
+  // Znaczniki
   for(let i=0;i<36;i++){
-    const a=i*10*Math.PI/180;
-    const r1=i%3===0?R-14:R-8;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*R, Math.sin(a)*R);
-    ctx.lineTo(Math.cos(a)*r1, Math.sin(a)*r1);
-    ctx.strokeStyle=i%9===0?'rgba(255,255,255,0.8)':'rgba(255,255,255,0.2)';
-    ctx.lineWidth=i%9===0?1.5:0.8;
-    ctx.stroke();
+    const a=i*10*Math.PI/180,major=i%9===0,minor4=i%3===0;
+    const r1=R-3,r2=major?R-20:minor4?R-12:R-7;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
+    ctx.strokeStyle=major?'rgba(255,255,255,0.9)':minor4?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.15)';
+    ctx.lineWidth=major?2:0.8;ctx.stroke();
   }
-  // Etykiety N/E/S/W
-  ctx.font='bold 11px JetBrains Mono, monospace';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  [['N',0,'#e85555'],['E',90,'rgba(255,255,255,0.7)'],['S',180,'rgba(255,255,255,0.7)'],['W',270,'rgba(255,255,255,0.7)']].forEach(([l,a,c])=>{
-    const rad=a*Math.PI/180;
-    ctx.fillStyle=c;
-    ctx.fillText(l, Math.cos(rad)*(R-22), Math.sin(rad)*(R-22));
+  // Etykiety
+  ctx.font='bold 13px JetBrains Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  [['N',0,'#e85555'],['E',90,'rgba(255,255,255,0.85)'],['S',180,'rgba(255,255,255,0.85)'],['W',270,'rgba(255,255,255,0.85)']].forEach(([l,a,c])=>{
+    const rad=a*Math.PI/180;ctx.fillStyle=c;ctx.fillText(l,Math.cos(rad)*(R-26),Math.sin(rad)*(R-26));
   });
   ctx.restore();
-
-  // Strzałka — zawsze wskazuje NA PÓŁNOC (nie obraca się)
-  // Igła czerwona (N)
+  // Igła
   ctx.save();ctx.translate(CX,CY);
-  ctx.beginPath();
-  ctx.moveTo(0,-R+18);ctx.lineTo(5,0);ctx.lineTo(0,8);ctx.lineTo(-5,0);ctx.closePath();
-  ctx.fillStyle='#e85555';ctx.fill();
-  // Igła biała (S)
-  ctx.beginPath();
-  ctx.moveTo(0,R-18);ctx.lineTo(5,0);ctx.lineTo(0,-8);ctx.lineTo(-5,0);ctx.closePath();
-  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fill();
-  // Środek
-  ctx.beginPath();ctx.arc(0,0,5,0,Math.PI*2);
-  ctx.fillStyle='#0d1015';ctx.fill();
-  ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);
-  ctx.fillStyle='#4f98a3';ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,-R+18);ctx.lineTo(6,4);ctx.lineTo(0,10);ctx.lineTo(-6,4);ctx.closePath();
+  ctx.fillStyle='#e85555';ctx.shadowColor='#e85555';ctx.shadowBlur=8;ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,R-18);ctx.lineTo(6,4);ctx.lineTo(0,-10);ctx.lineTo(-6,4);ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,0.25)';ctx.shadowBlur=0;ctx.fill();
+  ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fillStyle='#0d1420';ctx.fill();
+  ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);ctx.fillStyle='#4f98a3';ctx.fill();
   ctx.restore();
 }
-
-function lerp(a,b,t){
-  let d=b-a;
-  while(d>180)d-=360;while(d<-180)d+=360;
-  return a+d*t;
-}
-let animFrame;
-function animateTo(target){
-  cancelAnimationFrame(animFrame);
-  function step(){
-    heading=lerp(heading,target,0.12);
-    draw();
-    if(Math.abs(heading-target)>0.3) animFrame=requestAnimationFrame(step);
-    else{heading=target;draw();}
-  }
-  step();
-}
-
-async function poll(){
-  try{
-    const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
-    const h=d.heading??null;
-    if(h!==null){
-      targetHeading=h;
-      animateTo(h);
-      document.getElementById('degVal').textContent=Math.round(h)+'°';
-      document.getElementById('dirVal').textContent=dirName(h);
-    }
-  }catch{}
-}
+let af;
+function animateTo(t){cancelAnimationFrame(af);function step(){let d=t-heading;while(d>180)d-=360;while(d<-180)d+=360;heading+=d*0.15;draw();if(Math.abs(d)>0.3)af=requestAnimationFrame(step);else{heading=t;draw();}}step();}
+async function poll(){try{const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();const h=d.heading??null;if(h!==null){animateTo(h);document.getElementById('degVal').textContent=Math.round(h)+'°';document.getElementById('dirVal').textContent=dirName(h);}}catch{}}
 draw();poll();setInterval(poll,3000);
 </script></body></html>
