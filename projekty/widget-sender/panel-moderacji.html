@@ -67,7 +67,11 @@ input:checked+.slider:before{transform:translateX(20px)}
 <p class="subtitle">Zarządzaj widocznością i układem widgetów w OBS</p>
 
 <div class="server-label">ADRES SERWERA GPS</div>
-<input id="serverInput" type="text" placeholder="Pobieranie z Gist..." readonly>
+<div style="display:flex;gap:6px;margin-bottom:16px">
+  <input id="serverInput" type="text" placeholder="Pobieranie z Gist..." 
+    style="background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:8px 12px;font-size:13px;flex:1">
+  <button onclick="connectManual()" style="padding:8px 14px;border-radius:6px;border:none;background:#1f6feb;color:#fff;font-size:13px;cursor:pointer;white-space:nowrap">🔌 Połącz</button>
+</div>
 
 <div class="status-bar">
   <div class="dot" id="statusDot"></div>
@@ -133,12 +137,32 @@ const WIDGET_LABELS = {
 
 // ── GIST FETCH ──
 async function fetchServerUrl() {
+  document.getElementById('statusText').textContent = '🔄 Pobieranie adresu z Gist...';
   try {
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{Accept:'application/vnd.github.v3+json'}});
     const d = await r.json();
     const f = d.files['obs-gps-server-url.json'];
-    if(f){ const p=JSON.parse(f.content); if(p.url){ SERVER=p.url; document.getElementById('serverInput').value=SERVER; } }
-  }catch(e){}
+    if(f){
+      const p=JSON.parse(f.content);
+      if(p.url && p.url.length > 5){
+        SERVER=p.url;
+        document.getElementById('serverInput').value=SERVER;
+        return true;
+      }
+    }
+    document.getElementById('statusText').textContent = '⚠ Gist nie zawiera adresu — wpisz ręcznie i kliknij Połącz';
+    return false;
+  }catch(e){
+    document.getElementById('statusText').textContent = '⚠ Błąd Gist — wpisz adres ręcznie i kliknij Połącz';
+    return false;
+  }
+}
+
+function connectManual() {
+  const val = document.getElementById('serverInput').value.trim().replace(/\/$/,'');
+  if(!val){ alert('Wpisz adres serwera!'); return; }
+  SERVER = val;
+  pollState();
 }
 
 // ── TABS ──
@@ -268,8 +292,10 @@ async function pollState() {
 
 // ── INIT ──
 (async function(){
-  await fetchServerUrl();
-  await pollState();
+  const gistOk = await fetchServerUrl();
+  if(gistOk){
+    await pollState();
+  }
   buildGrid();
   setInterval(pollState,3000);
 })();
