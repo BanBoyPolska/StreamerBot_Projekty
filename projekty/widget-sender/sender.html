@@ -328,50 +328,74 @@ function hyperateConnect() {
   const code = (document.getElementById('hyperateId').value || '').trim().toUpperCase();
   if (!code) return;
   sessionStorage.setItem('hyperate_key', code);
-  if (hyperateWs) { try { hyperateWs._intentionalClose = true; hyperateWs.close(); } catch {} hyperateWs = null; }
+
+  // Zamknij poprzednie połączenie
+  if (hyperateWs) {
+    hyperateWs.onclose = null;
+    hyperateWs.close();
+    hyperateWs = null;
+  }
 
   const btn = document.getElementById('hyperateStatus');
-  btn.textContent = '⏳ Łączenie…'; btn.className = 'hyperate-status connecting';
+  btn.textContent = '⏳ Łączenie…';
+  btn.className = 'hyperate-status connecting';
 
-  hyperateWs = new WebSocket('wss://app.hyperate.io/socket/websocket?token=public');
+  hyperateWs = new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');
 
   hyperateWs.onopen = () => {
-    hyperateWs.send(JSON.stringify({ topic: `hr:${code}`, event: 'phx_join', payload: {}, ref: 0 }));
-    // Heartbeat co 25s
-    setInterval(() => {
-      if (hyperateWs && hyperateWs.readyState === 1)
-        hyperateWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 0 }));
+    // Dołącz do kanału HR
+    hyperateWs.send(JSON.stringify({
+      topic: `hr:${code}`,
+      event: 'phx_join',
+      payload: {},
+      ref: 0
+    }));
+    // Phoenix heartbeat co 25s (wymagany żeby połączenie nie wygasło)
+    hyperateWs._hb = setInterval(() => {
+      if (hyperateWs && hyperateWs.readyState === 1) {
+        hyperateWs.send(JSON.stringify({
+          topic: 'phoenix',
+          event: 'heartbeat',
+          payload: {},
+          ref: 0
+        }));
+      }
     }, 25000);
   };
 
   hyperateWs.onmessage = e => {
     try {
-      const d = JSON.parse(e.data);
-      if (d.event === 'phx_reply' && d.payload?.status === 'ok') {
-        hyperateConnected = true;
-        btn.textContent = `❤️ ${code} • --`; btn.className = 'hyperate-status connected';
-        log('info', `HypeRate połączono: ${code}`);
+      const msg = JSON.parse(e.data);
+      // Połączono z kanałem
+      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
+        btn.textContent = `❤️ ${code} · łącze…`;
+        btn.className = 'hyperate-status connected';
+        log('info', `HypeRate: dołączono do hr:${code}`);
       }
-      if (d.event === 'hr_update' && d.payload?.hr != null) {
-        heartRate = d.payload.hr;
-        btn.textContent = `❤️ ${code} • ${heartRate} BPM`; btn.className = 'hyperate-status connected';
+      // Odczyt tętna
+      if (msg.event === 'hr_update') {
+        const hr = msg.payload?.hr ?? msg.payload?.heart_rate;
+        if (hr != null) {
+          heartRate = hr;
+          btn.textContent = `❤️ ${code} · ${hr} BPM`;
+          btn.className = 'hyperate-status connected';
+        }
       }
     } catch {}
   };
 
-  hyperateWs.onerror = () => { btn.textContent = '✗ Błąd połączenia'; btn.className = 'hyperate-status'; };
-  let _intentionalClose = false;
-  hyperateWs.onclose = () => {
-    if (_intentionalClose) return;
-    hyperateConnected = false;
-    btn.textContent = '⏳ Ponawiam…'; btn.className = 'hyperate-status connecting';
-    log('info', 'HypeRate rozłączono — ponawianie za 5s');
-    setTimeout(() => {
-      if (!hyperateConnected) hyperateConnect();
-    }, 5000);
+  hyperateWs.onerror = () => {
+    log('info', 'HypeRate: błąd WebSocket');
   };
-  // Intentional close przy nowym połączeniu
-  if (hyperateWs) { _intentionalClose = true; }
+
+  hyperateWs.onclose = () => {
+    if (hyperateWs?._hb) clearInterval(hyperateWs._hb);
+    heartRate = null;
+    btn.textContent = '⏳ Ponawiam…';
+    btn.className = 'hyperate-status connecting';
+    log('info', 'HypeRate: rozłączono — ponawianie za 5s');
+    setTimeout(hyperateConnect, 5000);
+  };
 }
 
 // ── Wake Lock — ekran nie wygasza się ──
