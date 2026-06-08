@@ -115,7 +115,21 @@
     .btn-main:active { transform: scale(0.97); }
     .btn-main-start { background: var(--success); color: #071208; }
     .btn-main-stop  { background: var(--error); color: #fff; }
-  </style>
+  
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
+.tab-btn{flex:1;padding:13px 8px;font-family:var(--font-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all var(--tr);}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+#tab-chat.active{display:flex;flex-direction:column;height:calc(100dvh - 110px);}
+.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;}
+.chat-info{padding:10px 16px;font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
+.chat-channel{color:var(--primary);font-weight:700;}
+.chat-frame{flex:1;border:none;width:100%;background:#0e0e10;}
+
+</style>
 </head>
 <body>
 
@@ -129,6 +143,11 @@
     <span class="signal-label" id="signalLabel">offline</span>
   </div>
 </header>
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('sender',this)">📡 GPS Sender</button>
+  <button class="tab-btn" onclick="switchTab('chat',this)">💬 Czat Twitch</button>
+</div>
+<div class="tab-pane active" id="tab-sender">
 
 <div class="setup-box">
 
@@ -265,7 +284,28 @@
   </div>
 </div>
 
+</div><!-- /tab-sender -->
+<div class="tab-pane" id="tab-chat">
+  <div class="chat-wrap">
+    <div class="chat-info">
+      <span>💬 Czat: <span class="chat-channel">banboypolska</span></span>
+      <span style="font-size:9px;color:var(--faint)">Twitch Live Chat</span>
+    </div>
+    <iframe class="chat-frame"
+      src="https://www.twitch.tv/embed/banboypolska/chat?parent=banboypolska.github.io&parent=localhost&parent=127.0.0.1&darkpopout"
+      allowfullscreen>
+    </iframe>
+  </div>
+</div><!-- /tab-chat -->
 <script>
+// ── Tab switching ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
 const OWM_KEY = 'fb98ee38b873f8640d3fd0f8a916a908';
 const pad = n => String(n).padStart(2,'0');
 
@@ -360,6 +400,7 @@ async function initBattery() {
   batteryObj = await navigator.getBattery();
 }
 
+// ── HypeRate WebSocket ──
 
 
 // ── Wake Lock — ekran nie wygasza się ──
