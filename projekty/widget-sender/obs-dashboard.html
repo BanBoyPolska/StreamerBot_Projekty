@@ -33,7 +33,7 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 #w-weather    { left:440px;  top:20px;   width:220px; height:120px; padding:14px 18px }
 #w-location   { left:670px;  top:20px;   width:260px; height:100px; padding:12px 18px }
 #w-tracker    { left:20px;   top:150px;  width:380px; height:110px; padding:14px 18px }
-#w-compass    { left:1700px; top:20px;   width:180px; height:210px }
+#w-compass    { left:1700px; top:20px;   width:180px; height:260px }
 #w-speedo     { left:1480px; top:20px;   width:200px; height:210px }
 #w-heartrate  { left:1700px; top:245px;  width:200px; height:170px; padding:14px 16px }
 #w-gforce     { left:1480px; top:245px;  width:200px; height:190px; padding:14px 16px }
@@ -110,7 +110,7 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 #w-elevation .inner{display:flex;flex-direction:column;height:100%}
 
 /* ─ Compass ─ */
-#w-compass .inner{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px}
+#w-compass{overflow:visible!important}#w-compass .inner{display:flex;flex-direction:column;align-items:center;padding:8px 0 14px}
 #w-compass .cbottom{background:rgba(8,12,16,0.7);border-radius:10px;width:160px;padding:5px 0;display:flex;justify-content:center;gap:16px;margin-top:6px}
 #w-compass .ck{font-size:9px;text-transform:uppercase;color:rgba(255,255,255,.28)}
 #w-compass .cv{font-size:16px;font-weight:800;color:#fff}
