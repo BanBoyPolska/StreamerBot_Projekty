@@ -143,12 +143,15 @@
     <button class="btn-save" onclick="saveServer()">Zapisz</button>
   </div>
 
-  <div class="setup-label" style="margin-top:12px">HypeRate — ID urządzenia ❤️</div>
+  <div class="setup-label" style="margin-top:12px">HypeRate ❤️</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+    <input class="hyperate-input" type="text" id="hyperateId" placeholder="Device ID (np. ECB4C)" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()" style="flex:1">
+  </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-    <input class="hyperate-input" type="text" id="hyperateId" placeholder="np. ECB4C" value="ECB4C" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" oninput="this.value=this.value.toUpperCase()">
+    <input class="hyperate-input" type="text" id="hyperateToken" placeholder="API Key (hyperate.io/api)" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;font-size:11px;letter-spacing:0">
     <button onclick="hyperateConnect()" class="hyperate-status" id="hyperateStatus" style="cursor:pointer">● Połącz</button>
   </div>
-  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace">ID znajdziesz w HypeRate → Share → Device ID</div>
+  <div style="font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace">API Key: hyperate.io → Account → API Key (darmowe)</div>
 
   <div class="setup-label" style="margin-top:12px">Nazwa urządzenia</div>
   <div class="device-row">
@@ -291,8 +294,10 @@ const TRK = { state:'idle', totalDist:0, elapsed:0, startTime:null, lastPt:null,
   const s = sessionStorage.getItem('gps_server_url') || 'https://gps.banboypolska.deno.net';
   SERVER_URL = s; document.getElementById('serverUrl').value = s; sessionStorage.setItem('gps_server_url', s);
   const hrKey = sessionStorage.getItem('hyperate_key') || 'ECB4C';
+  const hrToken = sessionStorage.getItem('hyperate_token') || '';
   document.getElementById('hyperateId').value = hrKey;
-  setTimeout(() => hyperateConnect(), 800);
+  document.getElementById('hyperateToken').value = hrToken;
+  // HypeRate NIE łączy się automatycznie — użytkownik klika Połącz ręcznie
   const n = sessionStorage.getItem('gps_device_name');
   if (n) document.getElementById('deviceName').value = n;
 })();
@@ -326,8 +331,10 @@ async function initBattery() {
 // ── HypeRate WebSocket ──
 function hyperateConnect() {
   const code = (document.getElementById('hyperateId').value || '').trim().toUpperCase();
+  const token = (document.getElementById('hyperateToken').value || '').trim();
   if (!code) return;
   sessionStorage.setItem('hyperate_key', code);
+  if (token) sessionStorage.setItem('hyperate_token', token);
 
   // Zamknij poprzednie połączenie
   if (hyperateWs) {
@@ -340,7 +347,7 @@ function hyperateConnect() {
   btn.textContent = '⏳ Łączenie…';
   btn.className = 'hyperate-status connecting';
 
-  hyperateWs = new WebSocket('wss://app.hyperate.io/socket/websocket?token=nope');
+  hyperateWs = new WebSocket(`wss://app.hyperate.io/socket/websocket?token=${token}`);
 
   hyperateWs.onopen = () => {
     // Dołącz do kanału HR
@@ -391,10 +398,10 @@ function hyperateConnect() {
   hyperateWs.onclose = () => {
     if (hyperateWs?._hb) clearInterval(hyperateWs._hb);
     heartRate = null;
-    btn.textContent = '⏳ Ponawiam…';
-    btn.className = 'hyperate-status connecting';
-    log('info', 'HypeRate: rozłączono — ponawianie za 5s');
-    setTimeout(hyperateConnect, 5000);
+    btn.textContent = '● Połącz';
+    btn.className = 'hyperate-status';
+    log('info', 'HypeRate: rozłączono');
+    // Brak auto-reconnect — użytkownik łączy ręcznie
   };
 }
 
