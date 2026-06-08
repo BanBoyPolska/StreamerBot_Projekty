@@ -4,7 +4,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:transparent;overflow:hidden;width:180px;height:200px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased;border-radius:16px}
+  html,body{background:transparent;overflow:hidden;width:180px;height:215px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased;border-radius:16px}
   .wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
   canvas{filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4))}
   .bottom{background:rgba(8,12,16,0.88);border:1.5px solid rgba(79,152,163,0.35);border-radius:10px;width:160px;padding:6px 0;display:flex;justify-content:center;gap:20px}
@@ -13,7 +13,7 @@
   .iv{font-size:18px;font-weight:800;color:#fff}
 </style></head><body>
 <div class="wrap">
-  <canvas id="cv" width="170" height="170"></canvas>
+  <canvas id="cv" width="165" height="165"></canvas>
   <div class="bottom">
     <div class="info"><div class="ik">Kierunek</div><div class="iv" id="degVal">--°</div></div>
     <div class="info"><div class="ik">Strona</div><div class="iv" id="dirVal" style="color:#4f98a3">--</div></div>
@@ -22,7 +22,7 @@
 <script>
 const SERVER='https://gps.banboypolska.deno.net';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-const W=170,CX=85,CY=85,R=80;
+const W=165,CX=82,CY=82,R=77;
 let heading=0;
 const DNAMES=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 function dirName(h){return DNAMES[Math.round(h/22.5)%16];}
