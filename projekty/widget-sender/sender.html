@@ -389,73 +389,56 @@ function hyperateConnect() {
   sessionStorage.setItem('hyperate_key', code);
   if (token) sessionStorage.setItem('hyperate_token', token);
 
-  // Zamknij poprzednie połączenie
-  if (hyperateWs) {
-    hyperateWs.onclose = null;
-    hyperateWs.close();
-    hyperateWs = null;
-  }
-
   const btn = document.getElementById('hyperateStatus');
   btn.textContent = '⏳ Łączenie…';
   btn.className = 'hyperate-status connecting';
 
-  hyperateWs = new WebSocket(`wss://app.hyperate.io/socket/websocket?token=${token}`);
+  // Zamknij poprzednie połączenie SSE
+  if (window._hrEventSource) {
+    window._hrEventSource.close();
+    window._hrEventSource = null;
+  }
 
-  hyperateWs.onopen = () => {
-    // Dolacz do kanalu HR - payload MUSI byc pusty {}
-    hyperateWs.send(JSON.stringify({
-      topic: `hr:${code}`,
-      event: 'phx_join',
-      payload: {},
-      ref: 0
-    }));
-    // Phoenix heartbeat co 15s - wymagany zeby polaczenie nie wygaslo
-    hyperateWs._hb = setInterval(() => {
-      if (hyperateWs && hyperateWs.readyState === 1) {
-        hyperateWs.send(JSON.stringify({
-          topic: 'phoenix',
-          event: 'heartbeat',
-          payload: {},
-          ref: 0
-        }));
-      }
-    }, 15000);
-  };
+  // Krok 1: Uruchom proxy HR na serwerze (server.js łączy się z HypeRate)
+  fetch(`${SERVER_URL}/hr-start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, token })
+  }).then(() => {
+    // Krok 2: Subskrybuj SSE stream tętna z serwera
+    const sseUrl = `${SERVER_URL}/hr-stream?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`;
+    const es = new EventSource(sseUrl);
+    window._hrEventSource = es;
 
-  hyperateWs.onmessage = e => {
-    try {
-      const msg = JSON.parse(e.data);
-      // Polaczono z kanalem
-      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-        btn.textContent = `❤️ ${code} · połączono`;
-        btn.className = 'hyperate-status connected';
-        log('info', `HypeRate: dołączono do hr:${code}`);
-      }
-      // Odczyt tetna - event: hr_update, payload: { hr: 72 }
-      if (msg.event === 'hr_update') {
-        const hr = msg.payload?.hr;
-        if (hr != null && hr > 0) {
-          heartRate = hr;
-          btn.textContent = `❤️ ${code} · ${hr} BPM`;
+    es.onmessage = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.status === 'connected') {
+          btn.textContent = `❤️ ${code} · łącze…`;
+          btn.className = 'hyperate-status connected';
+          log('info', `HypeRate SSE: połączono z serwerem`);
+        }
+        if (msg.hr != null && msg.hr > 0) {
+          heartRate = msg.hr;
+          btn.textContent = `❤️ ${code} · ${msg.hr} BPM`;
           btn.className = 'hyperate-status connected';
         }
-      }
-    } catch {}
-  };
+      } catch {}
+    };
 
-  hyperateWs.onerror = () => {
-    log('info', 'HypeRate: błąd WebSocket');
-  };
+    es.onerror = () => {
+      heartRate = null;
+      btn.textContent = '● Połącz';
+      btn.className = 'hyperate-status';
+      log('info', 'HypeRate SSE: błąd połączenia');
+      es.close();
+    };
 
-  hyperateWs.onclose = () => {
-    if (hyperateWs?._hb) clearInterval(hyperateWs._hb);
-    heartRate = null;
+  }).catch(() => {
     btn.textContent = '● Połącz';
     btn.className = 'hyperate-status';
-    log('info', 'HypeRate: rozłączono');
-    // Brak auto-reconnect — użytkownik łączy ręcznie
-  };
+    log('info', 'HypeRate: serwer niedostępny');
+  });
 }
 
 // ── Wake Lock — ekran nie wygasza się ──
