@@ -315,8 +315,29 @@ function setSignal(s) {
 }
 
 async function initBattery() {
-  if (!navigator.getBattery) return;
-  batteryObj = await navigator.getBattery();
+  // Battery Status API — działa na iOS Safari i starszym Chrome
+  if (navigator.getBattery) {
+    try {
+      batteryObj = await navigator.getBattery();
+      // Nasłuchuj zmian na żywo
+      batteryObj.addEventListener('levelchange',   () => updateBatteryUI());
+      batteryObj.addEventListener('chargingchange', () => updateBatteryUI());
+      updateBatteryUI();
+      return;
+    } catch(e) {}
+  }
+  // Fallback dla Chrome Android (usunięto getBattery) — próbuj co 30s odczytać
+  // przez sprawdzenie window.battery (niektóre przeglądarki)
+  log('info', '⚠ Battery API niedostępne — bateria może pokazywać null na widgecie');
+}
+
+function updateBatteryUI() {
+  if (!batteryObj) return;
+  const p = Math.round(batteryObj.level * 100);
+  document.getElementById('sBat').textContent = p;
+  document.getElementById('sBatStatus').textContent = batteryObj.charging ? '⚡ ładowanie' : 'rozładowywanie';
+  document.getElementById('sBatBar').style.width = p + '%';
+  document.getElementById('sBatBar').style.background = p<=15?'#b84040':p<=30?'#c8a230':'#5fa84d';
 }
 
 // ── HypeRate WebSocket ──
@@ -443,13 +464,7 @@ function updateUI(pos) {
   document.getElementById('sLat').textContent   = c.latitude.toFixed(5)+'°';
   document.getElementById('sLng').textContent   = c.longitude.toFixed(5)+'°';
   document.getElementById('sAlt').textContent   = c.altitude ? Math.round(c.altitude)+' m' : 'N/A';
-  if (batteryObj) {
-    const p = Math.round(batteryObj.level*100);
-    document.getElementById('sBat').textContent = p;
-    document.getElementById('sBatStatus').textContent = batteryObj.charging?'⚡ ładowanie':'rozładowywanie';
-    document.getElementById('sBatBar').style.width = p+'%';
-    document.getElementById('sBatBar').style.background = p<=15?'#b84040':p<=30?'#c8a230':'#5fa84d';
-  }
+  updateBatteryUI();
   document.getElementById('sTemp').textContent    = weatherData.temp ?? '--';
   document.getElementById('sTempDesc').textContent = weatherData.desc ?? '—';
   document.getElementById('sCity').textContent    = cityData.city ?? '--';
@@ -607,6 +622,10 @@ function closeConfirm() { document.getElementById('confirmOverlay').classList.re
 // ── WYSYŁANIE ──
 async function pushData() {
   if (!SERVER_URL || !currentPos) return;
+  // Ponów próbę odczytu baterii jeśli jeszcze null (np. API załadowało się później)
+  if (!batteryObj && navigator.getBattery) {
+    try { batteryObj = await navigator.getBattery(); updateBatteryUI(); } catch {}
+  }
   const c = currentPos.coords;
   const payload = {
     lat: c.latitude, lng: c.longitude, alt: c.altitude||null,

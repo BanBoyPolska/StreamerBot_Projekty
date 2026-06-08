@@ -30,15 +30,20 @@
 </div>
 <script>
 const SERVER='https://gps.banboypolska.deno.net';
+let lastBat=null;
 async function poll(){
   try{
     const d=await(await fetch(SERVER+'/data',{cache:'no-cache'})).json();
-    const p=d.battery??null;
-    document.getElementById('val').textContent=p!==null?p:'--';
+    // Zachowaj ostatnią wartość jeśli serwer zwraca null (Battery API niedostępne na Androidzie)
+    const p=d.battery!==null&&d.battery!==undefined?d.battery:lastBat;
+    if(p!==null){
+      lastBat=p;
+      document.getElementById('val').textContent=p;
+      const bar=document.getElementById('bar');
+      bar.style.width=p+'%';
+      bar.style.background=p<=15?'#e84040':p<=30?'#f0a040':'#5fa84d';
+    }
     document.getElementById('chg').textContent=d.charging?'⚡':'';
-    const bar=document.getElementById('bar');
-    bar.style.width=(p||0)+'%';
-    bar.style.background=p<=15?'#e84040':p<=30?'#f0a040':'#5fa84d';
   }catch{}
 }
 poll();setInterval(poll,3000);
