@@ -94,6 +94,34 @@ input:checked+.slider:before{transform:translateX(20px)}
 
 <!-- PANE: Layout -->
 <div id="pane-layout" class="pane">
+  <div class="map-controls">
+    <div class="map-ctrl-title">🗺 Rozmiar mapy</div>
+    <div class="slider-row">
+      <span class="slider-label">Szerokość</span>
+      <input type="range" class="slider-input" id="mapW" min="200" max="900" step="10" value="370"
+        oninput="onMapSlider()">
+      <span class="slider-val" id="mapWVal">370px</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Wysokość</span>
+      <input type="range" class="slider-input" id="mapH" min="150" max="900" step="10" value="620"
+        oninput="onMapSlider()">
+      <span class="slider-val" id="mapHVal">620px</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Zoom mapy</span>
+      <input type="range" class="slider-input" id="mapZoom" min="5" max="19" step="1" value="15"
+        oninput="onMapSlider()">
+      <span class="slider-val" id="mapZoomVal">15</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-apply" onclick="applyMapSize()" style="font-size:12px;padding:7px 14px">
+        ✅ Zastosuj rozmiar mapy
+      </button>
+      <span id="mapSizeInfo" style="font-size:12px;color:#58a6ff;align-self:center"></span>
+    </div>
+  </div>
+
   <p class="layout-hint">Przeciągaj widgety aby zmienić ich położenie. Kliknij <b>Zastosuj</b> — dashboard w OBS zaktualizuje się natychmiast.</p>
   <div class="canvas-wrap">
     <div id="layoutCanvas"></div>
@@ -169,7 +197,7 @@ function switchTab(name) {
   event.target.classList.add('active');
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.getElementById('pane-'+name).classList.add('active');
-  if(name==='layout') setTimeout(renderCanvas, 50);
+  if(name==='layout') { setTimeout(renderCanvas, 50); syncMapSliders(); }
 }
 
 // ── WIDGET CARDS ──
@@ -297,6 +325,59 @@ async function pollState() {
   buildGrid();
   setInterval(pollState,3000);
 })();
+
+// ── MAP SIZE SLIDERS ──
+function onMapSlider() {
+  const w = document.getElementById('mapW').value;
+  const h = document.getElementById('mapH').value;
+  const z = document.getElementById('mapZoom').value;
+  document.getElementById('mapWVal').textContent   = w + 'px';
+  document.getElementById('mapHVal').textContent   = h + 'px';
+  document.getElementById('mapZoomVal').textContent = z;
+  // Aktualizuj w currentLayout zachowujac pozycje (centrowanie)
+  if (currentLayout['w-map']) {
+    const oldW = currentLayout['w-map'].width;
+    const oldH = currentLayout['w-map'].height;
+    const centerX = currentLayout['w-map'].left + oldW / 2;
+    const centerY = currentLayout['w-map'].top  + oldH / 2;
+    currentLayout['w-map'].width  = parseInt(w);
+    currentLayout['w-map'].height = parseInt(h);
+    currentLayout['w-map'].zoom   = parseInt(z);
+    // Wycentruj mape wzgledem starego centrum
+    currentLayout['w-map'].left = Math.max(0, Math.round(centerX - parseInt(w) / 2));
+    currentLayout['w-map'].top  = Math.max(0, Math.round(centerY - parseInt(h) / 2));
+  }
+  // Odswierz proxy na canvasie
+  if (document.getElementById('pane-layout').classList.contains('active')) renderCanvas();
+}
+
+async function applyMapSize() {
+  if (!SERVER) { alert('Brak połączenia z serwerem!'); return; }
+  try {
+    await fetch(SERVER + '/layout', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({'w-map': currentLayout['w-map']})
+    });
+    document.getElementById('mapSizeInfo').textContent = '✅ Zastosowano!';
+    setTimeout(() => document.getElementById('mapSizeInfo').textContent = '', 3000);
+  } catch {
+    document.getElementById('mapSizeInfo').textContent = '❌ Błąd';
+  }
+}
+
+// Zsynchronizuj suwaki z aktualnym layoutem po zaladowaniu
+function syncMapSliders() {
+  const m = currentLayout['w-map'];
+  if (!m) return;
+  document.getElementById('mapW').value     = m.width  || 370;
+  document.getElementById('mapH').value     = m.height || 620;
+  document.getElementById('mapZoom').value  = m.zoom   || 15;
+  document.getElementById('mapWVal').textContent    = (m.width  || 370) + 'px';
+  document.getElementById('mapHVal').textContent    = (m.height || 620) + 'px';
+  document.getElementById('mapZoomVal').textContent = (m.zoom   || 15);
+}
+
 </script>
 </body>
 </html>

@@ -554,6 +554,18 @@ async function pollLayout() {
       if (pos.width !== undefined) el.style.width  = pos.width  + 'px';
       if (pos.height!== undefined) el.style.height = pos.height + 'px';
     });
+    // Po zmianie rozmiaru mapy - odswierz Leaflet i wycentruj na pozycji
+    if (layout['w-map'] && mapInst) {
+      setTimeout(() => {
+        mapInst.invalidateSize();
+        if (lastData && lastData.lat && lastData.lng) {
+          mapInst.setView([lastData.lat, lastData.lng], layout['w-map'].zoom || mapInst.getZoom(), {animate: false});
+        }
+        if (layout['w-map'].zoom !== undefined) {
+          mapInst.setZoom(layout['w-map'].zoom, {animate: false});
+        }
+      }, 100);
+    }
   } catch {}
 }
 
