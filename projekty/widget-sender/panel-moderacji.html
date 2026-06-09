@@ -144,8 +144,8 @@ const GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
 const CANVAS_W = 1920, CANVAS_H = 1080;
 let SERVER = '';
 let state = {};
-let currentLayout = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}};
-const DEFAULT_LAYOUT_COPY = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}};
+let currentLayout = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}, "w-signal": {"left": 940, "top": 20, "width": 220, "height": 110}};
+const DEFAULT_LAYOUT_COPY = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}, "w-signal": {"left": 940, "top": 20, "width": 220, "height": 110}};
 
 const WIDGETS = [
   {key:'speed',      name:'Prędkość',   icon:'🚀'},
@@ -160,13 +160,15 @@ const WIDGETS = [
   {key:'compass',    name:'Kompas',      icon:'🧭'},
   {key:'gforce',     name:'G-Force',     icon:'💥'},
   {key:'heartrate',  name:'Tętno',       icon:'❤️'},
+  {key:'signal',     name:'Sygnał',      icon:'📶'},
 ];
 
 const WIDGET_LABELS = {
   'w-speed':'🚀 Prędkość','w-battery':'🔋 Bateria','w-weather':'🌤 Pogoda',
   'w-location':'📍 Lokalizacja','w-tracker':'📈 Tracker','w-heartrate':'❤️ Tętno',
   'w-gforce':'💥 G-Force','w-elevation':'⛰ Wysokość','w-compass':'🧭 Kompas',
-  'w-speedo':'🎯 Licznik','w-map':'🗺 Mapa'
+  'w-speedo':'🎯 Licznik','w-map':'🗺 Mapa',
+  'w-signal':'📶 Sygnał'
 };
 
 // ── GIST FETCH ──
