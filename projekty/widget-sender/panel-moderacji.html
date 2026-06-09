@@ -116,7 +116,7 @@ input:checked+.slider:before{transform:translateX(20px)}
     </div>
     <div class="slider-row">
       <span class="slider-label">Zaokrąglenie</span>
-      <input type="range" class="slider-input" id="mapRadius" min="0" max="40" step="1" value="16"
+      <input type="range" class="slider-input" id="mapRadius" min="0" max="50" step="1" value="16"
         oninput="onMapSlider()">
       <span class="slider-val" id="mapRadiusVal">16px</span>
     </div>
@@ -160,14 +160,13 @@ const WIDGETS = [
   {key:'compass',    name:'Kompas',      icon:'🧭'},
   {key:'gforce',     name:'G-Force',     icon:'💥'},
   {key:'heartrate',  name:'Tętno',       icon:'❤️'},
-  {key:'signal',    name:'Sygnał',      icon:'📶'},
 ];
 
 const WIDGET_LABELS = {
   'w-speed':'🚀 Prędkość','w-battery':'🔋 Bateria','w-weather':'🌤 Pogoda',
   'w-location':'📍 Lokalizacja','w-tracker':'📈 Tracker','w-heartrate':'❤️ Tętno',
   'w-gforce':'💥 G-Force','w-elevation':'⛰ Wysokość','w-compass':'🧭 Kompas',
-  'w-speedo':'🎯 Licznik','w-map':'🗺 Mapa','w-signal':'📶 Sygnał'
+  'w-speedo':'🎯 Licznik','w-map':'🗺 Mapa'
 };
 
 // ── GIST FETCH ──
@@ -341,7 +340,8 @@ function onMapSlider() {
   document.getElementById('mapWVal').textContent   = w + 'px';
   document.getElementById('mapHVal').textContent   = h + 'px';
   document.getElementById('mapZoomVal').textContent = z;
-  const _brEl=document.getElementById('mapRadius'); if(_brEl&&document.getElementById('mapRadiusVal')) document.getElementById('mapRadiusVal').textContent=_brEl.value+'px';
+  const brVal = document.getElementById('mapRadius') ? parseInt(document.getElementById('mapRadius').value) : 16;
+  if (document.getElementById('mapRadiusVal')) document.getElementById('mapRadiusVal').textContent = brVal + 'px';
   // Aktualizuj w currentLayout zachowujac pozycje (centrowanie)
   if (currentLayout['w-map']) {
     const oldW = currentLayout['w-map'].width;
@@ -351,8 +351,7 @@ function onMapSlider() {
     currentLayout['w-map'].width  = parseInt(w);
     currentLayout['w-map'].height = parseInt(h);
     currentLayout['w-map'].zoom   = parseInt(z);
-    const brEl = document.getElementById('mapRadius');
-    if(brEl) currentLayout['w-map'].borderRadius = parseInt(brEl.value);
+    currentLayout['w-map'].borderRadius = brVal;
     // Wycentruj mape wzgledem starego centrum
     currentLayout['w-map'].left = Math.max(0, Math.round(centerX - parseInt(w) / 2));
     currentLayout['w-map'].top  = Math.max(0, Math.round(centerY - parseInt(h) / 2));
@@ -386,6 +385,11 @@ function syncMapSliders() {
   document.getElementById('mapWVal').textContent    = (m.width  || 370) + 'px';
   document.getElementById('mapHVal').textContent    = (m.height || 620) + 'px';
   document.getElementById('mapZoomVal').textContent = (m.zoom   || 15);
+  if (document.getElementById('mapRadius')) {
+    const br = m.borderRadius != null ? m.borderRadius : 16;
+    document.getElementById('mapRadius').value = br;
+    document.getElementById('mapRadiusVal').textContent = br + 'px';
+  }
 }
 
 </script>
