@@ -128,56 +128,8 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 #w-map .inner{height:100%;border-radius:16px;overflow:hidden}
 #mapEl{width:100%;height:100%}
 .leaflet-tile-pane{filter:brightness(1) saturate(1)}
-
-/* ─ Signal ─ */
-#w-signal    { left:940px;  top:20px;   width:220px; height:110px; padding:14px 18px }
-#w-signal .rows { display:flex; flex-direction:column; gap:8px; margin-top:6px; }
-#w-signal .srow { display:flex; align-items:center; gap:8px; }
-#w-signal .sicon { font-size:16px; width:20px; text-align:center; flex-shrink:0; }
-#w-signal .sinfo { flex:1; min-width:0; }
-#w-signal .sname { font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:rgba(255,255,255,.28); }
-#w-signal .sval  { font-size:13px; font-weight:800; color:#fff; line-height:1.1; }
-#w-signal .sbars { display:flex; align-items:flex-end; gap:2px; height:14px; }
-#w-signal .sbar  { width:4px; border-radius:1px; background:rgba(255,255,255,.1); }
-#w-signal .sbar.on   { background:#5fa84d; }
-#w-signal .sbar.warn { background:#f0a040; }
-#w-signal .sbar.bad  { background:#e84040; }
-
 </style>
 </head><body>
-
-<!-- SIGNAL -->
-<div class="w b-green a-green" id="w-signal">
-  <div class="lbl c-green">Sygnał</div>
-  <div class="rows">
-    <div class="srow">
-      <div class="sicon">📶</div>
-      <div class="sinfo">
-        <div class="sname">Wi-Fi</div>
-        <div class="sval" id="sigWifi">--</div>
-      </div>
-      <div class="sbars" id="wifiBars">
-        <div class="sbar" style="height:4px"></div>
-        <div class="sbar" style="height:7px"></div>
-        <div class="sbar" style="height:10px"></div>
-        <div class="sbar" style="height:13px"></div>
-      </div>
-    </div>
-    <div class="srow">
-      <div class="sicon">🛰️</div>
-      <div class="sinfo">
-        <div class="sname">GPS</div>
-        <div class="sval" id="sigGps">--</div>
-      </div>
-      <div class="sbars" id="gpsBars">
-        <div class="sbar" style="height:4px"></div>
-        <div class="sbar" style="height:7px"></div>
-        <div class="sbar" style="height:10px"></div>
-        <div class="sbar" style="height:13px"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- SPEED -->
 <div class="w b-green a-green" id="w-speed">
@@ -343,7 +295,6 @@ let gfHist=[], gfMax=0;
 let sdMaxSpd=0, sdSumSpd=0, sdCntSpd=0, sdCurSpd=0;
 let cpHeading=0, cpAf=null;
 let mapInst=null, mapMarker=null, mapTrail=[];
-let mapCurrentZoom=16;
 
 // ── Jedna pętla poll ──
 async function poll() {
@@ -355,7 +306,6 @@ async function poll() {
 }
 
 function updateAll(d) {
-  updateSignalGps(d);
   updateSpeed(d);
   updateBattery(d);
   updateWeather(d);
@@ -568,7 +518,7 @@ function initMap(){
   mapInst = L.map('mapEl',{zoomControl:false,attributionControl:false});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mapInst);
   mapMarker = L.circleMarker([0,0],{radius:8,color:'#5fa84d',fillColor:'#5fa84d',fillOpacity:1,weight:2}).addTo(mapInst);
-  mapInst.setView([52,19],mapCurrentZoom);
+  mapInst.setView([52,19],13);
 }
 function updateMap(d){
   if(!d.lat||!d.lng) return;
@@ -579,7 +529,7 @@ function updateMap(d){
     if(window._mapTrailLine) mapInst.removeLayer(window._mapTrailLine);
     window._mapTrailLine=L.polyline(mapTrail,{color:'#5fa84d',weight:3,opacity:.7}).addTo(mapInst);
   }
-  mapInst.setView(ll,mapCurrentZoom,{animate:false});
+  mapInst.setView(ll,16);
 }
 initMap();
 
@@ -609,12 +559,10 @@ async function pollLayout() {
       setTimeout(() => {
         mapInst.invalidateSize();
         if (lastData && lastData.lat && lastData.lng) {
-          mapCurrentZoom = layout['w-map'].zoom || mapInst.getZoom();
-          mapInst.setView([lastData.lat, lastData.lng], mapCurrentZoom, {animate: false});
+          mapInst.setView([lastData.lat, lastData.lng], layout['w-map'].zoom || mapInst.getZoom(), {animate: false});
         }
         if (layout['w-map'].zoom !== undefined) {
-          mapCurrentZoom = layout['w-map'].zoom;
-          mapInst.setZoom(mapCurrentZoom, {animate: false});
+          mapInst.setZoom(layout['w-map'].zoom, {animate: false});
         }
       }, 100);
     }
@@ -645,53 +593,11 @@ async function pollWidgetVisibility() {
 _initServerUrl().then(() => {
   poll();
   setInterval(poll, INTERVAL);
-updateSignalWifi();
-setInterval(updateSignalWifi, 5000);
   pollWidgetVisibility();
   setInterval(pollWidgetVisibility, 2000);
   pollLayout();
   setInterval(pollLayout, 1000);
 });
-
-
-// ── SIGNAL widget ──
-function setSignalBars(elId, level) {
-  const bars = document.getElementById(elId).children;
-  const cls = level >= 4 ? 'on' : level >= 2 ? 'warn' : 'bad';
-  for (let i = 0; i < bars.length; i++) {
-    bars[i].className = 'sbar';
-    if (i < level) bars[i].classList.add(cls);
-  }
-}
-
-function updateSignalWifi() {
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const el = document.getElementById('sigWifi');
-  if (!el) return;
-  if (!conn) { el.textContent = 'brak API'; setSignalBars('wifiBars', 0); return; }
-  const type = conn.effectiveType || conn.type || '?';
-  const dl = conn.downlink != null ? conn.downlink : null;
-  let level = 0;
-  if (type==='4g'||type==='wifi') level=4;
-  else if (type==='3g') level=3;
-  else if (type==='2g') level=2;
-  else if (type==='slow-2g') level=1;
-  else if (dl!=null) level = dl>10?4:dl>2?3:dl>0.5?2:1;
-  el.textContent = dl!=null ? dl.toFixed(1)+' Mb/s' : type.toUpperCase();
-  el.style.color = ['#e84040','#e84040','#f0a040','#5fa84d','#5fa84d'][level];
-  setSignalBars('wifiBars', level);
-}
-
-function updateSignalGps(d) {
-  const el = document.getElementById('sigGps');
-  if (!el) return;
-  const acc = d ? d.accuracy : null;
-  if (acc == null) { el.textContent = 'brak'; el.style.color='rgba(255,255,255,.3)'; setSignalBars('gpsBars', 0); return; }
-  const level = acc<=5?4:acc<=15?3:acc<=30?2:acc<=60?1:0;
-  el.textContent = Math.round(acc) + 'm';
-  el.style.color = ['#e84040','#e84040','#f0a040','#5fa84d','#5fa84d'][level];
-  setSignalBars('gpsBars', level);
-}
 
 </script>
 </body></html>
