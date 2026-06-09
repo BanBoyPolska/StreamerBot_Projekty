@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OBS Widget Panel Moderacji</title>
+<title>OBS Widget Panel — Moderacja</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0}
 body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding:20px}
 h1{font-size:20px;font-weight:600;color:#58a6ff;margin-bottom:4px}
 .subtitle{font-size:13px;color:#8b949e;margin-bottom:20px}
@@ -14,12 +14,17 @@ h1{font-size:20px;font-weight:600;color:#58a6ff;margin-bottom:4px}
 .dot.online{background:#3fb950;box-shadow:0 0 6px #3fb950}
 .dot.offline{background:#f85149}
 .server-label{font-size:12px;color:#8b949e;margin-bottom:6px}
+#serverInput{background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:8px 12px;font-size:13px;width:100%;margin-bottom:16px}
+
+/* Tabs */
 .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #21262d;padding-bottom:12px}
 .tab{padding:8px 18px;border-radius:6px;border:1px solid transparent;background:transparent;color:#8b949e;font-size:13px;cursor:pointer;transition:.15s}
 .tab:hover{background:#21262d;color:#e6edf3}
 .tab.active{background:#58a6ff22;border-color:#58a6ff;color:#58a6ff}
 .pane{display:none}
 .pane.active{display:block}
+
+/* Widget cards */
 .actions{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .btn-all{padding:8px 16px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:13px;cursor:pointer;transition:background .15s}
 .btn-all:hover{background:#30363d}
@@ -37,9 +42,11 @@ h1{font-size:20px;font-weight:600;color:#58a6ff;margin-bottom:4px}
 .toggle{position:relative;width:44px;height:24px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0}
 .slider{position:absolute;inset:0;background:#484f58;border-radius:24px;cursor:pointer;transition:.2s}
-.slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-input:checked + .slider{background:#3fb950}
-input:checked + .slider::before{transform:translateX(20px)}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:#3fb950}
+input:checked+.slider:before{transform:translateX(20px)}
+
+/* Layout canvas */
 .canvas-wrap{width:100%;background:#0a0d0a;border:1px solid #30363d;border-radius:8px;overflow:hidden;margin-bottom:12px;position:relative}
 #layoutCanvas{width:100%;display:block;position:relative}
 .w-proxy{position:absolute;background:rgba(88,166,255,0.15);border:1.5px solid #58a6ff88;border-radius:5px;cursor:grab;user-select:none;display:flex;align-items:center;justify-content:center;font-weight:600;text-align:center;box-sizing:border-box;overflow:hidden}
@@ -51,319 +58,347 @@ input:checked + .slider::before{transform:translateX(20px)}
 .btn-apply{padding:9px 20px;border-radius:6px;border:none;background:#238636;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
 .btn-apply:hover{background:#2ea043}
 .btn-reset{padding:9px 16px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#8b949e;font-size:13px;cursor:pointer}
-.map-controls{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:16px}
-.map-ctrl-title{font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
-.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.slider-label{font-size:12px;color:#8b949e;width:80px;flex-shrink:0}
-.slider-input{flex:1;accent-color:#58a6ff}
-.slider-val{font-size:12px;color:#58a6ff;width:50px;text-align:right;flex-shrink:0}
+#layoutInfo{font-size:12px;color:#58a6ff}
 </style>
 </head>
 <body>
-<h1>OBS Widget Panel</h1>
+
+<h1>🎮 OBS Widget Panel</h1>
 <p class="subtitle">Zarządzaj widocznością i układem widgetów w OBS</p>
+
 <div class="server-label">ADRES SERWERA GPS</div>
 <div style="display:flex;gap:6px;margin-bottom:16px">
-  <input id="serverInput" type="text" placeholder="Pobieranie z Gist..." style="background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:8px 12px;font-size:13px;flex:1">
-  <button onclick="connectManual()" style="padding:8px 14px;border-radius:6px;border:none;background:#1f6feb;color:#fff;font-size:13px;cursor:pointer;white-space:nowrap">Połącz</button>
+  <input id="serverInput" type="text" placeholder="Pobieranie z Gist..." 
+    style="background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:8px 12px;font-size:13px;flex:1">
+  <button onclick="connectManual()" style="padding:8px 14px;border-radius:6px;border:none;background:#1f6feb;color:#fff;font-size:13px;cursor:pointer;white-space:nowrap">🔌 Połącz</button>
 </div>
+
 <div class="status-bar">
   <div class="dot" id="statusDot"></div>
   <span id="statusText">Łączenie z serwerem...</span>
 </div>
+
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('widgets')">Widgety</button>
-  <button class="tab" onclick="switchTab('layout')">Układ OBS</button>
+  <button class="tab active" onclick="switchTab('widgets')">🎛 Widgety</button>
+  <button class="tab" onclick="switchTab('layout')">📐 Układ OBS</button>
 </div>
+
+<!-- PANE: Widgety -->
 <div id="pane-widgets" class="pane active">
   <div class="actions">
-    <button class="btn-all green" onclick="setAll(true)">Włącz wszystkie</button>
-    <button class="btn-all red" onclick="setAll(false)">Wyłącz wszystkie</button>
+    <button class="btn-all green" onclick="setAll(true)">✅ Włącz wszystkie</button>
+    <button class="btn-all red" onclick="setAll(false)">❌ Wyłącz wszystkie</button>
   </div>
   <div class="grid" id="grid"></div>
 </div>
+
+<!-- PANE: Layout -->
 <div id="pane-layout" class="pane">
   <div class="map-controls">
-    <div class="map-ctrl-title">Rozmiar mapy</div>
+    <div class="map-ctrl-title">🗺 Rozmiar mapy</div>
     <div class="slider-row">
       <span class="slider-label">Szerokość</span>
-      <input type="range" class="slider-input" id="mapW" min="200" max="900" step="10" value="370" oninput="onMapSlider()">
+      <input type="range" class="slider-input" id="mapW" min="200" max="900" step="10" value="370"
+        oninput="onMapSlider()">
       <span class="slider-val" id="mapWVal">370px</span>
     </div>
     <div class="slider-row">
       <span class="slider-label">Wysokość</span>
-      <input type="range" class="slider-input" id="mapH" min="150" max="900" step="10" value="620" oninput="onMapSlider()">
+      <input type="range" class="slider-input" id="mapH" min="150" max="900" step="10" value="620"
+        oninput="onMapSlider()">
       <span class="slider-val" id="mapHVal">620px</span>
     </div>
     <div class="slider-row">
       <span class="slider-label">Zoom mapy</span>
-      <input type="range" class="slider-input" id="mapZoom" min="5" max="19" step="1" value="15" oninput="onMapSlider()">
+      <input type="range" class="slider-input" id="mapZoom" min="5" max="19" step="1" value="15"
+        oninput="onMapSlider()">
       <span class="slider-val" id="mapZoomVal">15</span>
     </div>
     <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn-apply" onclick="applyMapSize()" style="font-size:12px;padding:7px 14px">Zastosuj rozmiar mapy</button>
+      <button class="btn-apply" onclick="applyMapSize()" style="font-size:12px;padding:7px 14px">
+        ✅ Zastosuj rozmiar mapy
+      </button>
       <span id="mapSizeInfo" style="font-size:12px;color:#58a6ff;align-self:center"></span>
     </div>
   </div>
+
   <p class="layout-hint">Przeciągaj widgety aby zmienić ich położenie. Kliknij <b>Zastosuj</b> — dashboard w OBS zaktualizuje się natychmiast.</p>
-  <div class="canvas-wrap"><div id="layoutCanvas"></div></div>
+  <div class="canvas-wrap">
+    <div id="layoutCanvas"></div>
+  </div>
   <div class="layout-actions">
-    <button class="btn-apply" onclick="applyLayout()">Zastosuj układ</button>
-    <button class="btn-reset" onclick="resetLayout()">Resetuj</button>
+    <button class="btn-apply" onclick="applyLayout()">✅ Zastosuj układ</button>
+    <button class="btn-reset" onclick="resetLayout()">↩ Resetuj</button>
     <span id="layoutInfo"></span>
   </div>
 </div>
+
 <script>
-const GISTID = 'b8194117c4bb29f977bec88ec9a5c592';
-const CANVASW = 1920, CANVASH = 1080;
+const GIST_ID = 'b8194117c4bb29f977bec88ec9a5c592';
+const CANVAS_W = 1920, CANVAS_H = 1080;
 let SERVER = '';
 let state = {};
-let currentLayout = {
-  'w-speed':     { left:20,   top:20,  width:200, height:110 },
-  'w-battery':   { left:230,  top:20,  width:200, height:110 },
-  'w-weather':   { left:440,  top:20,  width:220, height:120 },
-  'w-location':  { left:670,  top:20,  width:260, height:100 },
-  'w-tracker':   { left:20,   top:150, width:380, height:110 },
-  'w-signal':    { left:940,  top:20,  width:220, height:110 },
-  'w-heartrate': { left:1700, top:245, width:200, height:170 },
-  'w-gforce':    { left:1480, top:245, width:200, height:190 },
-  'w-elevation': { left:20,   top:910, width:500, height:160 },
-  'w-compass':   { left:1700, top:20,  width:180, height:260 },
-  'w-speedo':    { left:1480, top:20,  width:200, height:210 },
-  'w-map':       { left:1540, top:450, width:370, height:620 }
-};
-const DEFAULTLAYOUT = JSON.parse(JSON.stringify(currentLayout));
+let currentLayout = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}};
+const DEFAULT_LAYOUT_COPY = {"w-speed": {"left": 20, "top": 20, "width": 200, "height": 110}, "w-battery": {"left": 230, "top": 20, "width": 200, "height": 110}, "w-weather": {"left": 440, "top": 20, "width": 220, "height": 120}, "w-location": {"left": 670, "top": 20, "width": 260, "height": 100}, "w-tracker": {"left": 20, "top": 150, "width": 380, "height": 110}, "w-heartrate": {"left": 1700, "top": 245, "width": 200, "height": 170}, "w-gforce": {"left": 1480, "top": 245, "width": 200, "height": 190}, "w-elevation": {"left": 20, "top": 910, "width": 500, "height": 160}, "w-compass": {"left": 1700, "top": 20, "width": 180, "height": 210}, "w-speedo": {"left": 1480, "top": 20, "width": 200, "height": 210}, "w-map": {"left": 1540, "top": 450, "width": 370, "height": 620}};
 
 const WIDGETS = [
-  { key:'speed',       name:'Predkosc',    icon:'🚀' },
-  { key:'speedometer', name:'Licznik',      icon:'🎯' },
-  { key:'battery',     name:'Bateria',      icon:'🔋' },
-  { key:'weather',     name:'Pogoda',       icon:'🌤️' },
-  { key:'location',    name:'Lokalizacja',  icon:'📍' },
-  { key:'signal',      name:'Sygnal',       icon:'📶' },
-  { key:'map',         name:'Mapa',         icon:'🗺️' },
-  { key:'tracker',     name:'Tracker',      icon:'🛤️' },
-  { key:'elevation',   name:'Wysokosc',     icon:'⛰️' },
-  { key:'compass',     name:'Kompas',       icon:'🧭' },
-  { key:'gforce',      name:'G-Force',      icon:'⚡' },
-  { key:'heartrate',   name:'Tetno',        icon:'❤️' },
+  {key:'speed',      name:'Prędkość',   icon:'🚀'},
+  {key:'speedometer',name:'Licznik',     icon:'🎯'},
+  {key:'battery',    name:'Bateria',     icon:'🔋'},
+  {key:'weather',    name:'Pogoda',      icon:'🌤'},
+  {key:'location',   name:'Lokalizacja', icon:'📍'},
+  {key:'map',        name:'Mapa',        icon:'🗺'},
+  {key:'minimap',    name:'Mini mapa',   icon:'🔎'},
+  {key:'tracker',    name:'Tracker',     icon:'📈'},
+  {key:'elevation',  name:'Wysokość',    icon:'⛰'},
+  {key:'compass',    name:'Kompas',      icon:'🧭'},
+  {key:'gforce',     name:'G-Force',     icon:'💥'},
+  {key:'heartrate',  name:'Tętno',       icon:'❤️'},
 ];
 
 const WIDGET_LABELS = {
-  'w-speed':'Predkosc','w-battery':'Bateria','w-weather':'Pogoda',
-  'w-location':'Lokalizacja','w-tracker':'Tracker','w-heartrate':'Tetno',
-  'w-gforce':'G-Force','w-elevation':'Wysokosc','w-compass':'Kompas',
-  'w-speedo':'Licznik','w-map':'Mapa','w-signal':'Sygnal'
+  'w-speed':'🚀 Prędkość','w-battery':'🔋 Bateria','w-weather':'🌤 Pogoda',
+  'w-location':'📍 Lokalizacja','w-tracker':'📈 Tracker','w-heartrate':'❤️ Tętno',
+  'w-gforce':'💥 G-Force','w-elevation':'⛰ Wysokość','w-compass':'🧭 Kompas',
+  'w-speedo':'🎯 Licznik','w-map':'🗺 Mapa'
 };
 
+// ── GIST FETCH ──
 async function fetchServerUrl() {
-  document.getElementById('statusText').textContent = 'Pobieranie adresu z Gist...';
+  document.getElementById('statusText').textContent = '🔄 Pobieranie adresu z Gist...';
   try {
-    const r = await fetch('https://gist.githubusercontent.com/BanBoyPolska/' + GISTID + '/raw/obs-gps-server-url.json?t=' + Date.now(), {cache:'no-store'});
-    if (r.ok) {
-      const p = await r.json();
-      if (p.url && p.url.length > 5) {
-        SERVER = p.url;
-        document.getElementById('serverInput').value = SERVER;
+    const r = await fetch('https://gist.githubusercontent.com/BanBoyPolska/b8194117c4bb29f977bec88ec9a5c592/raw/obs-gps-server-url.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok){
+      const p=await r.json();
+      if(p.url && p.url.length > 5){
+        SERVER=p.url;
+        document.getElementById('serverInput').value=SERVER;
         return true;
       }
     }
-    document.getElementById('statusText').textContent = 'Gist nie zawiera adresu — wpisz recznie';
+    document.getElementById('statusText').textContent = '⚠ Gist nie zawiera adresu — wpisz ręcznie i kliknij Połącz';
     return false;
-  } catch(e) {
-    document.getElementById('statusText').textContent = 'Blad Gist — wpisz adres recznie';
+  }catch(e){
+    document.getElementById('statusText').textContent = '⚠ Błąd Gist — wpisz adres ręcznie i kliknij Połącz';
     return false;
   }
 }
 
 function connectManual() {
-  const val = document.getElementById('serverInput').value.trim().replace(/\/+$/, '');
-  if (!val) { alert('Wpisz adres serwera!'); return; }
+  const val = document.getElementById('serverInput').value.trim().replace(/\/$/,'');
+  if(!val){ alert('Wpisz adres serwera!'); return; }
   SERVER = val;
   pollState();
 }
 
+// ── TABS ──
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-  document.getElementById('pane-' + name).classList.add('active');
-  if (name === 'layout') { setTimeout(renderCanvas, 50); syncMapSliders(); }
+  document.getElementById('pane-'+name).classList.add('active');
+  if(name==='layout') { setTimeout(renderCanvas, 50); syncMapSliders(); }
 }
 
+// ── WIDGET CARDS ──
 function buildGrid() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
-  WIDGETS.forEach(function(w) {
+  WIDGETS.forEach(w => {
     const on = state[w.key] !== false;
     const card = document.createElement('div');
-    card.className = 'card ' + (on ? 'active' : 'inactive');
-    card.id = 'card-' + w.key;
-    card.innerHTML =
-      '<div class="card-top"><span class="icon">' + w.icon + '</span><span class="name">' + w.name + '</span></div>' +
-      '<div class="toggle-row">' +
-        '<span class="toggle-label" id="lbl-' + w.key + '">' + (on ? 'Widoczny' : 'Ukryty') + '</span>' +
-        '<label class="toggle"><input type="checkbox" id="tog-' + w.key + '" ' + (on?'checked':'') + ' onchange="toggle(\'' + w.key + '\',this.checked)"><span class="slider"></span></label>' +
-      '</div>';
+    card.className = 'card '+(on?'active':'inactive');
+    card.id = 'card-'+w.key;
+    card.innerHTML = `
+      <div class="card-top"><span class="icon">${w.icon}</span><span class="name">${w.name}</span></div>
+      <div class="toggle-row">
+        <span class="toggle-label" id="lbl-${w.key}">${on?'Widoczny':'Ukryty'}</span>
+        <label class="toggle"><input type="checkbox" id="tog-${w.key}" ${on?'checked':''}
+          onchange="toggle('${w.key}',this.checked)"><span class="slider"></span></label>
+      </div>`;
     grid.appendChild(card);
   });
 }
 
-function updateCard(key, on) {
-  const card = document.getElementById('card-' + key);
-  if (!card) return;
-  card.className = 'card ' + (on ? 'active' : 'inactive');
-  const lbl = document.getElementById('lbl-' + key);
-  if (lbl) lbl.textContent = on ? 'Widoczny' : 'Ukryty';
-  const cb = document.getElementById('tog-' + key);
-  if (cb) cb.checked = on;
+function updateCard(key,on) {
+  const card=document.getElementById('card-'+key); if(!card)return;
+  card.className='card '+(on?'active':'inactive');
+  const lbl=document.getElementById('lbl-'+key); if(lbl) lbl.textContent=on?'Widoczny':'Ukryty';
+  const cb=document.getElementById('tog-'+key); if(cb) cb.checked=on;
 }
 
-async function toggle(key, value) {
-  state[key] = value;
-  updateCard(key, value);
-  if (!SERVER) return;
-  const body = {}; body[key] = value;
-  try { await fetch(SERVER + '/widgets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); } catch(e) {}
+async function toggle(key,value) {
+  state[key]=value; updateCard(key,value);
+  if(!SERVER)return;
+  try{ await fetch(SERVER+'/widgets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:value})}) }catch{}
 }
 
 async function setAll(value) {
-  const upd = {};
-  WIDGETS.forEach(function(w) { upd[w.key] = value; state[w.key] = value; updateCard(w.key, value); });
-  if (!SERVER) return;
-  try { await fetch(SERVER + '/widgets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(upd) }); } catch(e) {}
+  const upd={};
+  WIDGETS.forEach(w=>{upd[w.key]=value;state[w.key]=value;updateCard(w.key,value)});
+  if(!SERVER)return;
+  try{ await fetch(SERVER+'/widgets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(upd)}) }catch{}
 }
 
+// ── LAYOUT CANVAS ──
 function renderCanvas() {
   const canvas = document.getElementById('layoutCanvas');
   const W = canvas.offsetWidth;
-  if (W < 10) { setTimeout(renderCanvas, 100); return; }
-  const H = Math.round(W * CANVASH / CANVASW);
+  if(W < 10) { setTimeout(renderCanvas, 100); return; }
+  const H = Math.round(W * CANVAS_H / CANVAS_W);
   canvas.style.height = H + 'px';
   canvas.innerHTML = '';
-  const scaleX = W / CANVASW, scaleY = H / CANVASH;
+  const scaleX = W / CANVAS_W;
+  const scaleY = H / CANVAS_H;
 
-  Object.keys(currentLayout).forEach(function(id) {
-    const pos = currentLayout[id];
-    const key = id === 'w-speedo' ? 'speedometer' : id.replace('w-', '');
+  Object.entries(currentLayout).forEach(([id, pos]) => {
+    const key = id === 'w-speedo' ? 'speedometer' : id.replace('w-','');
     const isHidden = state[key] === false;
     const el = document.createElement('div');
-    el.className = 'w-proxy' + (isHidden ? ' hidden-w' : '');
-    el.style.left   = Math.round(pos.left  * scaleX) + 'px';
-    el.style.top    = Math.round(pos.top   * scaleY) + 'px';
-    el.style.width  = Math.round(pos.width * scaleX) + 'px';
-    el.style.height = Math.round(pos.height* scaleY) + 'px';
-    el.style.fontSize = Math.max(9, Math.round(11 * scaleX)) + 'px';
-    el.style.color = '#58a6ff';
-    el.innerHTML = '<span style="padding:2px 3px;pointer-events:none;line-height:1.2">' + (WIDGET_LABELS[id] || id) + '</span>';
+    el.className = 'w-proxy' + (isHidden?' hidden-w':'');
+    el.style.cssText = `left:${Math.round(pos.left*scaleX)}px;top:${Math.round(pos.top*scaleY)}px;width:${Math.round(pos.width*scaleX)}px;height:${Math.round(pos.height*scaleY)}px;font-size:${Math.max(9,Math.round(11*scaleX))}px;color:#58a6ff`;
+    el.innerHTML = `<span style="padding:2px 3px;pointer-events:none;line-height:1.2">${WIDGET_LABELS[id]||id}</span>`;
 
-    let startX, startY, startLeft, startTop;
-    el.addEventListener('mousedown', function(e) {
+    let startX,startY,startLeft,startTop;
+    el.addEventListener('mousedown', e=>{
       e.preventDefault();
       el.classList.add('dragging');
-      startX = e.clientX; startY = e.clientY;
-      startLeft = currentLayout[id].left; startTop = currentLayout[id].top;
-      function onMove(e) {
-        const nl = Math.max(0, Math.min(CANVASW - pos.width,  Math.round(startLeft + (e.clientX - startX) / scaleX)));
-        const nt = Math.max(0, Math.min(CANVASH - pos.height, Math.round(startTop  + (e.clientY - startY) / scaleY)));
-        currentLayout[id].left = nl; currentLayout[id].top = nt;
-        el.style.left = Math.round(nl * scaleX) + 'px';
-        el.style.top  = Math.round(nt * scaleY) + 'px';
-        document.getElementById('layoutInfo').textContent = (WIDGET_LABELS[id] || id) + ': ' + nl + 'x' + nt;
-      }
-      function onUp() {
-        el.classList.remove('dragging');
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      }
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+      startX=e.clientX; startY=e.clientY;
+      startLeft=currentLayout[id].left; startTop=currentLayout[id].top;
+      const onMove=e=>{
+        const nl=Math.max(0,Math.min(CANVAS_W-pos.width, Math.round(startLeft+(e.clientX-startX)/scaleX)));
+        const nt=Math.max(0,Math.min(CANVAS_H-pos.height,Math.round(startTop +(e.clientY-startY)/scaleY)));
+        currentLayout[id].left=nl; currentLayout[id].top=nt;
+        el.style.left=Math.round(nl*scaleX)+'px'; el.style.top=Math.round(nt*scaleY)+'px';
+        document.getElementById('layoutInfo').textContent=(WIDGET_LABELS[id]||id)+': '+nl+'x'+nt;
+      };
+      const onUp=()=>{ el.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+      window.addEventListener('mousemove',onMove);
+      window.addEventListener('mouseup',onUp);
     });
     canvas.appendChild(el);
   });
 }
 
 async function applyLayout() {
-  if (!SERVER) { alert('Brak polaczenia z serwerem!'); return; }
+  if(!SERVER){ alert('Brak połączenia z serwerem!'); return; }
   try {
-    await fetch(SERVER + '/layout', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(currentLayout) });
-    document.getElementById('layoutInfo').textContent = 'Zastosowano!';
-    setTimeout(function() { document.getElementById('layoutInfo').textContent = ''; }, 3000);
-  } catch(e) { document.getElementById('layoutInfo').textContent = 'Blad zapisu'; }
+    await fetch(SERVER+'/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(currentLayout)});
+    document.getElementById('layoutInfo').textContent='✅ Zastosowano!';
+    setTimeout(()=>document.getElementById('layoutInfo').textContent='',3000);
+  }catch{ document.getElementById('layoutInfo').textContent='❌ Błąd zapisu'; }
 }
 
 function resetLayout() {
-  currentLayout = JSON.parse(JSON.stringify(DEFAULTLAYOUT));
+  currentLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT_COPY));
   renderCanvas();
 }
 
-window.addEventListener('resize', function() {
-  if (document.getElementById('pane-layout').classList.contains('active')) renderCanvas();
+window.addEventListener('resize',()=>{
+  if(document.getElementById('pane-layout').classList.contains('active')) renderCanvas();
 });
 
+// ── POLLING ──
 async function pollState() {
-  if (!SERVER) return;
+  if(!SERVER)return;
   try {
-    const r = await fetch(SERVER + '/widgets', { cache:'no-cache' });
-    if (!r.ok) throw new Error();
-    const ns = await r.json();
-    const changed = JSON.stringify(ns) !== JSON.stringify(state);
-    state = ns;
-    if (changed) buildGrid();
-    document.getElementById('statusDot').className = 'dot online';
-    document.getElementById('statusText').textContent = 'Polaczono z serwerem GPS';
-  } catch(e) {
-    document.getElementById('statusDot').className = 'dot offline';
-    document.getElementById('statusText').textContent = 'Brak polaczenia z serwerem';
+    const r=await fetch(SERVER+'/widgets',{cache:'no-cache'});
+    if(!r.ok)throw new Error();
+    const ns=await r.json();
+    const changed=JSON.stringify(ns)!==JSON.stringify(state);
+    state=ns;
+    if(changed)buildGrid();
+    document.getElementById('statusDot').className='dot online';
+    document.getElementById('statusText').textContent='Połączono z serwerem GPS';
+  }catch{
+    document.getElementById('statusDot').className='dot offline';
+    document.getElementById('statusText').textContent='Brak połączenia z serwerem';
   }
 }
 
-(async function() {
+// ── INIT ──
+
+// ── FETCH LAYOUT FROM SERVER ON INIT ──
+async function fetchLayoutFromServer() {
+  if (!SERVER) return;
+  try {
+    const r = await fetch(SERVER + '/layout', {cache: 'no-cache'});
+    if (!r.ok) return;
+    const saved = await r.json();
+    if (saved && Object.keys(saved).length > 0) {
+      Object.keys(saved).forEach(id => {
+        if (currentLayout[id]) {
+          currentLayout[id] = {...currentLayout[id], ...saved[id]};
+        }
+      });
+      syncMapSliders();
+      if (document.getElementById('pane-layout').classList.contains('active')) renderCanvas();
+    }
+  } catch(e) {}
+}
+
+(async function(){
   const gistOk = await fetchServerUrl();
-  if (gistOk) await pollState();
+  if(gistOk){
+    await pollState();
+    await fetchLayoutFromServer();
+  }
   buildGrid();
-  setInterval(pollState, 3000);
+  setInterval(pollState,3000);
 })();
 
+// ── MAP SIZE SLIDERS ──
 function onMapSlider() {
   const w = document.getElementById('mapW').value;
   const h = document.getElementById('mapH').value;
   const z = document.getElementById('mapZoom').value;
-  document.getElementById('mapWVal').textContent = w + 'px';
-  document.getElementById('mapHVal').textContent = h + 'px';
+  document.getElementById('mapWVal').textContent   = w + 'px';
+  document.getElementById('mapHVal').textContent   = h + 'px';
   document.getElementById('mapZoomVal').textContent = z;
+  // Aktualizuj w currentLayout zachowujac pozycje (centrowanie)
   if (currentLayout['w-map']) {
-    const oldW = currentLayout['w-map'].width, oldH = currentLayout['w-map'].height;
-    const cx = currentLayout['w-map'].left + oldW/2;
-    const cy = currentLayout['w-map'].top  + oldH/2;
+    const oldW = currentLayout['w-map'].width;
+    const oldH = currentLayout['w-map'].height;
+    const centerX = currentLayout['w-map'].left + oldW / 2;
+    const centerY = currentLayout['w-map'].top  + oldH / 2;
     currentLayout['w-map'].width  = parseInt(w);
     currentLayout['w-map'].height = parseInt(h);
     currentLayout['w-map'].zoom   = parseInt(z);
-    currentLayout['w-map'].left = Math.max(0, Math.round(cx - parseInt(w)/2));
-    currentLayout['w-map'].top  = Math.max(0, Math.round(cy - parseInt(h)/2));
-    if (document.getElementById('pane-layout').classList.contains('active')) renderCanvas();
+    // Wycentruj mape wzgledem starego centrum
+    currentLayout['w-map'].left = Math.max(0, Math.round(centerX - parseInt(w) / 2));
+    currentLayout['w-map'].top  = Math.max(0, Math.round(centerY - parseInt(h) / 2));
   }
+  // Odswierz proxy na canvasie
+  if (document.getElementById('pane-layout').classList.contains('active')) renderCanvas();
 }
 
 async function applyMapSize() {
-  if (!SERVER) { alert('Brak polaczenia!'); return; }
+  if (!SERVER) { alert('Brak połączenia z serwerem!'); return; }
   try {
-    await fetch(SERVER + '/layout', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({'w-map': currentLayout['w-map']}) });
-    document.getElementById('mapSizeInfo').textContent = 'Zastosowano!';
-    setTimeout(function() { document.getElementById('mapSizeInfo').textContent = ''; }, 3000);
-  } catch(e) { document.getElementById('mapSizeInfo').textContent = 'Blad'; }
+    await fetch(SERVER + '/layout', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(currentLayout)
+    });
+    document.getElementById('mapSizeInfo').textContent = '✅ Zastosowano!';
+    setTimeout(() => document.getElementById('mapSizeInfo').textContent = '', 3000);
+  } catch {
+    document.getElementById('mapSizeInfo').textContent = '❌ Błąd';
+  }
 }
 
+// Zsynchronizuj suwaki z aktualnym layoutem po zaladowaniu
 function syncMapSliders() {
   const m = currentLayout['w-map'];
   if (!m) return;
-  document.getElementById('mapW').value = m.width || 370;
-  document.getElementById('mapH').value = m.height || 620;
-  document.getElementById('mapZoom').value = m.zoom || 15;
-  document.getElementById('mapWVal').textContent = (m.width || 370) + 'px';
-  document.getElementById('mapHVal').textContent = (m.height || 620) + 'px';
-  document.getElementById('mapZoomVal').textContent = m.zoom || 15;
+  document.getElementById('mapW').value     = m.width  || 370;
+  document.getElementById('mapH').value     = m.height || 620;
+  document.getElementById('mapZoom').value  = m.zoom   || 15;
+  document.getElementById('mapWVal').textContent    = (m.width  || 370) + 'px';
+  document.getElementById('mapHVal').textContent    = (m.height || 620) + 'px';
+  document.getElementById('mapZoomVal').textContent = (m.zoom   || 15);
 }
+
 </script>
 </body>
 </html>
