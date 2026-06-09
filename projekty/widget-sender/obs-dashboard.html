@@ -6,6 +6,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+:root{--map-radius:16px}
+
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased}
 
@@ -33,7 +35,7 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 #w-weather    { left:440px;  top:20px;   width:220px; height:120px; padding:14px 18px }
 #w-location   { left:670px;  top:20px;   width:260px; height:100px; padding:12px 18px }
 #w-tracker    { left:20px;   top:150px;  width:380px; height:110px; padding:14px 18px }
-#w-compass    { left:1700px; top:20px;   width:180px; height:210px }
+#w-compass    { left:1700px; top:20px;   width:200px; height:240px }
 #w-speedo     { left:1480px; top:20px;   width:200px; height:210px }
 #w-heartrate  { left:1700px; top:245px;  width:200px; height:170px; padding:14px 16px }
 #w-gforce     { left:1480px; top:245px;  width:200px; height:190px; padding:14px 16px }
@@ -125,11 +127,58 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 #w-speedo .sv{font-size:13px;font-weight:800;color:#fff}
 
 /* ─ Map ─ */
-#w-map .inner{height:100%;border-radius:16px;overflow:hidden}
+#w-map .inner{height:100%;border-radius:var(--map-radius,16px);overflow:hidden}
 #mapEl{width:100%;height:100%}
 .leaflet-tile-pane{filter:brightness(1) saturate(1)}
+
+/* ─ Signal ─ */
+#w-signal       { left:940px; top:20px; width:220px; height:110px; padding:14px 18px }
+#w-signal .rows { display:flex; flex-direction:column; gap:8px; margin-top:6px }
+#w-signal .srow { display:flex; align-items:center; gap:8px }
+#w-signal .sicon{ font-size:16px; width:20px; text-align:center; flex-shrink:0 }
+#w-signal .sinfo{ flex:1; min-width:0 }
+#w-signal .sname{ font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:rgba(255,255,255,.28) }
+#w-signal .sval { font-size:13px; font-weight:800; color:#fff; line-height:1.1 }
+#w-signal .sbars{ display:flex; align-items:flex-end; gap:2px; height:14px }
+#w-signal .sbar { width:4px; border-radius:1px; background:rgba(255,255,255,.1) }
+#w-signal .sbar.on  { background:#5fa84d }
+#w-signal .sbar.warn{ background:#f0a040 }
+#w-signal .sbar.bad { background:#e84040 }
 </style>
 </head><body>
+
+<!-- SIGNAL -->
+<div class="w b-green a-green" id="w-signal">
+  <div class="lbl c-green">Sygnał</div>
+  <div class="rows">
+    <div class="srow">
+      <div class="sicon">📶</div>
+      <div class="sinfo">
+        <div class="sname">Wi-Fi</div>
+        <div class="sval" id="sigWifi">--</div>
+      </div>
+      <div class="sbars" id="wifiBars">
+        <div class="sbar" style="height:4px"></div>
+        <div class="sbar" style="height:7px"></div>
+        <div class="sbar" style="height:10px"></div>
+        <div class="sbar" style="height:13px"></div>
+      </div>
+    </div>
+    <div class="srow">
+      <div class="sicon">🛰️</div>
+      <div class="sinfo">
+        <div class="sname">GPS</div>
+        <div class="sval" id="sigGps">--</div>
+      </div>
+      <div class="sbars" id="gpsBars">
+        <div class="sbar" style="height:4px"></div>
+        <div class="sbar" style="height:7px"></div>
+        <div class="sbar" style="height:10px"></div>
+        <div class="sbar" style="height:13px"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- SPEED -->
 <div class="w b-green a-green" id="w-speed">
@@ -243,7 +292,7 @@ html,body{background:transparent;overflow:hidden;width:1920px;height:1080px;font
 <!-- COMPASS -->
 <div class="w b-teal" id="w-compass" style="background:transparent;border:none;box-shadow:none">
   <div class="inner">
-    <canvas id="cpCv" width="165" height="165"></canvas>
+    <canvas id="cpCv" width="190" height="190"></canvas>
     <div class="cbottom">
       <div><div class="ck">Kierunek</div><div class="cv" id="cpDeg">--°</div></div>
       <div><div class="ck">Strona</div><div class="cv c-teal" id="cpDir">--</div></div>
@@ -306,6 +355,7 @@ async function poll() {
 }
 
 function updateAll(d) {
+  updateSignalGps(d);
   updateSpeed(d);
   updateBattery(d);
   updateWeather(d);
@@ -463,23 +513,120 @@ function updateElevation(d) {
 
 // ── COMPASS ──
 const cpCv=document.getElementById('cpCv'),cpCtx=cpCv.getContext('2d');
-const CW=165,CX=82,CY=82,CR=77;
+const CW=190,CX=95,CY=95,CR=88;
 const DNAMES=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 function dirName(h){return DNAMES[Math.round(h/22.5)%16];}
 function drawCompass(h){
   cpCtx.clearRect(0,0,CW,CW);
+
+  // Tło - zewnętrzny glow ring
+  const outerGlow = cpCtx.createRadialGradient(CX,CY,CR-8,CX,CY,CR+4);
+  outerGlow.addColorStop(0,'rgba(79,152,163,0.15)');
+  outerGlow.addColorStop(1,'rgba(79,152,163,0)');
+  cpCtx.beginPath();cpCtx.arc(CX,CY,CR+4,0,Math.PI*2);
+  cpCtx.fillStyle=outerGlow;cpCtx.fill();
+
+  // Tło tarczy
   cpCtx.beginPath();cpCtx.arc(CX,CY,CR,0,Math.PI*2);
-  const bg=cpCtx.createRadialGradient(CX,CY,0,CX,CY,CR);bg.addColorStop(0,'rgba(15,22,30,0.95)');bg.addColorStop(1,'rgba(8,12,16,0.95)');cpCtx.fillStyle=bg;cpCtx.fill();
-  cpCtx.beginPath();cpCtx.arc(CX,CY,CR,0,Math.PI*2);cpCtx.strokeStyle='rgba(79,152,163,0.3)';cpCtx.lineWidth=1.5;cpCtx.stroke();
-  cpCtx.save();cpCtx.translate(CX,CY);cpCtx.rotate((h-90)*Math.PI/180);
-  for(let i=0;i<36;i++){const a=i*10*Math.PI/180,mj=i%9===0,mn4=i%3===0;const r1=CR-3,r2=mj?CR-18:mn4?CR-10:CR-6;cpCtx.beginPath();cpCtx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);cpCtx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);cpCtx.strokeStyle=mj?'rgba(255,255,255,0.9)':mn4?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.15)';cpCtx.lineWidth=mj?2:0.8;cpCtx.stroke();}
-  cpCtx.font='bold 12px JetBrains Mono,monospace';cpCtx.textAlign='center';cpCtx.textBaseline='middle';
-  [['N',0,'#e85555'],['E',90,'rgba(255,255,255,.8)'],['S',180,'rgba(255,255,255,.8)'],['W',270,'rgba(255,255,255,.8)']].forEach(([l,a,c])=>{const r=a*Math.PI/180;cpCtx.fillStyle=c;cpCtx.fillText(l,Math.cos(r)*(CR-24),Math.sin(r)*(CR-24));});
+  const bg=cpCtx.createRadialGradient(CX,CY-20,8,CX,CY,CR);
+  bg.addColorStop(0,'rgba(22,34,44,0.98)');
+  bg.addColorStop(0.7,'rgba(12,18,24,0.98)');
+  bg.addColorStop(1,'rgba(6,10,14,0.98)');
+  cpCtx.fillStyle=bg;cpCtx.fill();
+
+  // Zewnętrzny border ring - gradient teal
+  const ringGr=cpCtx.createLinearGradient(CX-CR,CY,CX+CR,CY);
+  ringGr.addColorStop(0,'rgba(79,152,163,0.1)');
+  ringGr.addColorStop(0.5,'rgba(79,152,163,0.55)');
+  ringGr.addColorStop(1,'rgba(79,152,163,0.1)');
+  cpCtx.beginPath();cpCtx.arc(CX,CY,CR,0,Math.PI*2);
+  cpCtx.strokeStyle=ringGr;cpCtx.lineWidth=2;cpCtx.stroke();
+
+  // Wewnętrzny dekoracyjny ring
+  cpCtx.beginPath();cpCtx.arc(CX,CY,CR-14,0,Math.PI*2);
+  cpCtx.strokeStyle='rgba(255,255,255,0.04)';cpCtx.lineWidth=1;cpCtx.stroke();
+
+  // Podziałka - obraca się z kompasem
+  cpCtx.save();
+  cpCtx.translate(CX,CY);
+  cpCtx.rotate((h)*Math.PI/180);
+  for(let i=0;i<72;i++){
+    const a=i*5*Math.PI/180;
+    const maj=(i%18===0),med=(i%9===0&&!maj),min4=(i%3===0&&!med&&!maj);
+    const r1=CR-2;
+    const r2=maj?CR-20:med?CR-13:min4?CR-8:CR-5;
+    const lw=maj?2.5:med?1.5:0.7;
+    const alpha=maj?1:med?0.5:0.18;
+    cpCtx.beginPath();
+    cpCtx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);
+    cpCtx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
+    cpCtx.strokeStyle=`rgba(255,255,255,${alpha})`;
+    cpCtx.lineWidth=lw;cpCtx.stroke();
+  }
+
+  // Litery kierunków (obracają się z tarczą)
+  cpCtx.font='bold 14px JetBrains Mono,monospace';
+  cpCtx.textAlign='center';cpCtx.textBaseline='middle';
+  [['N',0,'#e85555'],['E',90,'rgba(255,255,255,.75)'],
+   ['S',180,'rgba(255,255,255,.75)'],['W',270,'rgba(255,255,255,.75)']].forEach(([l,a,c])=>{
+    const r=a*Math.PI/180;
+    const tx=Math.cos(r)*(CR-28),ty=Math.sin(r)*(CR-28);
+    if(l==='N'){
+      cpCtx.shadowColor='#e85555';cpCtx.shadowBlur=10;
+    } else {
+      cpCtx.shadowBlur=0;
+    }
+    cpCtx.fillStyle=c;
+    cpCtx.fillText(l,tx,ty);
+  });
+  cpCtx.shadowBlur=0;
   cpCtx.restore();
-  cpCtx.save();cpCtx.translate(CX,CY);
-  cpCtx.beginPath();cpCtx.moveTo(0,-CR+16);cpCtx.lineTo(5,4);cpCtx.lineTo(0,9);cpCtx.lineTo(-5,4);cpCtx.closePath();cpCtx.fillStyle='#e85555';cpCtx.shadowColor='#e85555';cpCtx.shadowBlur=8;cpCtx.fill();
-  cpCtx.beginPath();cpCtx.moveTo(0,CR-16);cpCtx.lineTo(5,4);cpCtx.lineTo(0,-9);cpCtx.lineTo(-5,4);cpCtx.closePath();cpCtx.fillStyle='rgba(255,255,255,.2)';cpCtx.shadowBlur=0;cpCtx.fill();
-  cpCtx.beginPath();cpCtx.arc(0,0,5,0,Math.PI*2);cpCtx.fillStyle='#0d1420';cpCtx.fill();cpCtx.beginPath();cpCtx.arc(0,0,3,0,Math.PI*2);cpCtx.fillStyle='#4f98a3';cpCtx.fill();
+
+  // Igła - zawsze wskazuje GÓRA = Północ (nie obraca się)
+  cpCtx.save();
+  cpCtx.translate(CX,CY);
+
+  // Cień igły
+  cpCtx.shadowColor='rgba(0,0,0,0.6)';cpCtx.shadowBlur=8;cpCtx.shadowOffsetY=3;
+
+  // Czerwona część igły (północ - góra)
+  const needleLen=CR-22,needleW=5;
+  cpCtx.beginPath();
+  cpCtx.moveTo(0,-needleLen);
+  cpCtx.lineTo(needleW,0);
+  cpCtx.lineTo(0,10);
+  cpCtx.lineTo(-needleW,0);
+  cpCtx.closePath();
+  const needleGrN=cpCtx.createLinearGradient(-needleW,0,needleW,0);
+  needleGrN.addColorStop(0,'#c02020');
+  needleGrN.addColorStop(0.4,'#e85555');
+  needleGrN.addColorStop(1,'#991010');
+  cpCtx.fillStyle=needleGrN;
+  cpCtx.shadowColor='#e85555';cpCtx.shadowBlur=12;
+  cpCtx.fill();
+
+  // Biała część igły (południe - dół)
+  cpCtx.shadowBlur=0;cpCtx.shadowOffsetY=0;
+  cpCtx.beginPath();
+  cpCtx.moveTo(0,needleLen);
+  cpCtx.lineTo(needleW,0);
+  cpCtx.lineTo(0,-10);
+  cpCtx.lineTo(-needleW,0);
+  cpCtx.closePath();
+  const needleGrS=cpCtx.createLinearGradient(-needleW,0,needleW,0);
+  needleGrS.addColorStop(0,'rgba(180,190,200,0.6)');
+  needleGrS.addColorStop(0.5,'rgba(210,220,230,0.9)');
+  needleGrS.addColorStop(1,'rgba(150,160,170,0.5)');
+  cpCtx.fillStyle=needleGrS;cpCtx.fill();
+
+  // Środkowy krążek
+  cpCtx.beginPath();cpCtx.arc(0,0,9,0,Math.PI*2);
+  cpCtx.fillStyle='rgba(6,12,18,0.95)';cpCtx.fill();
+  cpCtx.strokeStyle='rgba(79,152,163,0.6)';cpCtx.lineWidth=1.5;cpCtx.stroke();
+  cpCtx.beginPath();cpCtx.arc(0,0,4,0,Math.PI*2);
+  cpCtx.fillStyle='#4f98a3';cpCtx.shadowColor='#4f98a3';cpCtx.shadowBlur=6;cpCtx.fill();
+  cpCtx.shadowBlur=0;
+
   cpCtx.restore();
 }
 function updateCompass(d){
@@ -553,6 +700,8 @@ async function pollLayout() {
       if (pos.top   !== undefined) el.style.top    = pos.top    + 'px';
       if (pos.width !== undefined) el.style.width  = pos.width  + 'px';
       if (pos.height!== undefined) el.style.height = pos.height + 'px';
+      if (id==='w-map' && pos.borderRadius !== undefined)
+        document.documentElement.style.setProperty('--map-radius', pos.borderRadius + 'px');
     });
     // Po zmianie rozmiaru mapy - odswierz Leaflet i wycentruj na pozycji
     if (layout['w-map'] && mapInst) {
@@ -576,7 +725,7 @@ async function pollWidgetVisibility() {
     const r = await fetch(SERVER + '/widgets', {cache: 'no-cache'});
     if (!r.ok) return;
     const state = await r.json();
-    const MAP = {"speed": "w-speed", "battery": "w-battery", "weather": "w-weather", "location": "w-location", "tracker": "w-tracker", "heartrate": "w-heartrate", "gforce": "w-gforce", "elevation": "w-elevation", "compass": "w-compass", "speedometer": "w-speedo", "map": "w-map"};
+    const MAP = {"speed": "w-speed", "battery": "w-battery", "weather": "w-weather", "location": "w-location", "tracker": "w-tracker", "heartrate": "w-heartrate", "gforce": "w-gforce", "elevation": "w-elevation", "compass": "w-compass", "speedometer": "w-speedo", "map": "w-map", "signal": "w-signal"};
     Object.entries(MAP).forEach(([key, elId]) => {
       const el = document.getElementById(elId);
       if (!el) return;
@@ -593,11 +742,51 @@ async function pollWidgetVisibility() {
 _initServerUrl().then(() => {
   poll();
   setInterval(poll, INTERVAL);
+  updateSignalWifi();
+  setInterval(updateSignalWifi, 5000);
   pollWidgetVisibility();
   setInterval(pollWidgetVisibility, 2000);
   pollLayout();
   setInterval(pollLayout, 1000);
 });
+
+
+// ── SIGNAL ──
+function setSignalBars(elId, level){
+  const bars = document.getElementById(elId).children;
+  const cls = level>=4?'on':level>=2?'warn':'bad';
+  for(let i=0;i<bars.length;i++){
+    bars[i].className='sbar';
+    if(i<level) bars[i].classList.add(cls);
+  }
+}
+function updateSignalWifi(){
+  const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  const el=document.getElementById('sigWifi');
+  if(!el)return;
+  if(!conn){el.textContent='brak API';setSignalBars('wifiBars',0);return;}
+  const type=conn.effectiveType||conn.type||'?';
+  const dl=conn.downlink!=null?conn.downlink:null;
+  let level=0;
+  if(type==='4g'||type==='wifi') level=4;
+  else if(type==='3g') level=3;
+  else if(type==='2g') level=2;
+  else if(type==='slow-2g') level=1;
+  else if(dl!=null) level=dl>10?4:dl>2?3:dl>0.5?2:1;
+  el.textContent=dl!=null?`${dl.toFixed(1)} Mb/s`:(type.toUpperCase());
+  el.style.color=['#e84040','#e84040','#f0a040','#5fa84d','#5fa84d'][level];
+  setSignalBars('wifiBars',level);
+}
+function updateSignalGps(d){
+  const el=document.getElementById('sigGps');
+  if(!el)return;
+  const acc=d?d.accuracy:null;
+  if(acc==null){el.textContent='brak';el.style.color='rgba(255,255,255,.3)';setSignalBars('gpsBars',0);return;}
+  const level=acc<=5?4:acc<=15?3:acc<=30?2:acc<=60?1:0;
+  el.textContent=Math.round(acc)+'m';
+  el.style.color=['#e84040','#e84040','#f0a040','#5fa84d','#5fa84d'][level];
+  setSignalBars('gpsBars',level);
+}
 
 </script>
 </body></html>
