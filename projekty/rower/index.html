@@ -61,7 +61,8 @@
     <div class="card"><div class="lbl">Dystans całk.</div><div class="val" id="vTotal">0.00</div><div class="unt">km</div></div>
     <div class="card"><div class="lbl">Wysokość</div><div class="val" id="vAlt">—</div><div class="unt">m n.p.m.</div></div>
     <div class="card"><div class="lbl">Przewyższenie</div><div class="val" id="vGain">0</div><div class="unt">m</div></div>
-    <div class="card wide"><div class="lbl">Czas w ruchu</div><div class="val" id="vTimer">00:00:00</div><div class="unt">hh:mm:ss</div></div>
+    <div class="card"><div class="lbl">Czas w ruchu</div><div class="val" id="vMoveTimer">00:00:00</div><div class="unt">hh:mm:ss</div></div>
+    <div class="card"><div class="lbl">Czas nagrywania</div><div class="val" id="vRecTimer">00:00:00</div><div class="unt">hh:mm:ss</div></div>
   </div>
 
   <div class="actions">
@@ -118,9 +119,9 @@
   var S = {
     running:false, paused:false, watchId:null, timerId:null, startTime:0,
     pts:[], tp:[], trip:0, total:parseFloat(localStorage.getItem('bk_total')||'0'),
-    gain:0, movT:0, movD:0, last:null, lastAlt:null,
+    gain:0, movT:0, movD:0, recT:0, lastTick:0, last:null, lastAlt:null,
     spdEma:new EMA(.3), altBuf:new AltBuf(),
-    altH:[], spdH:[]
+    altH:[], spdH:[], lowCount:0, autoPauseKmh:1.5, autoPauseMinPts:6, autoPauseNeed:4
   }
   g('vTotal').textContent = S.total.toFixed(2)
 
@@ -280,12 +281,12 @@
   // ── buttons ──
   var start=function(){
     if(!navigator.geolocation){status('Geolokalizacja niedostępna.');return}
-    if(S.running&&S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wznowiono nagrywanie.');return}
+    if(S.running&&S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();S.lastTick=Date.now();keepScreenAwake(true);status('Wznowiono nagrywanie.');return}
     if(S.running) return
     S.running=true;S.paused=false;S.pts=[];S.tp=[];S.trip=0;S.gain=0;S.last=null;S.lastAlt=null;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.spdEma=new EMA(.3);S.altBuf=new AltBuf()
-    g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vTimer').textContent='00:00:00'
+    g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wyszukuję sygnał GPS...')
-    S.startTime=Date.now();clearInterval(S.timerId);S.timerId=setInterval(function(){g('vTimer').textContent=toHms((Date.now()-S.startTime)/1000)},1000)
+    S.startTime=Date.now();S.lastTick=S.startTime;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();g('vRecTimer').textContent=toHms((now-S.startTime)/1000);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
     S.watchId=navigator.geolocation.watchPosition(onPos,function(e){status('Błąd GPS: '+e.message)},{enableHighAccuracy:true,maximumAge:2000,timeout:20000})
   }
   var stop=function(){
@@ -303,12 +304,12 @@
   var reset=function(){
     if(S.running&&!confirm('Zresetować trip w trakcie jazdy?')) return
     S.trip=0;S.gain=0;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.tp=[];S.last=null;S.lastAlt=null
-    g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vTimer').textContent='00:00:00'
+    g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     drawChart();status('Trip zresetowany.')
   }
   var toggleStart=function(){
     if(!S.running){start();return}
-    if(S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wznowiono nagrywanie.')}
+    if(S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();S.lastTick=Date.now();keepScreenAwake(true);status('Wznowiono nagrywanie.')}
     else{S.paused=true;setBadge('pause','PAUZA');setBtn();keepScreenAwake(false);status('⏸ Pauza.')}
   }
 
