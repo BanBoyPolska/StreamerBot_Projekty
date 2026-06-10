@@ -195,12 +195,13 @@
     el.innerHTML=''
     rides.forEach(function(r,i){
       var d=document.createElement('div');d.className='ride'
-      d.innerHTML='<div class="ride-name">'+esc(r.name||r.date)+'</div><div class="ride-meta">Trip: '+r.tripKm+' km &nbsp;·&nbsp; +'+r.gainM+' m &nbsp;·&nbsp; '+r.dur+'</div><div class="ride-actions"><button data-i="'+i+'" data-a="dl">📥 Pobierz</button><button data-i="'+i+'" data-a="ren" class="btn-ren">✏️ Nazwa</button><button data-i="'+i+'" data-a="del" class="btn-del">🗑 Usuń</button></div>'
+      d.innerHTML='<div class="ride-name">'+esc(r.name||r.date)+'</div><div class="ride-meta">Trip: '+r.tripKm+' km &nbsp;·&nbsp; +'+r.gainM+' m &nbsp;·&nbsp; '+r.dur+'</div><div class="ride-actions"><button data-i="'+i+'" data-a="sum">🗺 Podsumowanie</button><button data-i="'+i+'" data-a="dl">📥 Pobierz</button><button data-i="'+i+'" data-a="ren" class="btn-ren">✏️ Nazwa</button><button data-i="'+i+'" data-a="del" class="btn-del">🗑 Usuń</button></div>'
       d.querySelectorAll('button').forEach(function(b){
         b.onclick=function(){
           var idx=+b.dataset.i, act=b.dataset.a, all=loadRides(), r2=all[idx]
           if(!r2) return
-          if(act==='dl'){dl(r2.fileBase+'.gpx',r2.gpx,'application/gpx+xml');setTimeout(function(){dl(r2.fileBase+'.html',r2.html,'text/html')},300)}
+          if(act==='sum'){var w=window.open(); if(w){w.document.write(r2.html); w.document.close()} else {alert('Blokada okna podręcznego — pobierz HTML z przycisku 📥 Pobierz.')}}
+          else if(act==='dl'){dl(r2.fileBase+'.gpx',r2.gpx,'application/gpx+xml');setTimeout(function(){dl(r2.fileBase+'.html',r2.html,'text/html')},300)}
           else if(act==='ren'){var v=prompt('Nowa nazwa:',r2.name||r2.date);if(v&&v.trim()){all[idx].name=v.trim();saveRides(all);renderRides()}}
           else if(act==='del'){if(confirm('Usunąć "'+esc(r2.name||r2.date)+'"?')){all.splice(idx,1);saveRides(all);renderRides()}}
         }
@@ -226,10 +227,10 @@
     var d=dist(S.last,cur),dt=cur.t-S.last.t
     if(dt<500) return  // ignoruj zbyt częste punkty
     var sms=dt>0?d/(dt/1000):0
-    var kmh=S.spdEma.push(sms*3.6)||0
+    var kmh=S.spdEma.push(sms*3.6)||0; var autoPauseKmh=1.5
     var moving=kmh>2
     // Auto-pauza — tylko po 5+ punktach i nie blokuje GPS
-    if(!moving && S.pts.length>5){
+    if(kmh<1.5 && S.pts.length>8){
       if(!S.paused){
         S.paused=true
         setBadge('pause','(auto)PAUZA');setBtn()
@@ -240,7 +241,7 @@
       return
     }
     // Auto-wznów gdy ruszamy
-    if(moving && S.paused){
+    if(kmh>=1.5 && S.paused){
       S.paused=false
       setBadge('rec','NAGRYWAM');setBtn()
       status('▶ Wznowiono automatycznie.')
@@ -251,7 +252,7 @@
     if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift();S.spdH.push(Math.round(kmh*10)/10);if(S.spdH.length>300)S.spdH.shift()}
     S.pts.push(cur);S.last=cur;S.tp.push([cur.lat,cur.lon,Math.min(kmh,40)])
     g('vSpeed').textContent=fmt(kmh,1);g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1);g('vTrip').textContent=fmt(S.trip/1000,2);g('vTotal').textContent=fmt(S.total,2);g('vGain').textContent=Math.round(S.gain)
-    drawChart();status('Nagrywam... acc:'+Math.round(cur.acc)+'m | '+new Date(cur.t).toLocaleTimeString('pl-PL'))
+    drawChart();status('Nagrywam... acc:'+Math.round(cur.acc)+'m | pkt:'+S.pts.length+' | '+new Date(cur.t).toLocaleTimeString('pl-PL'))
   }
 
   // ── buttons ──
