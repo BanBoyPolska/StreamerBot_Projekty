@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Bike Dashboard v3.1</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root{
+      --bg:#07111f;--card:#111a2e;--card2:#16213a;--txt:#e8eefc;--muted:#6d83a8;
+      --acc:#4ade80;--red:#fb7185;--line:#1e3154;--warn:#fbbf24;
+      --safe-bottom:env(safe-area-inset-bottom,0px);
+      --header-bg:linear-gradient(180deg,rgba(7,17,31,.98),rgba(7,17,31,.88));
+      --panel-bg:rgba(255,255,255,.03);--chart-bg:rgba(255,255,255,.02);
+      --map-pill-bg:rgba(7,17,31,.78);--btn-soft-bg:rgba(255,255,255,.05);
+      --btn-soft-txt:var(--muted);--modal-bg:var(--card2);--status-bg:rgba(255,255,255,.03);
+      --tile-filter:brightness(.82) saturate(.9) hue-rotate(10deg);
+    }
+    body.light{
+      --bg:#eef3f9;--card:#ffffff;--card2:#f7faff;--txt:#122033;--muted:#58708f;
+      --acc:#16a34a;--red:#e11d48;--line:#d7e3f1;--warn:#d97706;
+      --header-bg:linear-gradient(180deg,rgba(255,255,255,.96),rgba(245,249,255,.92));
+      --panel-bg:rgba(255,255,255,.82);--chart-bg:rgba(255,255,255,.72);
+      --map-pill-bg:rgba(255,255,255,.84);--btn-soft-bg:#ffffff;
+      --btn-soft-txt:#38516f;--modal-bg:#f8fbff;--status-bg:rgba(255,255,255,.82);
+      --tile-filter:none;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;overscroll-behavior:none}
+    body{display:flex;flex-direction:column;min-height:100dvh}
+
+    /* ── HEADER ── */
+    header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 16px 10px;
+      background:var(--header-bg);
+      backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+      position:sticky;top:0;z-index:100
+    }
+    header h1{margin:0;font-size:20px;letter-spacing:.02em}
+    .badge{font-size:11px;padding:4px 9px;border-radius:999px;font-weight:700;letter-spacing:.05em}
+    .badge.idle{background:rgba(255,255,255,.07);color:var(--muted)}
+    .badge.recording{background:rgba(74,222,128,.12);color:var(--acc);animation:pulse 1.8s ease-in-out infinite}
+    .badge.stopped{background:rgba(251,113,133,.12);color:var(--red)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* ── WIDGETS GRID ── */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+    .card{
+      background:linear-gradient(160deg,var(--card),var(--card2));
+      border:1px solid var(--line);border-radius:20px;padding:14px 14px 12px;
+      box-shadow:0 4px 20px rgba(0,0,0,.25);position:relative;overflow:hidden;min-height:90px
+    }
+    .card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--acc),transparent);opacity:.25}
+    .card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:600}
+    .card .value{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.01em;transition:color .3s}
+    .card .unit{font-size:11px;color:var(--muted);margin-top:5px;font-weight:500}
+    .card.wide{grid-column:span 2}
+    .card.accent .value{color:var(--acc)}
+
+    /* ── MAP ── */
+    .map-wrap{margin:0 10px 10px;border-radius:20px;overflow:hidden;border:1px solid var(--line);position:relative}
+    #map{height:240px;width:100%}
+    .map-overlay{position:absolute;bottom:8px;left:8px;z-index:999;display:flex;gap:6px}
+    .map-pill{background:var(--map-pill-bg);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11px;color:var(--muted)}
+    .map-pill span{color:var(--txt);font-weight:700}
+
+    /* ── BUTTONS ── */
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 10px 10px}
+    .btn{border:0;border-radius:18px;padding:18px;font-size:18px;font-weight:800;color:#08111f;letter-spacing:.03em;transition:opacity .2s,transform .1s}
+    .btn:active{opacity:.8;transform:scale(.97)}
+    #startBtn{background:linear-gradient(135deg,#4ade80,#22c55e)}
+    #stopBtn{background:linear-gradient(135deg,#fb7185,#f43f5e)}
+    #resetBtn{
+      grid-column:span 2;background:var(--btn-soft-bg);
+      border:1px solid var(--line);color:var(--btn-soft-txt);font-size:15px;
+      padding:12px;border-radius:14px;font-weight:700
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar{margin:0 10px 10px;background:var(--status-bg);border:1px solid var(--line);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:8px}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+    .status-dot.on{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+    .status-text{font-size:13px;color:var(--muted);flex:1}
+
+    /* ── ALTITUDE CHART ── */
+    .chart-panel{margin:0 10px 10px;background:var(--chart-bg);border:1px solid var(--line);border-radius:20px;padding:14px}
+    .chart-panel h3{margin:0 0 10px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+    #altChart{height:80px;width:100%}
+
+    /* ── MODAL ── */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:999;align-items:flex-end}
+    .modal-bg.open{display:flex}
+    .modal{background:var(--modal-bg);border-radius:24px 24px 0 0;border:1px solid var(--line);padding:24px 20px calc(24px + var(--safe-bottom));width:100%;max-height:90dvh;overflow-y:auto}
+    .modal h2{margin:0 0 6px;font-size:22px}
+    .modal .sub{color:var(--muted);font-size:14px;margin-bottom:20px}
+    .stat-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:16px}
+    .stat-row .k{color:var(--muted);font-size:13px}
+    .stat-row .v{font-weight:800;font-size:18px}
+    .modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+    .mbtn{border:0;border-radius:14px;padding:15px;font-size:14px;font-weight:800;cursor:pointer}
+    .mbtn.primary{background:linear-gradient(135deg,#4ade80,#22c55e);color:#08111f}
+    .mbtn.secondary{background:rgba(255,255,255,.07);color:var(--txt);border:1px solid var(--line)}
+    .mbtn.full{grid-column:span 2;background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.2)}
+
+    /* ── SAFE AREA PAD ── */
+    .safe-bottom{height:calc(var(--safe-bottom) + 6px)}
+
+    /* ── LEAFLET dark fix ── */
+    .leaflet-tile-container img{filter:var(--tile-filter)}
+    .theme-toggle{border:1px solid var(--line);background:var(--btn-soft-bg);color:var(--txt);padding:10px 12px;border-radius:12px;font-weight:700;font-size:13px}
+    .ride-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
+    .ride-item .meta{font-size:12px;color:var(--muted)}
+    .ride-item button{border:0;background:var(--btn-soft-bg);color:var(--txt);padding:8px 10px;border-radius:10px;font-weight:700}
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Bike Dashboard v3.1</h1>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+    <button class="theme-toggle" id="installBtn" style="display:none">⬇ Zainstaluj</button>
+    <button class="theme-toggle" id="themeBtn">☀ Jasny</button>
+    <span class="badge idle" id="badge">IDLE</span>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="card accent">
+    <div class="label">Prędkość</div>
+    <div class="value" id="speed">0.0</div>
+    <div class="unit">km/h</div>
+  </div>
+  <div class="card">
+    <div class="label">Śr. w ruchu</div>
+    <div class="value" id="avgMoving">0.0</div>
+    <div class="unit">km/h</div>
+  </div>
+  <div class="card">
+    <div class="label">Trip</div>
+    <div class="value" id="trip">0.00</div>
+    <div class="unit">km</div>
+  </div>
+  <div class="card">
+    <div class="label">Dystans całk.</div>
+    <div class="value" id="total">0.00</div>
+    <div class="unit">km</div>
+  </div>
+  <div class="card">
+    <div class="label">Wysokość</div>
+    <div class="value" id="alt">—</div>
+    <div class="unit">m n.p.m.</div>
+  </div>
+  <div class="card">
+    <div class="label">Przewyższenie</div>
+    <div class="value" id="gain">0</div>
+    <div class="unit">m</div>
+  </div>
+  <div class="card wide">
+    <div class="label">Czas w ruchu</div>
+    <div class="value" id="timer">00:00:00</div>
+    <div class="unit">hh:mm:ss</div>
+  </div>
+</div>
+
+<div class="actions">
+  <button class="btn" id="startBtn">▶ Start</button>
+  <button class="btn" id="stopBtn">■ Stop</button>
+  <button class="btn" id="resetBtn">↺ Resetuj Trip</button>
+</div>
+
+<div class="map-wrap">
+  <div id="map"></div>
+  <div class="map-overlay">
+    <div class="map-pill">Punkty: <span id="pointsCount">0</span></div>
+    <div class="map-pill">Dokładność: <span id="accuracy">—</span> m</div>
+  </div>
+</div>
+
+<div class="chart-panel">
+  <h3>Profil wysokości</h3>
+  <canvas id="altChart"></canvas>
+</div>
+
+
+<div class="chart-panel">
+  <h3>Zapisane trasy</h3>
+  <div id="ridesList" style="display:grid;gap:8px"></div>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <div class="status-text" id="statusText">Kliknij Start, aby rozpocząć nagrywanie trasy.</div>
+</div>
+
+<div class="safe-bottom"></div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>Trasa zakończona</h2>
+    <p class="sub" id="modalSub">Podsumowanie wycieczki</p>
+    <div id="modalStats"></div>
+    <div class="modal-btns">
+      <button class="mbtn primary" id="btnGPX">📥 Pobierz GPX</button>
+      <button class="mbtn secondary" id="btnHTML">📄 Pobierz HTML</button>
+      <button class="mbtn full" id="btnClose">Zamknij bez zapisywania</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ───────────────────────────────────────────────
+   HELPERS
+─────────────────────────────────────────────── */
+const $ = id => document.getElementById(id)
+const fmt = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d) : '—'
+
+const RIDES_KEY = 'bike_rides_v3_1'
+function loadRides(){ try { return JSON.parse(localStorage.getItem(RIDES_KEY) || '[]') } catch { return [] } }
+function saveRides(r){ localStorage.setItem(RIDES_KEY, JSON.stringify(r.slice(0,20))) }
+function renderRides(){
+  const el = $('ridesList')
+  if (!el) return
+  const rides = loadRides()
+  if (!rides.length){ el.innerHTML = '<div class="ride-item"><div><strong>Brak zapisanych tras</strong><div class="meta">Po zakończeniu jazdy można zapisać GPX, HTML i dane trasy.</div></div></div>'; return }
+  el.innerHTML = rides.map((r,i)=>`<div class="ride-item"><div><strong>${r.date}</strong><div class="meta">Trip: ${r.tripKm} km · Gain: ${r.gainM} m · Czas: ${r.duration}</div></div><button data-idx="${i}">Pobierz</button></div>`).join('')
+  el.querySelectorAll('button[data-idx]').forEach(btn=>btn.onclick=()=>downloadSavedRide(parseInt(btn.dataset.idx,10)))
+}
+function downloadSavedRide(idx){
+  const rides = loadRides(); const r = rides[idx]; if (!r) return
+  download(`${r.fileBase}.gpx`, r.gpx, 'application/gpx+xml')
+  download(`${r.fileBase}.html`, r.html, 'text/html')
+}
+
+
+function applyTheme(theme) {
+  document.body.classList.toggle('light', theme === 'light')
+  localStorage.setItem('bike_theme', theme)
+  const btn = $('themeBtn')
+  if (btn) btn.textContent = theme === 'light' ? '🌙 Ciemny' : '☀ Jasny'
+}
+function toggleTheme() {
+  const next = document.body.classList.contains('light') ? 'dark' : 'light'
+  applyTheme(next)
+}
+
+
+let deferredInstallPrompt = null
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  deferredInstallPrompt = e
+  const btn = $('installBtn')
+  if (btn) btn.style.display = 'inline-block'
+})
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null
+  const btn = $('installBtn')
+  if (btn) btn.style.display = 'none'
+  setStatus('Aplikacja została zainstalowana.', false)
+})
+async function installApp() {
+  if (!deferredInstallPrompt) return
+  deferredInstallPrompt.prompt()
+  await deferredInstallPrompt.userChoice
+  deferredInstallPrompt = null
+  $('installBtn').style.display = 'none'
+}
+
+const toHms = s => {
+  s = Math.max(0, Math.floor(s))
+  const h = String(Math.floor(s / 3600)).padStart(2, '0')
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
+  const sec = String(s % 60).padStart(2, '0')
+  return `${h}:${m}:${sec}`
+}
+
+/* Haversine distance in metres */
+function haversine(a, b) {
+  const R = 6371000, r = x => x * Math.PI / 180
+  const dLat = r(b.lat - a.lat), dLon = r(b.lon - a.lon)
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(x))
+}
+
+/* ── EMA smoother ── */
+class EMA {
+  constructor(alpha = 0.25) { this.a = alpha; this.v = null }
+  push(x) {
+    if (!Number.isFinite(x)) return this.v
+    this.v = this.v === null ? x : this.a * x + (1 - this.a) * this.v
+    return this.v
+  }
+}
+
+/* ── Altitude Kalman-like buffer ── */
+class AltFilter {
+  constructor(win = 5, minGain = 3) { this.buf = []; this.win = win; this.minGain = minGain }
+  push(h) {
+    if (!Number.isFinite(h)) return null
+    this.buf.push(h)
+    if (this.buf.length > this.win) this.buf.shift()
+    return this.buf.reduce((a, b) => a + b, 0) / this.buf.length
+  }
+  gainFrom(prev, cur) {
+    if (prev === null || cur === null) return 0
+    const d = cur - prev
+    return d > this.minGain ? d : 0
+  }
+}
+
+/* ── GPS position filter (ignore jumps) ── */
+function isValidPoint(prev, cur) {
+  if (!prev) return cur.accuracy < 50
+  const d = haversine(prev, cur)
+  const dt = (cur.t - prev.t) / 1000
+  if (dt < 1) return false
+  const maxSpeedMs = 25 // ~90 km/h, enough for bike
+  return d / dt < maxSpeedMs && cur.accuracy < 50
+}
+
+/* ───────────────────────────────────────────────
+   STATE
+─────────────────────────────────────────────── */
+const S = {
+  watchId: null,
+  running: false,
+  points: [],
+  trip: 0,
+  total: parseFloat(localStorage.getItem('bike_total_km') || '0'),
+  gain: 0,
+  last: null,
+  lastAlt: null,
+  startTime: 0,
+  movingTime: 0,
+  movingDist: 0,
+  speedEma: new EMA(0.3),
+  altFilter: new AltFilter(5, 3),
+  timerInterval: null,
+  altHistory: []
+}
+
+/* ───────────────────────────────────────────────
+   MAP
+─────────────────────────────────────────────── */
+const map = L.map('map', { zoomControl: true }).setView([50.27, 18.88], 14)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map)
+const trackLine = L.polyline([], { color: '#4ade80', weight: 5, opacity: .9 }).addTo(map)
+const posIcon = L.divIcon({ html: '<div style="width:14px;height:14px;background:#4ade80;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px #4ade80"></div>', iconSize: [14, 14], iconAnchor: [7, 7], className: '' })
+let posMarker = L.marker([50.27, 18.88], { icon: posIcon }).addTo(map)
+
+/* ───────────────────────────────────────────────
+   ALTITUDE CHART
+─────────────────────────────────────────────── */
+const altCanvas = $('altChart')
+const altCtx = altCanvas.getContext('2d')
+
+function drawAltChart() {
+  const data = S.altHistory
+  const w = altCanvas.offsetWidth; const h = altCanvas.offsetHeight
+  altCanvas.width = w * devicePixelRatio; altCanvas.height = h * devicePixelRatio
+  const ctx = altCtx; ctx.scale(devicePixelRatio, devicePixelRatio)
+  ctx.clearRect(0, 0, w, h)
+  if (data.length < 2) {
+    ctx.fillStyle = '#6d83a8'; ctx.font = '12px system-ui'; ctx.textAlign = 'center'
+    ctx.fillText('Brak danych wysokości', w / 2, h / 2); return
+  }
+  const min = Math.min(...data), max = Math.max(...data), rng = max - min || 1
+  const px = i => (i / (data.length - 1)) * w
+  const py = v => h - ((v - min) / rng) * (h - 16) - 4
+  ctx.beginPath(); ctx.moveTo(0, h)
+  data.forEach((v, i) => ctx.lineTo(px(i), py(v)))
+  ctx.lineTo(w, h); ctx.closePath()
+  const grad = ctx.createLinearGradient(0, 0, 0, h)
+  grad.addColorStop(0, 'rgba(74,222,128,.35)'); grad.addColorStop(1, 'rgba(74,222,128,.02)')
+  ctx.fillStyle = grad; ctx.fill()
+  ctx.beginPath(); data.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)))
+  ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2; ctx.stroke()
+}
+
+/* ───────────────────────────────────────────────
+   TIMER
+─────────────────────────────────────────────── */
+function startTimer() {
+  S.timerInterval = setInterval(() => {
+    $('timer').textContent = toHms((Date.now() - S.startTime) / 1000)
+  }, 1000)
+}
+function stopTimer() { clearInterval(S.timerInterval) }
+
+/* ───────────────────────────────────────────────
+   GPS CALLBACK
+─────────────────────────────────────────────── */
+function onPos(p) {
+  const cur = {
+    lat: p.coords.latitude,
+    lon: p.coords.longitude,
+    alt: p.coords.altitude,
+    speed: p.coords.speed,
+    accuracy: p.coords.accuracy,
+    t: p.timestamp
+  }
+
+  if (!S.running) return
+
+  // First point
+  if (!S.last) {
+    if (cur.accuracy > 50) { setStatus('Czekam na dokładny sygnał GPS...'); return }
+    S.points.push(cur)
+    S.last = cur
+    S.lastAlt = S.altFilter.push(cur.alt)
+    S.startTime = Date.now()
+    trackLine.setLatLngs([])
+    startTimer()
+    posMarker.setLatLng([cur.lat, cur.lon])
+    map.setView([cur.lat, cur.lon], 16)
+    setStatus('GPS zablokowany. Nagrywanie trasy...')
+    return
+  }
+
+  // Filter bad points
+  if (!isValidPoint(S.last, cur)) {
+    setStatus(`Filtrowanie punktu (acc: ${Math.round(cur.accuracy)} m)`)
+    return
+  }
+
+  const d = haversine(S.last, cur)
+  const dt = cur.t - S.last.t // ms
+  const speedMs = dt > 0 ? d / (dt / 1000) : 0
+  const speedKmh = S.speedEma.push(speedMs * 3.6)
+
+  // Moving threshold: > 2 km/h
+  const isMoving = speedKmh > 2.0
+  if (isMoving) {
+    S.trip += d
+    S.total += d / 1000
+    S.movingTime += dt
+    S.movingDist += d
+  }
+
+  // Altitude
+  const smoothAlt = S.altFilter.push(cur.alt)
+  const gainDelta = S.altFilter.gainFrom(S.lastAlt, smoothAlt)
+  S.gain += gainDelta
+  S.lastAlt = smoothAlt
+  if (smoothAlt !== null) {
+    S.altHistory.push(Math.round(smoothAlt))
+    if (S.altHistory.length > 300) S.altHistory.shift()
+  }
+
+  S.points.push(cur)
+  S.last = cur
+
+  // Map
+  posMarker.setLatLng([cur.lat, cur.lon])
+  trackLine.addLatLng([cur.lat, cur.lon])
+  map.panTo([cur.lat, cur.lon], { animate: true, duration: .5 })
+
+  // UI
+  const avgMoving = S.movingTime > 0 ? (S.movingDist / 1000) / (S.movingTime / 3600000) : 0
+  $('speed').textContent = fmt(speedKmh, 1)
+  $('avgMoving').textContent = fmt(avgMoving, 1)
+  $('trip').textContent = fmt(S.trip / 1000, 2)
+  $('total').textContent = fmt(S.total, 2)
+  $('alt').textContent = smoothAlt !== null ? Math.round(smoothAlt) : '—'
+  $('gain').textContent = Math.round(S.gain)
+  $('pointsCount').textContent = S.points.length
+  $('accuracy').textContent = Math.round(cur.accuracy)
+
+  saveTotal()
+  drawAltChart()
+  setStatus(`Nagrywanie... ${new Date(cur.t).toLocaleTimeString('pl-PL')}`)
+}
+
+/* ───────────────────────────────────────────────
+   STATUS
+─────────────────────────────────────────────── */
+function setStatus(msg, active = true) {
+  $('statusText').textContent = msg
+  $('statusDot').className = 'status-dot' + (active ? ' on' : '')
+}
+function setBadge(state) {
+  const b = $('badge')
+  b.className = 'badge ' + state
+  b.textContent = state === 'recording' ? 'NAGRYWAM' : state === 'stopped' ? 'STOP' : 'IDLE'
+}
+
+/* ───────────────────────────────────────────────
+   START
+─────────────────────────────────────────────── */
+function start() {
+  if (S.running) return
+  if (!navigator.geolocation) { setStatus('Geolokalizacja niedostępna.', false); return }
+  S.running = true
+  S.points = []
+  S.trip = 0
+  S.gain = 0
+  S.last = null
+  S.lastAlt = null
+  S.movingTime = 0
+  S.movingDist = 0
+  S.altHistory = []
+  S.speedEma = new EMA(0.3)
+  S.altFilter = new AltFilter(5, 3)
+  trackLine.setLatLngs([])
+  setBadge('recording')
+  setStatus('Wyszukuję sygnał GPS...')
+  S.watchId = navigator.geolocation.watchPosition(
+    onPos,
+    e => { setStatus('Błąd GPS: ' + e.message, false) },
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 }
+  )
+}
+
+/* ───────────────────────────────────────────────
+   STOP
+─────────────────────────────────────────────── */
+function stop() {
+  if (!S.running) return
+  navigator.geolocation.clearWatch(S.watchId)
+  S.running = false
+  stopTimer()
+  setBadge('stopped')
+  setStatus('Nagrywanie zakończone.', false)
+  const stats = getStats()
+  const ride = {
+    date: new Date().toLocaleString('pl-PL'),
+    tripKm: stats.tripKm,
+    gainM: stats.gainM,
+    duration: stats.duration,
+    fileBase: `trasa-${Date.now()}`,
+    gpx: buildGpx(),
+    html: buildHtml(stats)
+  }
+  const rides = loadRides()
+  rides.unshift(ride)
+  saveRides(rides)
+  renderRides()
+  showModal()
+  $('btnGPX').onclick = () => download(`${ride.fileBase}.gpx`, ride.gpx, 'application/gpx+xml')
+  $('btnHTML').onclick = () => download(`${ride.fileBase}.html`, ride.html, 'text/html')
+  $('btnClose').onclick = () => $('modalBg').classList.remove('open')
+}
+
+
+/* ───────────────────────────────────────────────
+   RESET TRIP
+─────────────────────────────────────────────── */
+function resetTrip() {
+  if (S.running) {
+    if (!confirm('Zresetować trip w trakcie jazdy?')) return
+    S.trip = 0
+    S.gain = 0
+    S.movingTime = 0
+    S.movingDist = 0
+    S.altHistory = []
+    S.speedEma = new EMA(0.3)
+    S.altFilter = new AltFilter(5, 3)
+    S.last = null
+    S.points = []
+    trackLine.setLatLngs([])
+    setStatus('Trip zresetowany. Kontynuuj jazdę...')
+  } else {
+    S.trip = 0; S.gain = 0; S.movingTime = 0; S.movingDist = 0; S.altHistory = []
+    S.speedEma = new EMA(0.3); S.altFilter = new AltFilter(5, 3); S.last = null; S.points = []; trackLine.setLatLngs([])
+    $('trip').textContent = '0.00'
+    $('gain').textContent = '0'
+    $('speed').textContent = '0.0'
+    $('avgMoving').textContent = '0.0'
+    $('timer').textContent = '00:00:00'
+    drawAltChart()
+    setStatus('Trip zresetowany. Gotowy na nową trasę.', false)
+  }
+}
+
+/* ───────────────────────────────────────────────
+   GPX GENERATOR
+─────────────────────────────────────────────── */
+function buildGpx() {
+  const pts = S.points.map(p =>
+    `<trkpt lat="${p.lat}" lon="${p.lon}">${Number.isFinite(p.alt) ? `<ele>${p.alt.toFixed(2)}</ele>` : ''}<time>${new Date(p.t).toISOString()}</time></trkpt>`
+  ).join('\n      ')
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Bike Dashboard" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Bike ride ${new Date().toLocaleDateString('pl-PL')}</name></metadata>
+  <trk>
+    <name>Bike ride ${new Date().toLocaleDateString('pl-PL')}</name>
+    <trkseg>
+      ${pts}
+    </trkseg>
+  </trk>
+</gpx>`
+}
+
+/* ───────────────────────────────────────────────
+   HTML SUMMARY GENERATOR
+─────────────────────────────────────────────── */
+function buildHtml(stats) {
+  const { tripKm, totalKm, avgKmh, topKmh, gainM, points, duration } = stats
+  const now = new Date().toLocaleString('pl-PL')
+  return `<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Podsumowanie trasy – ${now}</title>
+  <style>
+    body{font-family:system-ui,Arial,sans-serif;max-width:640px;margin:30px auto;padding:0 20px;color:#1a2030;background:#f4f7fb}
+    h1{color:#111a2e;border-bottom:3px solid #4ade80;padding-bottom:10px}
+    .card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+    .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf2f7}
+    .row:last-child{border-bottom:0}
+    .k{color:#6d83a8;font-size:14px}
+    .v{font-weight:800;font-size:18px;color:#111a2e}
+    .tag{display:inline-block;background:#edfaf3;color:#16803c;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
+    footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}
+  </style>
+</head>
+<body>
+  <h1>🚴 Podsumowanie trasy</h1>
+  <p>${now}</p>
+  <div class="card">
+    <div class="row"><span class="k">Dystans (Trip)</span><span class="v">${tripKm} km</span></div>
+    <div class="row"><span class="k">Dystans całkowity roweru</span><span class="v">${totalKm} km</span></div>
+    <div class="row"><span class="k">Średnia prędkość (w ruchu)</span><span class="v">${avgKmh} km/h</span></div>
+    <div class="row"><span class="k">Prędkość max.</span><span class="v">${topKmh} km/h</span></div>
+    <div class="row"><span class="k">Przewyższenie</span><span class="v">${gainM} m</span></div>
+    <div class="row"><span class="k">Czas w ruchu</span><span class="v">${duration}</span></div>
+    <div class="row"><span class="k">Liczba punktów GPS</span><span class="v">${points}</span></div>
+  </div>
+  <footer>Wygenerowano przez Bike Dashboard</footer>
+</body>
+</html>`
+}
+
+/* ───────────────────────────────────────────────
+   MODAL
+─────────────────────────────────────────────── */
+function getStats() {
+  const avgKmh = S.movingTime > 0 ? (S.movingDist / 1000) / (S.movingTime / 3600000) : 0
+  const topKmh = S.points.reduce((m, p) => Math.max(m, (p.speed || 0) * 3.6), 0)
+  return {
+    tripKm: fmt(S.trip / 1000, 2),
+    totalKm: fmt(S.total, 2),
+    avgKmh: fmt(avgKmh, 1),
+    topKmh: fmt(topKmh, 1),
+    gainM: Math.round(S.gain),
+    points: S.points.length,
+    duration: toHms(S.movingTime / 1000)
+  }
+}
+function showModal() {
+  const stats = getStats()
+  const html = [
+    ['Dystans (Trip)', stats.tripKm + ' km'],
+    ['Śr. prędkość (ruch)', stats.avgKmh + ' km/h'],
+    ['Prędkość max.', stats.topKmh + ' km/h'],
+    ['Przewyższenie', stats.gainM + ' m'],
+    ['Czas w ruchu', stats.duration],
+    ['Punkty GPS', stats.points]
+  ].map(([k, v]) => `<div class="stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')
+  $('modalStats').innerHTML = html
+  $('modalSub').textContent = `${new Date().toLocaleDateString('pl-PL')} · Trasa ${stats.tripKm} km`
+  $('modalBg').classList.add('open')
+  $('btnClose').onclick = () => $('modalBg').classList.remove('open')
+}
+
+/* ───────────────────────────────────────────────
+   DOWNLOAD
+─────────────────────────────────────────────── */
+function download(name, content, type) {
+  const blob = new Blob([content], { type })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = name
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
+
+/* ───────────────────────────────────────────────
+   PERSIST TOTAL
+─────────────────────────────────────────────── */
+function saveTotal() { localStorage.setItem('bike_total_km', String(S.total)) }
+
+/* ───────────────────────────────────────────────
+   INIT
+─────────────────────────────────────────────── */
+$('total').textContent = S.total.toFixed(2)
+drawAltChart()
+const savedTheme = localStorage.getItem('bike_theme') || 'dark'
+applyTheme(savedTheme)
+$('themeBtn').onclick = toggleTheme
+$('installBtn').onclick = installApp
+$('startBtn').onclick = start
+$('stopBtn').onclick = stop
+$('resetBtn').onclick = resetTrip
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) }
+window.addEventListener('beforeunload', saveTotal)
+window.addEventListener('resize', drawAltChart)
+</script>
+</body>
+</html>
