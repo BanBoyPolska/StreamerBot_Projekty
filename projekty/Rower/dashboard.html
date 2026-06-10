@@ -475,8 +475,9 @@ $('total').textContent = S.total.toFixed(2)
 drawAltChart()
 const savedTheme = localStorage.getItem('bike_theme') || 'dark'
 applyTheme(savedTheme)
-const boot = () => { drawAltChart(); renderRides(); $('themeBtn').onclick = toggleTheme; $('installBtn').onclick = installApp; $('startBtn').onclick = start; $('stopBtn').onclick = stop; $('resetBtn').onclick = resetTrip; if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) } window.addEventListener('beforeunload', saveTotal); window.addEventListener('resize', drawAltChart) }
+const boot = () => { drawAltChart(); renderRides(); $('themeBtn').onclick = toggleTheme; $('installBtn').onclick = installApp; $('startBtn').disabled = false; $('startBtn').onclick = start; $('stopBtn').onclick = stop; $('resetBtn').onclick = resetTrip; if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) } window.addEventListener('beforeunload', saveTotal); window.addEventListener('resize', drawAltChart) }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot()
+window.__bikeBooted = true
 </script>
 </body>
 </html>
