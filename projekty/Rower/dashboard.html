@@ -113,8 +113,7 @@
 
     /* ── LEAFLET dark fix ── */
     .leaflet-tile-container img{filter:var(--tile-filter)}
-    .theme-toggle{border:1px solid var(--line);background:var(--btn-soft-bg);color:var(--txt);padding:10px 12px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation}
-    button{touch-action:manipulation}
+    .theme-toggle{border:1px solid var(--line);background:var(--btn-soft-bg);color:var(--txt);padding:10px 12px;border-radius:12px;font-weight:700;font-size:13px}
     .ride-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
     .ride-item .meta{font-size:12px;color:var(--muted)}
     .ride-item .btns{display:flex;gap:8px;flex-shrink:0}
@@ -127,8 +126,8 @@
 <header>
   <h1>Bike Dashboard v3.1</h1>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-    <button type="button" class="theme-toggle" id="installBtn" style="display:none">⬇ Zainstaluj</button>
-    <button type="button" class="theme-toggle" id="themeBtn">☀ Jasny</button>
+    <button class="theme-toggle" id="installBtn" style="display:none">⬇ Zainstaluj</button>
+    <button class="theme-toggle" id="themeBtn">☀ Jasny</button>
     <span class="badge idle" id="badge">IDLE</span>
   </div>
 </header>
@@ -172,9 +171,9 @@
 </div>
 
 <div class="actions">
-  <button type="button" class="btn" id="startBtn">▶ Start</button>
-  <button type="button" class="btn" id="stopBtn">■ Stop</button>
-  <button type="button" class="btn" id="resetBtn">↺ Resetuj Trip</button>
+  <button class="btn" id="startBtn">▶ Start</button>
+  <button class="btn" id="stopBtn">■ Stop</button>
+  <button class="btn" id="resetBtn">↺ Resetuj Trip</button>
 </div>
 
 <div class="map-wrap">
@@ -210,9 +209,9 @@
     <p class="sub" id="modalSub">Podsumowanie wycieczki</p>
     <div id="modalStats"></div>
     <div class="modal-btns">
-      <button type="button" class="mbtn primary" id="btnGPX">📥 Pobierz GPX</button>
-      <button type="button" class="mbtn secondary" id="btnHTML">📄 Pobierz HTML</button>
-      <button type="button" class="mbtn full" id="btnClose">Zamknij bez zapisywania</button>
+      <button class="mbtn primary" id="btnGPX">📥 Pobierz GPX</button>
+      <button class="mbtn secondary" id="btnHTML">📄 Pobierz HTML</button>
+      <button class="mbtn full" id="btnClose">Zamknij bez zapisywania</button>
     </div>
   </div>
 </div>
@@ -225,26 +224,8 @@
 const $ = id => document.getElementById(id)
 const fmt = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d) : '—'
 
-function bindTouchFallback(id, fn){
-  const el = $(id)
-  if (!el) return
-  el.addEventListener('click', fn, { passive: true })
-  el.addEventListener('touchend', e => { e.preventDefault(); fn(e) }, { passive: false })
-  el.addEventListener('pointerup', fn, { passive: true })
-}
-
-
-
 const RIDES_KEY = 'bike_rides_v3_1'
-const RIDES_KEY_OLD = 'bike_rides_v3_1_old'
-function loadRides(){
-  try {
-    const raw = localStorage.getItem(RIDES_KEY)
-    if (raw) return JSON.parse(raw)
-    const legacy = localStorage.getItem('bike_rides_v3_1') || localStorage.getItem(RIDES_KEY_OLD)
-    return legacy ? JSON.parse(legacy) : []
-  } catch { return [] }
-}
+function loadRides(){ try { return JSON.parse(localStorage.getItem(RIDES_KEY) || '[]') } catch { return [] } }
 function saveRides(r){ localStorage.setItem(RIDES_KEY, JSON.stringify(r.slice(0,20))) }
 function renderRides(){
   const el = $('ridesList')
@@ -271,6 +252,248 @@ function deleteSavedRide(idx){
   renderRides()
 }
 
+
+function applyTheme(theme) {
+  document.body.classList.toggle('light', theme === 'light')
+  localStorage.setItem('bike_theme', theme)
+  const btn = $('themeBtn')
+  if (btn) btn.textContent = theme === 'light' ? '🌙 Ciemny' : '☀ Jasny'
+}
+function toggleTheme() {
+  const next = document.body.classList.contains('light') ? 'dark' : 'light'
+  applyTheme(next)
+}
+
+
+let deferredInstallPrompt = null
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  deferredInstallPrompt = e
+  const btn = $('installBtn')
+  if (btn) btn.style.display = 'inline-block'
+})
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null
+  const btn = $('installBtn')
+  if (btn) btn.style.display = 'none'
+  setStatus('Aplikacja została zainstalowana.', false)
+})
+async function installApp() {
+  if (!deferredInstallPrompt) return
+  deferredInstallPrompt.prompt()
+  await deferredInstallPrompt.userChoice
+  deferredInstallPrompt = null
+  $('installBtn').style.display = 'none'
+}
+
+const toHms = s => {
+  s = Math.max(0, Math.floor(s))
+  const h = String(Math.floor(s / 3600)).padStart(2, '0')
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
+  const sec = String(s % 60).padStart(2, '0')
+  return `${h}:${m}:${sec}`
+}
+
+/* Haversine distance in metres */
+function haversine(a, b) {
+  const R = 6371000, r = x => x * Math.PI / 180
+  const dLat = r(b.lat - a.lat), dLon = r(b.lon - a.lon)
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(x))
+}
+
+/* ── EMA smoother ── */
+class EMA {
+  constructor(alpha = 0.25) { this.a = alpha; this.v = null }
+  push(x) {
+    if (!Number.isFinite(x)) return this.v
+    this.v = this.v === null ? x : this.a * x + (1 - this.a) * this.v
+    return this.v
+  }
+}
+
+/* ── Altitude Kalman-like buffer ── */
+class AltFilter {
+  constructor(win = 5, minGain = 3) { this.buf = []; this.win = win; this.minGain = minGain }
+  push(h) {
+    if (!Number.isFinite(h)) return null
+    this.buf.push(h)
+    if (this.buf.length > this.win) this.buf.shift()
+    return this.buf.reduce((a, b) => a + b, 0) / this.buf.length
+  }
+  gainFrom(prev, cur) {
+    if (prev === null || cur === null) return 0
+    const d = cur - prev
+    return d > this.minGain ? d : 0
+  }
+}
+
+/* ── GPS position filter (ignore jumps) ── */
+function isValidPoint(prev, cur) {
+  if (!prev) return cur.accuracy < 50
+  const d = haversine(prev, cur)
+  const dt = (cur.t - prev.t) / 1000
+  if (dt < 1) return false
+  const maxSpeedMs = 25 // ~90 km/h, enough for bike
+  return d / dt < maxSpeedMs && cur.accuracy < 50
+}
+
+/* ───────────────────────────────────────────────
+   STATE
+─────────────────────────────────────────────── */
+const S = {
+  watchId: null,
+  running: false,
+  points: [],
+  trip: 0,
+  total: parseFloat(localStorage.getItem('bike_total_km') || '0'),
+  gain: 0,
+  last: null,
+  lastAlt: null,
+  startTime: 0,
+  movingTime: 0,
+  movingDist: 0,
+  speedEma: new EMA(0.3),
+  altFilter: new AltFilter(5, 3),
+  timerInterval: null,
+  altHistory: []
+}
+
+/* ───────────────────────────────────────────────
+   MAP
+─────────────────────────────────────────────── */
+const map = L.map('map', { zoomControl: true }).setView([50.27, 18.88], 14)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map)
+const trackLine = L.polyline([], { color: '#4ade80', weight: 5, opacity: .9 }).addTo(map)
+const posIcon = L.divIcon({ html: '<div style="width:14px;height:14px;background:#4ade80;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px #4ade80"></div>', iconSize: [14, 14], iconAnchor: [7, 7], className: '' })
+let posMarker = L.marker([50.27, 18.88], { icon: posIcon }).addTo(map)
+
+/* ───────────────────────────────────────────────
+   ALTITUDE CHART
+─────────────────────────────────────────────── */
+const altCanvas = $('altChart')
+const altCtx = altCanvas.getContext('2d')
+
+function drawAltChart() {
+  const data = S.altHistory
+  const w = altCanvas.offsetWidth; const h = altCanvas.offsetHeight
+  altCanvas.width = w * devicePixelRatio; altCanvas.height = h * devicePixelRatio
+  const ctx = altCtx; ctx.scale(devicePixelRatio, devicePixelRatio)
+  ctx.clearRect(0, 0, w, h)
+  if (data.length < 2) {
+    ctx.fillStyle = '#6d83a8'; ctx.font = '12px system-ui'; ctx.textAlign = 'center'
+    ctx.fillText('Brak danych wysokości', w / 2, h / 2); return
+  }
+  const min = Math.min(...data), max = Math.max(...data), rng = max - min || 1
+  const px = i => (i / (data.length - 1)) * w
+  const py = v => h - ((v - min) / rng) * (h - 16) - 4
+  ctx.beginPath(); ctx.moveTo(0, h)
+  data.forEach((v, i) => ctx.lineTo(px(i), py(v)))
+  ctx.lineTo(w, h); ctx.closePath()
+  const grad = ctx.createLinearGradient(0, 0, 0, h)
+  grad.addColorStop(0, 'rgba(74,222,128,.35)'); grad.addColorStop(1, 'rgba(74,222,128,.02)')
+  ctx.fillStyle = grad; ctx.fill()
+  ctx.beginPath(); data.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)))
+  ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2; ctx.stroke()
+}
+
+/* ───────────────────────────────────────────────
+   TIMER
+─────────────────────────────────────────────── */
+function startTimer() {
+  S.timerInterval = setInterval(() => {
+    $('timer').textContent = toHms((Date.now() - S.startTime) / 1000)
+  }, 1000)
+}
+function stopTimer() { clearInterval(S.timerInterval) }
+
+/* ───────────────────────────────────────────────
+   GPS CALLBACK
+─────────────────────────────────────────────── */
+function onPos(p) {
+  const cur = {
+    lat: p.coords.latitude,
+    lon: p.coords.longitude,
+    alt: p.coords.altitude,
+    speed: p.coords.speed,
+    accuracy: p.coords.accuracy,
+    t: p.timestamp
+  }
+
+  if (!S.running) return
+
+  // First point
+  if (!S.last) {
+    if (cur.accuracy > 50) { setStatus('Czekam na dokładny sygnał GPS...'); return }
+    S.points.push(cur)
+    S.last = cur
+    S.lastAlt = S.altFilter.push(cur.alt)
+    S.startTime = Date.now()
+    trackLine.setLatLngs([])
+    startTimer()
+    posMarker.setLatLng([cur.lat, cur.lon])
+    map.setView([cur.lat, cur.lon], 16)
+    setStatus('GPS zablokowany. Nagrywanie trasy...')
+    return
+  }
+
+  // Filter bad points
+  if (!isValidPoint(S.last, cur)) {
+    setStatus(`Filtrowanie punktu (acc: ${Math.round(cur.accuracy)} m)`)
+    return
+  }
+
+  const d = haversine(S.last, cur)
+  const dt = cur.t - S.last.t // ms
+  const speedMs = dt > 0 ? d / (dt / 1000) : 0
+  const speedKmh = S.speedEma.push(speedMs * 3.6)
+
+  // Moving threshold: > 2 km/h
+  const isMoving = speedKmh > 2.0
+  if (isMoving) {
+    S.trip += d
+    S.total += d / 1000
+    S.movingTime += dt
+    S.movingDist += d
+  }
+
+  // Altitude
+  const smoothAlt = S.altFilter.push(cur.alt)
+  const gainDelta = S.altFilter.gainFrom(S.lastAlt, smoothAlt)
+  S.gain += gainDelta
+  S.lastAlt = smoothAlt
+  if (smoothAlt !== null) {
+    S.altHistory.push(Math.round(smoothAlt))
+    if (S.altHistory.length > 300) S.altHistory.shift()
+  }
+
+  S.points.push(cur)
+  S.last = cur
+
+  // Map
+  posMarker.setLatLng([cur.lat, cur.lon])
+  trackLine.addLatLng([cur.lat, cur.lon])
+  map.panTo([cur.lat, cur.lon], { animate: true, duration: .5 })
+
+  // UI
+  const avgMoving = S.movingTime > 0 ? (S.movingDist / 1000) / (S.movingTime / 3600000) : 0
+  $('speed').textContent = fmt(speedKmh, 1)
+  $('avgMoving').textContent = fmt(avgMoving, 1)
+  $('trip').textContent = fmt(S.trip / 1000, 2)
+  $('total').textContent = fmt(S.total, 2)
+  $('alt').textContent = smoothAlt !== null ? Math.round(smoothAlt) : '—'
+  $('gain').textContent = Math.round(S.gain)
+  $('pointsCount').textContent = S.points.length
+  $('accuracy').textContent = Math.round(cur.accuracy)
+
+  saveTotal()
+  drawAltChart()
+  setStatus(`Nagrywanie... ${new Date(cur.t).toLocaleTimeString('pl-PL')}`)
+}
+
+/* ───────────────────────────────────────────────
+   STATUS
+─────────────────────────────────────────────── */
 function setStatus(msg, active = true) {
   $('statusText').textContent = msg
   $('statusDot').className = 'status-dot' + (active ? ' on' : '')
@@ -485,9 +708,14 @@ $('total').textContent = S.total.toFixed(2)
 drawAltChart()
 const savedTheme = localStorage.getItem('bike_theme') || 'dark'
 applyTheme(savedTheme)
-const boot = () => { drawAltChart(); renderRides(); bindTouchFallback('themeBtn', toggleTheme); bindTouchFallback('installBtn', installApp); bindTouchFallback('startBtn', start); bindTouchFallback('stopBtn', stop); bindTouchFallback('resetBtn', resetTrip); $('startBtn').disabled = false; if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) } window.addEventListener('beforeunload', saveTotal); window.addEventListener('resize', drawAltChart) }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot()
-window.__bikeBooted = true
+$('themeBtn').onclick = toggleTheme
+$('installBtn').onclick = installApp
+$('startBtn').onclick = start
+$('stopBtn').onclick = stop
+$('resetBtn').onclick = resetTrip
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) }
+window.addEventListener('beforeunload', saveTotal)
+window.addEventListener('resize', drawAltChart)
 </script>
 </body>
 </html>
