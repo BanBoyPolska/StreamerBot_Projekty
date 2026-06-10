@@ -119,6 +119,18 @@
     .ride-item .btns{display:flex;gap:8px;flex-shrink:0}
     .ride-item button{border:0;background:var(--btn-soft-bg);color:var(--txt);padding:8px 10px;border-radius:10px;font-weight:700}
     .ride-item button.danger{background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.18)}
+  
+    .ride-item{display:flex;flex-direction:column;gap:6px;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
+    .ride-item .ride-name{font-size:15px;font-weight:700;color:var(--txt);word-break:break-word}
+    .ride-item .meta{font-size:12px;color:var(--muted)}
+    .ride-item .ride-btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+    .ride-item .ride-btns button{border:0;border-radius:10px;padding:7px 12px;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation}
+    .ride-item .ride-btns .btn-dl{background:var(--btn-soft-bg);color:var(--txt);border:1px solid var(--line)}
+    .ride-item .ride-btns .btn-ren{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+    .ride-item .ride-btns .btn-del{background:rgba(251,113,133,.1);color:var(--red);border:1px solid rgba(251,113,133,.2)}
+    #ridesList{display:grid;gap:9px}
+    .no-rides{font-size:13px;color:var(--muted);text-align:center;padding:10px 0}
+
   </style>
 </head>
 <body>
@@ -224,33 +236,10 @@
 const $ = id => document.getElementById(id)
 const fmt = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d) : '—'
 
-const RIDES_KEY = 'bike_rides_v3_1'
-function loadRides(){ try { return JSON.parse(localStorage.getItem(RIDES_KEY) || '[]') } catch { return [] } }
-function saveRides(r){ localStorage.setItem(RIDES_KEY, JSON.stringify(r.slice(0,20))) }
-function renderRides(){
-  const el = $('ridesList')
-  if (!el) return
-  const rides = loadRides()
-  if (!rides.length){
-    el.innerHTML = '<div class="ride-item"><div><strong>Brak zapisanych tras</strong><div class="meta">Po zakończeniu jazdy można zapisać GPX, HTML i dane trasy.</div></div></div>'
-    return
-  }
-  el.innerHTML = rides.map((r,i)=>`<div class="ride-item"><div><strong>${r.date}</strong><div class="meta">Trip: ${r.tripKm} km · Gain: ${r.gainM} m · Czas: ${r.duration}</div></div><div class="btns"><button data-act="download" data-idx="${i}">Pobierz</button><button class="danger" data-act="delete" data-idx="${i}">Usuń</button></div></div>`).join('')
-  el.querySelectorAll('button[data-act="download"]').forEach(btn=>btn.onclick=()=>downloadSavedRide(parseInt(btn.dataset.idx,10)))
-  el.querySelectorAll('button[data-act="delete"]').forEach(btn=>btn.onclick=()=>deleteSavedRide(parseInt(btn.dataset.idx,10)))
-}
-function downloadSavedRide(idx){
-  const rides = loadRides(); const r = rides[idx]; if (!r) return
-  download(`${r.fileBase}.gpx`, r.gpx, 'application/gpx+xml')
-  download(`${r.fileBase}.html`, r.html, 'text/html')
-}
-function deleteSavedRide(idx){
-  const rides = loadRides(); const r = rides[idx]; if (!r) return
-  if (!confirm(`Usunąć trasę: ${r.date}?`)) return
-  rides.splice(idx, 1)
-  saveRides(rides)
-  renderRides()
-}
+
+
+
+
 
 
 function applyTheme(theme) {
@@ -494,6 +483,95 @@ function onPos(p) {
 /* ───────────────────────────────────────────────
    STATUS
 ─────────────────────────────────────────────── */
+
+const RIDES_KEY = 'bike_rides_v1'
+
+function loadRides() {
+  try { return JSON.parse(localStorage.getItem(RIDES_KEY) || '[]') } catch { return [] }
+}
+function saveRides(rides) {
+  localStorage.setItem(RIDES_KEY, JSON.stringify(rides.slice(0, 30)))
+}
+
+function renderRides() {
+  const el = document.getElementById('ridesList')
+  if (!el) return
+  const rides = loadRides()
+  if (!rides.length) {
+    el.innerHTML = '<div class="no-rides">Brak zapisanych tras. Zakończ jazdę przyciskiem Stop.</div>'
+    return
+  }
+  el.innerHTML = rides.map((r, i) => `
+    <div class="ride-item">
+      <div class="ride-name">${escHtml(r.name || r.date)}</div>
+      <div class="meta">Trip: ${r.tripKm} km &nbsp;·&nbsp; Przewyższenie: ${r.gainM} m &nbsp;·&nbsp; Czas: ${r.duration}</div>
+      <div class="ride-btns">
+        <button class="btn-dl" data-act="download" data-idx="${i}" type="button">📥 Pobierz</button>
+        <button class="btn-ren" data-act="rename" data-idx="${i}" type="button">✏️ Zmień nazwę</button>
+        <button class="btn-del" data-act="delete" data-idx="${i}" type="button">🗑 Usuń</button>
+      </div>
+    </div>`).join('')
+  el.querySelectorAll('[data-act]').forEach(btn => {
+    btn.addEventListener('click', handleRideAction, { passive: true })
+    btn.addEventListener('touchend', e => { e.preventDefault(); handleRideAction(e) }, { passive: false })
+  })
+}
+
+function handleRideAction(e) {
+  const btn = e.currentTarget
+  const idx = parseInt(btn.dataset.idx, 10)
+  const act = btn.dataset.act
+  if (act === 'download') downloadRide(idx)
+  else if (act === 'rename') renameRide(idx)
+  else if (act === 'delete') deleteRide(idx)
+}
+
+function escHtml(s) {
+  return String(s).replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m]))
+}
+
+function downloadRide(idx) {
+  const rides = loadRides(); const r = rides[idx]; if (!r) return
+  download(`${r.fileBase || 'trasa'}.gpx`, r.gpx, 'application/gpx+xml')
+  setTimeout(() => download(`${r.fileBase || 'trasa'}.html`, r.html, 'text/html'), 300)
+}
+
+function renameRide(idx) {
+  const rides = loadRides(); const r = rides[idx]; if (!r) return
+  const newName = prompt('Podaj nową nazwę trasy:', r.name || r.date)
+  if (newName === null || newName.trim() === '') return
+  rides[idx].name = newName.trim()
+  saveRides(rides)
+  renderRides()
+}
+
+function deleteRide(idx) {
+  const rides = loadRides(); const r = rides[idx]; if (!r) return
+  if (!confirm(`Usunąć trasę "${r.name || r.date}"?`)) return
+  rides.splice(idx, 1)
+  saveRides(rides)
+  renderRides()
+}
+
+function saveRideToStorage(stats) {
+  const fileBase = `trasa-${Date.now()}`
+  const ride = {
+    name: `Trasa ${new Date().toLocaleDateString('pl-PL')}`,
+    date: new Date().toLocaleString('pl-PL'),
+    tripKm: stats.tripKm,
+    gainM: stats.gainM,
+    duration: stats.duration,
+    fileBase,
+    gpx: typeof buildGpx === 'function' ? buildGpx() : '',
+    html: typeof buildHtml === 'function' ? buildHtml(stats) : ''
+  }
+  const rides = loadRides()
+  rides.unshift(ride)
+  saveRides(rides)
+  renderRides()
+  return ride
+}
+
 function setStatus(msg, active = true) {
   $('statusText').textContent = msg
   $('statusDot').className = 'status-dot' + (active ? ' on' : '')
@@ -716,6 +794,27 @@ $('resetBtn').onclick = resetTrip
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) }
 window.addEventListener('beforeunload', saveTotal)
 window.addEventListener('resize', drawAltChart)
+const boot = () => {
+  drawAltChart()
+  renderRides()
+  const bind = (id, fn) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.addEventListener('click', fn, { passive: true })
+    el.addEventListener('touchend', e => { e.preventDefault(); fn(e) }, { passive: false })
+  }
+  bind('themeBtn', toggleTheme)
+  bind('installBtn', installApp)
+  bind('startBtn', start)
+  bind('stopBtn', stop)
+  bind('resetBtn', resetTrip)
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {})
+  window.addEventListener('beforeunload', saveTotal)
+  window.addEventListener('resize', drawAltChart)
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot)
+else boot()
+
 </script>
 </body>
 </html>
