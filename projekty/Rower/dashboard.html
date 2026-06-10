@@ -193,7 +193,13 @@
   <div class="map-overlay">
     <div class="map-pill">Punkty: <span id="pointsCount">0</span></div>
     <div class="map-pill">Dokładność: <span id="accuracy">—</span> m</div>
-  </div>
+  
+<div class="map-overlay" id="speedLegend" style="bottom:32px;right:8px;left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+  <div style="font-size:10px;color:var(--muted);font-weight:700;text-align:right">Prędkość</div>
+  <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt)"><span style="display:inline-block;width:28px;height:5px;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)"></span>0–35+ km/h</div>
+</div>
+
+</div>
 </div>
 
 <div class="chart-panel">
@@ -229,6 +235,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-hotline@0.4.0/dist/leaflet.hotline.js"></script>
 <script>
 /* ───────────────────────────────────────────────
    HELPERS
@@ -353,7 +360,9 @@ const S = {
 ─────────────────────────────────────────────── */
 const map = L.map('map', { zoomControl: true }).setView([50.27, 18.88], 14)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OSM' }).addTo(map)
-const trackLine = L.polyline([], { color: '#4ade80', weight: 5, opacity: .9 }).addTo(map)
+let trackLine = null
+let hotlineLayer = null
+let trackPoints = [] // [lat, lon, speed_kmh]
 const posIcon = L.divIcon({ html: '<div style="width:14px;height:14px;background:#4ade80;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px #4ade80"></div>', iconSize: [14, 14], iconAnchor: [7, 7], className: '' })
 let posMarker = L.marker([50.27, 18.88], { icon: posIcon }).addTo(map)
 
@@ -418,7 +427,8 @@ function onPos(p) {
     S.last = cur
     S.lastAlt = S.altFilter.push(cur.alt)
     S.startTime = Date.now()
-    trackLine.setLatLngs([])
+    trackPoints = []
+if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
     startTimer()
     posMarker.setLatLng([cur.lat, cur.lon])
     map.setView([cur.lat, cur.lon], 16)
@@ -461,7 +471,14 @@ function onPos(p) {
 
   // Map
   posMarker.setLatLng([cur.lat, cur.lon])
-  trackLine.addLatLng([cur.lat, cur.lon])
+  trackPoints.push([cur.lat, cur.lon, Math.min(speedKmh || 0, 40)])
+  if(hotlineLayer){ map.removeLayer(hotlineLayer) }
+  if(trackPoints.length >= 2){
+    hotlineLayer = L.hotline(trackPoints, {
+      min: 0, max: 35, palette: { 0.0: '#3b82f6', 0.4: '#4ade80', 0.7: '#fbbf24', 1.0: '#f43f5e' },
+      weight: 5, outlineWidth: 1, outlineColor: 'rgba(0,0,0,.3)'
+    }).addTo(map)
+  }
   map.panTo([cur.lat, cur.lon], { animate: true, duration: .5 })
 
   // UI
@@ -599,7 +616,8 @@ function start() {
   S.altHistory = []
   S.speedEma = new EMA(0.3)
   S.altFilter = new AltFilter(5, 3)
-  trackLine.setLatLngs([])
+  trackPoints = []
+if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
   setBadge('recording')
   setStatus('Wyszukuję sygnał GPS...')
   S.watchId = navigator.geolocation.watchPosition(
@@ -655,11 +673,13 @@ function resetTrip() {
     S.altFilter = new AltFilter(5, 3)
     S.last = null
     S.points = []
-    trackLine.setLatLngs([])
+    trackPoints = []
+if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
     setStatus('Trip zresetowany. Kontynuuj jazdę...')
   } else {
     S.trip = 0; S.gain = 0; S.movingTime = 0; S.movingDist = 0; S.altHistory = []
-    S.speedEma = new EMA(0.3); S.altFilter = new AltFilter(5, 3); S.last = null; S.points = []; trackLine.setLatLngs([])
+    S.speedEma = new EMA(0.3); S.altFilter = new AltFilter(5, 3); S.last = null; S.points = []; trackPoints = []
+if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
     $('trip').textContent = '0.00'
     $('gain').textContent = '0'
     $('speed').textContent = '0.0'
@@ -695,27 +715,36 @@ function buildGpx() {
 function buildHtml(stats) {
   const { tripKm, totalKm, avgKmh, topKmh, gainM, points, duration } = stats
   const now = new Date().toLocaleString('pl-PL')
+  // Prepare hotline data for embedded map
+  const hotlineData = JSON.stringify(trackPoints || [])
+  const center = trackPoints && trackPoints.length > 0
+    ? [trackPoints[Math.floor(trackPoints.length/2)][0], trackPoints[Math.floor(trackPoints.length/2)][1]]
+    : [50.27, 18.88]
   return `<!doctype html>
 <html lang="pl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Podsumowanie trasy – ${now}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    body{font-family:system-ui,Arial,sans-serif;max-width:640px;margin:30px auto;padding:0 20px;color:#1a2030;background:#f4f7fb}
+    body{font-family:system-ui,Arial,sans-serif;max-width:680px;margin:24px auto;padding:0 16px;color:#1a2030;background:#f4f7fb}
     h1{color:#111a2e;border-bottom:3px solid #4ade80;padding-bottom:10px}
     .card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}
     .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf2f7}
     .row:last-child{border-bottom:0}
-    .k{color:#6d83a8;font-size:14px}
-    .v{font-weight:800;font-size:18px;color:#111a2e}
-    .tag{display:inline-block;background:#edfaf3;color:#16803c;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
+    .k{color:#6d83a8;font-size:14px}.v{font-weight:800;font-size:18px;color:#111a2e}
+    #summaryMap{height:340px;border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #d7e3f1}
+    .legend{display:flex;align-items:center;gap:8px;font-size:12px;color:#6d83a8;margin-top:8px}
+    .legend-bar{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}
     footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}
   </style>
 </head>
 <body>
   <h1>🚴 Podsumowanie trasy</h1>
-  <p>${now}</p>
+  <p style="color:#6d83a8">${now}</p>
+  <div id="summaryMap"></div>
+  <div class="legend"><span class="legend-bar"></span>0 km/h → 35+ km/h</div>
   <div class="card">
     <div class="row"><span class="k">Dystans (Trip)</span><span class="v">${tripKm} km</span></div>
     <div class="row"><span class="k">Dystans całkowity roweru</span><span class="v">${totalKm} km</span></div>
@@ -726,6 +755,22 @@ function buildHtml(stats) {
     <div class="row"><span class="k">Liczba punktów GPS</span><span class="v">${points}</span></div>
   </div>
   <footer>Wygenerowano przez Bike Dashboard</footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script src="https://unpkg.com/leaflet-hotline@0.4.0/dist/leaflet.hotline.js"><\/script>
+  <script>
+    const pts = ${hotlineData}
+    const m = L.map('summaryMap').setView([${center[0]},${center[1]}], 14)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(m)
+    if(pts.length >= 2){
+      const hl = L.hotline(pts, {min:0,max:35,palette:{'0.0':'#3b82f6','0.4':'#4ade80','0.7':'#fbbf24','1.0':'#f43f5e'},weight:5,outlineWidth:1,outlineColor:'rgba(0,0,0,.2)'}).addTo(m)
+      m.fitBounds(hl.getBounds(), {padding:[20,20]})
+      const first = pts[0]; const last = pts[pts.length-1]
+      L.marker([first[0],first[1]]).bindPopup('Start').addTo(m)
+      L.marker([last[0],last[1]]).bindPopup('Meta').addTo(m)
+    } else {
+      m.setView([${center[0]},${center[1]}],13)
+    }
+  <\/script>
 </body>
 </html>`
 }
