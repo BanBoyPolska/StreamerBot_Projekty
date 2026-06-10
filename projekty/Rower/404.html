@@ -1,4 +1,152 @@
 <!doctype html>
-<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bike Dashboard</title>
-<meta http-equiv="refresh" content="0; url=./index.html">
-<script>location.replace('./index.html')</script></head><body>Przekierowanie...</body></html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#07111f" />
+  <title>Bike Dashboard</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root{--bg:#07111f;--card:#111a2e;--card2:#16213a;--txt:#e8eefc;--muted:#6d83a8;--acc:#4ade80;--red:#fb7185;--warn:#fbbf24;--line:#1e3154;--safe-bottom:env(safe-area-inset-bottom,0px)}
+    body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+    header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .badge{font-size:11px;padding:4px 9px;border-radius:999px;font-weight:700}
+    .badge.idle{background:rgba(255,255,255,.07);color:var(--muted)}
+    .badge.recording{background:rgba(74,222,128,.12);color:var(--acc)}
+    .badge.paused{background:rgba(251,191,36,.12);color:var(--warn)}
+    .badge.stopped{background:rgba(251,113,133,.12);color:var(--red)}
+    .theme-toggle,.btn,.mbtn{cursor:pointer;touch-action:manipulation;border:0}
+    .theme-toggle{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);padding:10px 12px;border-radius:12px;font-weight:700;font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+    .card{background:linear-gradient(160deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:20px;padding:14px;min-height:90px}
+    .wide{grid-column:span 2}
+    .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .value{font-size:30px;font-weight:800;line-height:1}
+    .unit{font-size:11px;color:var(--muted);margin-top:5px}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 10px 10px}
+    .btn{border-radius:18px;padding:18px;font-size:18px;font-weight:800;color:#08111f}
+    #startBtn{background:linear-gradient(135deg,#4ade80,#22c55e)}
+    #stopBtn{background:linear-gradient(135deg,#fb7185,#f43f5e)}
+    #resetBtn{grid-column:span 2;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--txt);font-size:15px;padding:12px;border-radius:14px;font-weight:700}
+    .panel{margin:0 10px 10px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:20px;padding:14px}
+    .panel h3{margin:0 0 10px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .status{margin:0 10px 10px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;padding:10px 14px;color:var(--muted)}
+    .ride-item{display:flex;flex-direction:column;gap:6px;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);margin-bottom:9px}
+    .ride-name{font-size:15px;font-weight:700;word-break:break-word}.meta{font-size:12px;color:var(--muted)}
+    .ride-btns{display:flex;gap:7px;flex-wrap:wrap}
+    .ride-btns button{border-radius:10px;padding:7px 12px;font-weight:700;font-size:12px}
+    .ride-btns .btn-dl{background:rgba(255,255,255,.05);color:var(--txt);border:1px solid var(--line)}
+    .ride-btns .btn-ren{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+    .ride-btns .btn-del{background:rgba(251,113,133,.1);color:var(--red);border:1px solid rgba(251,113,133,.2)}
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:999;align-items:flex-end}
+    .modal-bg.open{display:flex}
+    .modal{background:#16213a;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:24px 20px calc(24px + var(--safe-bottom));width:100%;max-height:90dvh;overflow-y:auto}
+    .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}
+    .row:last-child{border-bottom:0}
+    .k{color:var(--muted)} .v{font-weight:800}
+    .modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+    .mbtn{border-radius:14px;padding:15px;font-size:14px;font-weight:800}
+    .mbtn.primary{background:linear-gradient(135deg,#4ade80,#22c55e);color:#08111f}
+    .mbtn.secondary{background:rgba(255,255,255,.07);color:var(--txt);border:1px solid var(--line)}
+    .mbtn.full{grid-column:span 2;background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.2)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1 style="margin:0;font-size:20px">Bike Dashboard</h1>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <button type="button" class="theme-toggle" id="themeBtn">☀ Jasny</button>
+      <span class="badge idle" id="badge">IDLE</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card"><div class="label">Prędkość</div><div class="value" id="speed">0.0</div><div class="unit">km/h</div></div>
+    <div class="card"><div class="label">Śr. w ruchu</div><div class="value" id="avgMoving">0.0</div><div class="unit">km/h</div></div>
+    <div class="card"><div class="label">Trip</div><div class="value" id="trip">0.00</div><div class="unit">km</div></div>
+    <div class="card"><div class="label">Dystans całk.</div><div class="value" id="total">0.00</div><div class="unit">km</div></div>
+    <div class="card"><div class="label">Wysokość</div><div class="value" id="alt">—</div><div class="unit">m n.p.m.</div></div>
+    <div class="card"><div class="label">Przewyższenie</div><div class="value" id="gain">0</div><div class="unit">m</div></div>
+    <div class="card wide"><div class="label">Czas w ruchu</div><div class="value" id="timer">00:00:00</div><div class="unit">hh:mm:ss</div></div>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn" id="startBtn">▶ Start</button>
+    <button type="button" class="btn" id="stopBtn">■ Stop</button>
+    <button type="button" class="btn" id="resetBtn">↺ Resetuj Trip</button>
+  </div>
+
+  <div class="panel">
+    <h3>Zapisane trasy</h3>
+    <div id="ridesList"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Profil wysokości</h3>
+    <canvas id="altChart" height="90"></canvas>
+  </div>
+
+  <div class="status" id="statusText">Kliknij Start, aby rozpocząć nagrywanie trasy.</div>
+  <div style="height:calc(var(--safe-bottom) + 6px)"></div>
+
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <h2 style="margin-top:0">Trasa zakończona</h2>
+      <p id="modalSub" style="color:var(--muted)">Podsumowanie wycieczki</p>
+      <div id="modalStats"></div>
+      <div class="modal-btns">
+        <button type="button" class="mbtn primary" id="btnGPX">📥 Pobierz GPX</button>
+        <button type="button" class="mbtn secondary" id="btnHTML">📄 Pobierz HTML</button>
+        <button type="button" class="mbtn full" id="btnClose">Zamknij bez zapisywania</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  ;(function(){
+    const $ = id => document.getElementById(id)
+    const fmt = (n,d=1)=>Number.isFinite(n)?n.toFixed(d):'—'
+    const km = m => m/1000
+    const esc = s => String(s).replace(/[<>&"]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m]))
+    const toHms = s => { s=Math.max(0,Math.floor(s)); return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(v=>String(v).padStart(2,'0')).join(':') }
+    const bind = (id, fn) => { const el=$(id); if(!el) return; el.onclick = fn; el.addEventListener('touchend', e => { e.preventDefault(); fn(e) }, {passive:false}) }
+    const setStatus = (m) => $('statusText').textContent = m
+    const setBadge = (s) => { const b=$('badge'); b.className='badge '+s; b.textContent = s==='recording'?'NAGRYWAM':s==='paused'?'PAUZA':s==='stopped'?'STOP':'IDLE' }
+    const setStartLabel = () => { const b=$('startBtn'); if(!S.running) b.textContent='▶ Start'; else if(S.paused) b.textContent='▶ Wznów'; else b.textContent='⏸ Pauza' }
+    const lerp = (a,b,t) => { const pa=a.replace('#',''), pb=b.replace('#',''); const c=i=>parseInt(pa.slice(i,i+2),16)+(parseInt(pb.slice(i,i+2),16)-parseInt(pa.slice(i,i+2),16))*t; return '#'+[0,2,4].map(i=>Math.round(c(i)).toString(16).padStart(2,'0')).join('') }
+    const speedColor = kmh => { const n=Math.min(Math.max(kmh||0,0),40)/40; return n<0.33 ? lerp('#3b82f6','#4ade80',n/0.33) : n<0.66 ? lerp('#4ade80','#fbbf24',(n-0.33)/0.33) : lerp('#fbbf24','#f43f5e',(n-0.66)/0.34) }
+    const dist = (a,b) => { const R=6371000, to=x=>x*Math.PI/180, dLat=to(b.lat-a.lat), dLon=to(b.lon-a.lon), x=Math.sin(dLat/2)**2+Math.cos(to(a.lat))*Math.cos(to(b.lat))*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(x)) }
+    class EMA{constructor(a=.3){this.a=a;this.v=null} push(x){ if(!Number.isFinite(x)) return this.v; this.v=this.v===null?x:this.a*x+(1-this.a)*this.v; return this.v }}
+    class AltFilter{constructor(win=5,minGain=3){this.buf=[];this.win=win;this.minGain=minGain} push(h){ if(!Number.isFinite(h)) return null; this.buf.push(h); if(this.buf.length>this.win) this.buf.shift(); return this.buf.reduce((a,b)=>a+b,0)/this.buf.length } gainFrom(prev,cur){ if(prev===null||cur===null) return 0; const d=cur-prev; return d>this.minGain?d:0 }}
+    const RIDES_KEY='bike_rides_v1'
+    const loadRides = () => { try{return JSON.parse(localStorage.getItem(RIDES_KEY)||'[]')}catch{return[]} }
+    const saveRides = r => localStorage.setItem(RIDES_KEY, JSON.stringify(r.slice(0,30)))
+    const download = (name, content, type) => { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000) }
+
+    const S = { running:false, paused:false, pauseAuto:false, watchId:null, timerId:null, startTime:0, points:[], trackPoints:[], trip:0, total:parseFloat(localStorage.getItem('bike_total_km')||'0'), gain:0, movingTime:0, movingDist:0, last:null, lastAlt:null, speedEma:new EMA(.3), altFilter:new AltFilter(5,3), altHistory:[], speedHistory:[] }
+    $('total').textContent = S.total.toFixed(2)
+
+    function renderRides(){ const el=$('ridesList'); const rides=loadRides(); if(!rides.length){ el.innerHTML='<div class="ride-item"><div class="ride-name">Brak zapisanych tras</div><div class="meta">Po zakończeniu jazdy można zapisać GPX i HTML.</div></div>'; return } el.innerHTML=rides.map((r,i)=>`<div class="ride-item"><div class="ride-name">${esc(r.name||r.date)}</div><div class="meta">Trip: ${r.tripKm} km · Gain: ${r.gainM} m · Czas: ${r.duration}</div><div class="ride-btns"><button type="button" class="btn-dl" data-act="download" data-idx="${i}">📥 Pobierz</button><button type="button" class="btn-ren" data-act="rename" data-idx="${i}">✏️ Zmień nazwę</button><button type="button" class="btn-del" data-act="delete" data-idx="${i}">🗑 Usuń</button></div></div>`).join(''); el.querySelectorAll('[data-act]').forEach(b => { b.onclick = rideAction; b.addEventListener('touchend', e => { e.preventDefault(); rideAction(e) }, {passive:false}) }) }
+    function rideAction(e){ const btn=e.currentTarget; const idx=parseInt(btn.dataset.idx,10); const act=btn.dataset.act; const rides=loadRides(); const r=rides[idx]; if(!r) return; if(act==='download'){ download(`${r.fileBase}.gpx`, r.gpx, 'application/gpx+xml'); setTimeout(()=>download(`${r.fileBase}.html`, r.html, 'text/html'),200) } else if(act==='rename'){ const v=prompt('Nowa nazwa trasy:', r.name||r.date); if(v===null||!v.trim()) return; rides[idx].name=v.trim(); saveRides(rides); renderRides() } else if(act==='delete'){ if(!confirm(`Usunąć trasę: ${r.name||r.date}?`)) return; rides.splice(idx,1); saveRides(rides); renderRides() } }
+
+    function drawAltChart(){ const c=$('altChart'); const ctx=c.getContext('2d'); const w=c.width=c.offsetWidth*devicePixelRatio, h=c.height=c.offsetHeight*devicePixelRatio; ctx.scale(devicePixelRatio,devicePixelRatio); ctx.clearRect(0,0,c.offsetWidth,c.offsetHeight); const data=S.altHistory; if(data.length<2){ ctx.fillStyle='#6d83a8'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText('Brak danych wysokości', c.offsetWidth/2, c.offsetHeight/2); return } const min=Math.min(...data), max=Math.max(...data), rng=max-min||1; const grad=ctx.createLinearGradient(0,0,0,c.offsetHeight); grad.addColorStop(0,'rgba(251,191,36,.35)'); grad.addColorStop(1,'rgba(251,191,36,.02)'); ctx.beginPath(); ctx.moveTo(0,c.offsetHeight); data.forEach((v,i)=>ctx.lineTo((i/(data.length-1))*c.offsetWidth, c.offsetHeight-((v-min)/rng)*(c.offsetHeight-10)-4)); ctx.lineTo(c.offsetWidth,c.offsetHeight); ctx.closePath(); ctx.fillStyle=grad; ctx.fill(); ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo((i/(data.length-1))*c.offsetWidth, c.offsetHeight-((v-min)/rng)*(c.offsetHeight-10)-4):ctx.lineTo((i/(data.length-1))*c.offsetWidth, c.offsetHeight-((v-min)/rng)*(c.offsetHeight-10)-4)); ctx.strokeStyle='#fbbf24'; ctx.lineWidth=2; ctx.stroke() }
+    function toGpx(){ return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Bike Dashboard" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Bike ride</name><trkseg>'+S.points.map(p=>`<trkpt lat="${p.lat}" lon="${p.lon}">${Number.isFinite(p.alt)?`<ele>${p.alt.toFixed(2)}</ele>`:''}<time>${new Date(p.t).toISOString()}</time></trkpt>`).join('')+'</trkseg></trk></gpx>' }
+    function getStats(){ const avg=S.movingTime>0 ? (S.movingDist/1000)/(S.movingTime/3600000) : 0; const top=S.points.reduce((m,p)=>Math.max(m,(p.speed||0)*3.6),0); return { tripKm:fmt(S.trip/1000,2), totalKm:fmt(S.total,2), avgKmh:fmt(avg,1), topKmh:fmt(top,1), gainM:Math.round(S.gain), points:S.points.length, duration:toHms(S.movingTime/1000), altHistory:S.altHistory.slice(), speedHistory:S.speedHistory.slice() } }
+    function buildHtml(st){ const now=new Date().toLocaleString('pl-PL'); const tp=JSON.stringify(S.trackPoints.slice()); const alt=JSON.stringify(st.altHistory||[]); const spd=JSON.stringify(st.speedHistory||[]); const la=JSON.stringify((st.altHistory||[]).map((_,i)=>i)); const ls=JSON.stringify((st.speedHistory||[]).map((_,i)=>i)); const center=S.trackPoints.length?[S.trackPoints[Math.floor(S.trackPoints.length/2)][0],S.trackPoints[Math.floor(S.trackPoints.length/2)][1]]:[50.27,18.88]; return '<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Podsumowanie trasy</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><style>body{font-family:system-ui,Arial,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;color:#1a2030;background:#f4f7fb}h1{color:#111a2e;border-bottom:3px solid #4ade80;padding-bottom:10px}h2{color:#111a2e;font-size:16px;margin:24px 0 10px}.card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf2f7}.row:last-child{border-bottom:0}.k{color:#6d83a8;font-size:14px}.v{font-weight:800;font-size:18px;color:#111a2e}#summaryMap{height:300px;width:100%;border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #d7e3f1;background:#e8f0fe}.legend{display:flex;align-items:center;gap:8px;font-size:12px;color:#6d83a8;margin-bottom:12px}.legend-bar{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}.chart-wrap{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.08);min-height:160px}canvas{display:block;width:100%!important}footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}</style></head><body><h1>🚴 Podsumowanie trasy</h1><p style="color:#6d83a8">'+now+'</p><h2>🗺 Mapa trasy</h2><div id="summaryMap"></div><div class="legend"><span class="legend-bar"></span>0 km/h → 35+ km/h (kolor = prędkość)</div><div class="card"><div class="row"><span class="k">Dystans (Trip)</span><span class="v">'+st.tripKm+' km</span></div><div class="row"><span class="k">Dystans całkowity roweru</span><span class="v">'+st.totalKm+' km</span></div><div class="row"><span class="k">Średnia prędkość (w ruchu)</span><span class="v">'+st.avgKmh+' km/h</span></div><div class="row"><span class="k">Prędkość max.</span><span class="v">'+st.topKmh+' km/h</span></div><div class="row"><span class="k">Przewyższenie</span><span class="v">'+st.gainM+' m</span></div><div class="row"><span class="k">Czas w ruchu</span><span class="v">'+st.duration+'</span></div><div class="row"><span class="k">Liczba punktów GPS</span><span class="v">'+st.points+'</span></div></div><h2>📈 Prędkość w trakcie jazdy</h2><div class="chart-wrap"><canvas id="chartSpeed" height="140"></canvas></div><h2>⛰ Profil przewyższeń</h2><div class="chart-wrap"><canvas id="chartAlt" height="140"></canvas></div><footer>Wygenerowano przez Bike Dashboard</footer><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script><script>var TP='+tp+';var ALT='+alt+';var SPD='+spd+';var LALT='+la+';var LSPD='+ls+';var CENTER=['+center[0]+','+center[1]+'];function lerpC(a,b,t){var pa=a.slice(1),pb=b.slice(1);function p(s,i){return parseInt(s.slice(i,i+2),16)}var r=Math.round(p(pa,0)+(p(pb,0)-p(pa,0))*t).toString(16).padStart(2,'0');var g=Math.round(p(pa,2)+(p(pb,2)-p(pa,2))*t).toString(16).padStart(2,'0');var bl=Math.round(p(pa,4)+(p(pb,4)-p(pa,4))*t).toString(16).padStart(2,'0');return '#'+r+g+bl}function spdColor(v){var n=Math.min(Math.max(v,0),40)/40;if(n<0.33)return lerpC('#3b82f6','#4ade80',n/0.33);if(n<0.66)return lerpC('#4ade80','#fbbf24',(n-0.33)/0.33);return lerpC('#fbbf24','#f43f5e',(n-0.66)/0.34)}window.onload=function(){var m=L.map('summaryMap').setView(CENTER,14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(m);setTimeout(function(){m.invalidateSize()},250);if(TP.length>=2){var bounds=[];for(var i=1;i<TP.length;i++){L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:spdColor(TP[i][2]),weight:5,opacity:.9,lineCap:'round'}).addTo(m);bounds.push([TP[i][0],TP[i][1]])}m.fitBounds(L.latLngBounds(bounds),{padding:[20,20]});L.marker([TP[0][0],TP[0][1]]).bindPopup('🟢 Start').addTo(m);L.marker([TP[TP.length-1][0],TP[TP.length-1][1]]).bindPopup('🏁 Meta').addTo(m);}function mkGrad(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}if(SPD.length>1){var cs=document.getElementById('chartSpeed').getContext('2d');new Chart(cs,{type:'line',data:{labels:LSPD,datasets:[{data:SPD,borderColor:'#4ade80',backgroundColor:mkGrad(cs,'rgba(74,222,128,.35)','rgba(74,222,128,.02)'),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+' km/h'}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+' km/h'},font:{size:11}},grid:{color:'rgba(0,0,0,.06)'}}}})} else {document.getElementById('chartSpeed').parentNode.innerHTML='<p style="color:#999;text-align:center;padding:20px">Brak danych prędkości</p>'}if(ALT.length>1){var ca=document.getElementById('chartAlt').getContext('2d');new Chart(ca,{type:'line',data:{labels:LALT,datasets:[{data:ALT,borderColor:'#fbbf24',backgroundColor:mkGrad(ca,'rgba(251,191,36,.35)','rgba(251,191,36,.02)'),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+' m n.p.m.'}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+' m'},font:{size:11}},grid:{color:'rgba(0,0,0,.06)'}}}})} else {document.getElementById('chartAlt').parentNode.innerHTML='<p style="color:#999;text-align:center;padding:20px">Brak danych wysokości</p>'}}</script></body></html>' }
+    function saveRideToStorage(st){ const ride={name:'Trasa '+new Date().toLocaleDateString('pl-PL'),date:new Date().toLocaleString('pl-PL'),tripKm:st.tripKm,gainM:st.gainM,duration:st.duration,fileBase:'trasa-'+Date.now(),gpx:toGpx(),html:buildHtml(st)}; const rides=loadRides(); rides.unshift(ride); saveRides(rides); renderRides(); return ride }
+
+    function pauseRecording(auto=false){ S.paused=true; S.pauseAuto=auto; setBadge('paused'); setStartLabel(); setStatus(auto?'⏸ (auto)Pauza – brak ruchu...':'⏸ Pauza') }
+    function resumeRecording(){ S.paused=false; S.pauseAuto=false; setBadge('recording'); setStartLabel(); setStatus('Nagrywanie wznowione.') }
+    function toggleStartPause(){ if(!S.running){ start(); return } if(S.paused){ resumeRecording(); } else { pauseRecording(false); } }
+
+    function start(){ if(S.running && S.paused){ resumeRecording(); return } if(S.running) return; if(!navigator.geolocation){ setStatus('Geolokalizacja niedostępna.'); return } S.running=true; S.paused=false; S.pauseAuto=false; S.points=[]; S.trackPoints=[]; S.trip=0; S.gain=0; S.last=null; S.lastAlt=null; S.movingTime=0; S.movingDist=0; S.altHistory=[]; S.speedHistory=[]; S.speedEma=new EMA(.3); S.altFilter=new AltFilter(5,3); $('trip').textContent='0.00'; $('gain').textContent='0'; $('speed').textContent='0.0'; $('avgMoving').textContent='0.0'; $('timer').textContent='00:00:00'; setBadge('recording'); setStartLabel(); setStatus('Wyszukuję sygnał GPS...'); S.startTime=Date.now(); clearInterval(S.timerId); S.timerId=setInterval(()=>{$('timer').textContent=toHms((Date.now()-S.startTime)/1000)},1000); S.watchId=navigator.geolocation.watchPosition(onPos, e=>setStatus('Błąd GPS: '+e.message), {enableHighAccuracy:true,maximumAge:2000,timeout:20000}) }
+    function stop(){ if(!S.running) return; navigator.geolocation.clearWatch(S.watchId); clearInterval(S.timerId); S.running=false; S.paused=false; S.pauseAuto=false; setBadge('stopped'); setStartLabel(); setStatus('Nagrywanie zakończone.'); const st=getStats(); const ride=saveRideToStorage(st); $('btnGPX').onclick=()=>download(ride.fileBase+'.gpx', ride.gpx, 'application/gpx+xml'); $('btnHTML').onclick=()=>download(ride.fileBase+'.html', ride.html, 'text/html'); $('btnClose').onclick=()=>$('modalBg').classList.remove('open'); $('modalSub').textContent=ride.date+' · Trasa '+st.tripKm+' km'; $('modalStats').innerHTML=['Dystans (Trip)','Śr. prędkość (ruch)','Prędkość max.','Przewyższenie','Czas w ruchu','Punkty GPS'].map((k,i)=>'<div class="row"><span class="k">'+k+'</span><span class="v">'+[st.tripKm+' km',st.avgKmh+' km/h',st.topKmh+' km/h',st.gainM+' m',st.duration,st.points][i]+'</span></div>').join(''); $('modalBg').classList.add('open') }
+    function resetTrip(){ if(S.running && !confirm('Zresetować trip w trakcie jazdy?')) return; S.trip=0; S.gain=0; S.movingTime=0; S.movingDist=0; S.altHistory=[]; S.speedHistory=[]; S.trackPoints=[]; S.last=null; S.lastAlt=null; $('trip').textContent='0.00'; $('gain').textContent='0'; $('speed').textContent='0.0'; $('avgMoving').textContent='0.0'; $('timer').textContent='00:00:00'; drawAltChart(); setStatus('Trip zresetowany.') }
+    function onPos(p){ if(!S.running || S.paused) return; const cur={lat:p.coords.latitude, lon:p.coords.longitude, alt:p.coords.altitude, speed:p.coords.speed, accuracy:p.coords.accuracy, t:p.timestamp}; if(!S.last){ if(cur.accuracy>50){ setStatus('Czekam na dokładny sygnał GPS...'); return } S.last=cur; S.lastAlt=S.altFilter.push(cur.alt); setStatus('GPS zablokowany. Nagrywanie trasy...'); return } const d=dist(S.last,cur); const dt=cur.t-S.last.t; const speedMs=dt>0?d/(dt/1000):0; const speedKmh=S.speedEma.push(speedMs*3.6)||0; if(speedKmh<=2){ pauseRecording(true); S.last=cur; return } S.trip+=d; S.total+=d/1000; S.movingTime+=dt; S.movingDist+=d; const smoothAlt=S.altFilter.push(cur.alt); const gainDelta=S.altFilter.gainFrom(S.lastAlt,smoothAlt); S.gain+=gainDelta; S.lastAlt=smoothAlt; if(smoothAlt!==null){ S.altHistory.push(Math.round(smoothAlt)); if(S.altHistory.length>300) S.altHistory.shift(); S.speedHistory.push(Math.round(speedKmh*10)/10); if(S.speedHistory.length>300) S.speedHistory.shift() } S.points.push(cur); S.last=cur; S.trackPoints.push([cur.lat,cur.lon,Math.min(speedKmh,40)]); $('speed').textContent=fmt(speedKmh,1); $('avgMoving').textContent=fmt((S.movingDist/1000)/(S.movingTime/3600000),1); $('trip').textContent=fmt(km(S.trip),2); $('total').textContent=fmt(S.total,2); $('gain').textContent=Math.round(S.gain); $('alt').textContent=smoothAlt!==null?Math.round(smoothAlt):'—'; drawAltChart(); setStatus('Nagrywanie... '+new Date(cur.t).toLocaleTimeString('pl-PL')) }
+    function applyTheme(theme){ document.body.style.background = theme==='light' ? '#eef3f9' : '#07111f'; document.body.style.color = theme==='light' ? '#122033' : '#e8eefc'; localStorage.setItem('bike_theme', theme); $('themeBtn').textContent = theme==='light' ? '🌙 Ciemny' : '☀ Jasny' }
+    function init(){ applyTheme(localStorage.getItem('bike_theme')||'dark'); renderRides(); setStartLabel(); bind('themeBtn', ()=>applyTheme(localStorage.getItem('bike_theme')==='light'?'dark':'light')); bind('startBtn', toggleStartPause); bind('stopBtn', stop); bind('resetBtn', resetTrip); if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{}); drawAltChart() }
+    document.addEventListener('DOMContentLoaded', init)
+  })();
+  </script>
+</body>
+</html>
