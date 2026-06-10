@@ -180,7 +180,7 @@
     +'var m=L.map("smap").setView([CX,CY],14);'
     +'L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(m);'
     +'setTimeout(function(){m.invalidateSize()},300);'
-    +'if(TP.length>=2){var b=[];for(var i=1;i<TP.length;i++){L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:sc(TP[i][2]),weight:5,opacity:.9,lineCap:"round"}).addTo(m);b.push([TP[i][0],TP[i][1]])}m.fitBounds(L.latLngBounds(b),{padding:[20,20]});L.marker([TP[0][0],TP[0][1]]).bindPopup("🟢 Start").addTo(m);L.marker([TP[TP.length-1][0],TP[TP.length-1][1]]).bindPopup("🏁 Meta").addTo(m);}'
+    +'if(TP.length>=1){'+'  L.marker([TP[0][0],TP[0][1]]).bindPopup("🟢 Start").addTo(m);'+'  m.setView([TP[0][0],TP[0][1]],15);'+'  if(TP.length>=2){'+'    var b=[],i;'+'    for(i=1;i<TP.length;i++){L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:sc(TP[i][2]),weight:5,opacity:.9,lineCap:"round"}).addTo(m);b.push([TP[i][0],TP[i][1]]);}'+'    b.push([TP[0][0],TP[0][1]]);'+'    try{m.fitBounds(L.latLngBounds(b),{padding:[30,30]})}catch(e){}'+'    L.marker([TP[TP.length-1][0],TP[TP.length-1][1]]).bindPopup("🏁 Meta").addTo(m);'+'  }'+'}'
     +'function mg(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,130);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}'
     +'if(SPD.length>1){var cs=document.getElementById("cs").getContext("2d");new Chart(cs,{type:"line",data:{labels:LS,datasets:[{data:SPD,borderColor:"#4ade80",backgroundColor:mg(cs,"rgba(74,222,128,.3)","rgba(74,222,128,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" km/h"},font:{size:10}}}}}})}'
     +'if(ALT.length>1){var ca=document.getElementById("ca").getContext("2d");new Chart(ca,{type:"line",data:{labels:LA,datasets:[{data:ALT,borderColor:"#fbbf24",backgroundColor:mg(ca,"rgba(251,191,36,.3)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:10}}}}}})}'
@@ -242,7 +242,7 @@
     g('vAlt').textContent=isFinite(cur.alt)?Math.round(cur.alt):'—'
     if(!S.last){
       if(cur.acc>50){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
-      S.last=cur;S.lastWall=wallNow;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur)
+      S.last=cur;S.lastWall=wallNow;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur);S.tp.push([cur.lat,cur.lon,0])
       status('✅ GPS znaleziony (acc: '+Math.round(cur.acc)+' m). Nagrywam trasę...')
       return
     }
@@ -297,7 +297,7 @@
     if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift()}
     S.spdH.push(Math.round(displayKmh*10)/10);if(S.spdH.length>300)S.spdH.shift()
     S.pts.push(cur); S.last=cur; S.lastWall=wallNow
-    if(displayKmh >= S.autoPauseKmh) S.tp.push([cur.lat,cur.lon,Math.min(displayKmh,40)])
+    S.tp.push([cur.lat,cur.lon,Math.min(displayKmh,40)])
 
     var avg = S.movD>0 && S.movT>0 ? fmt((S.movD/1000)/(S.movT/3600000),1) : '0.0'
     g('vSpeed').textContent=fmt(displayKmh,1)
