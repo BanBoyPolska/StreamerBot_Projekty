@@ -119,7 +119,7 @@
   var S = {
     running:false, paused:false, watchId:null, timerId:null, startTime:0,
     pts:[], tp:[], trip:0, total:parseFloat(localStorage.getItem('bk_total')||'0'),
-    gain:0, movT:0, movD:0, recT:0, lastTick:0, last:null, lastAlt:null,
+    gain:0, movT:0, movD:0, recStart:0, pausedAccum:0, pauseStarted:0, last:null, lastAlt:null,
     spdEma:new EMA(.3), altBuf:new AltBuf(),
     altH:[], spdH:[], lowCount:0, autoPauseKmh:1.5, autoPauseMinPts:6, autoPauseNeed:4
   }
@@ -238,9 +238,7 @@
   var onPos=function(p){
     if(!S.running) return
     var cur={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,spd:p.coords.speed,acc:p.coords.accuracy,t:p.timestamp}
-    // Zawsze aktualizuj wysokość i pokaż dokładność
     g('vAlt').textContent=isFinite(cur.alt)?Math.round(cur.alt):'—'
-    // Pierwszy punkt — ustaw referencję, nie licz dystansu
     if(!S.last){
       if(cur.acc>60){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
       S.last=cur;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur)
@@ -248,51 +246,64 @@
       return
     }
     var d=dist(S.last,cur),dt=cur.t-S.last.t
-    if(dt<500) return  // ignoruj zbyt częste punkty
+    if(dt<500) return
     var sms=dt>0?d/(dt/1000):0
-    var kmh=S.spdEma.push(sms*3.6)||0; var autoPauseKmh=1.5
-    var moving=kmh>2
-    // Auto-pauza — tylko po 5+ punktach i nie blokuje GPS
-    if(kmh<1.5 && S.pts.length>8){
-      if(!S.paused){
-        S.paused=true
-        setBadge('pause','(auto)PAUZA');setBtn()
-        status('⏸ (auto)Pauza — brak ruchu...')
-      }
-      S.last=cur
+    var gpsSpeed = isFinite(cur.spd) ? cur.spd*3.6 : null
+    var kmh = S.spdEma.push(sms*3.6) || 0
+    var signal = gpsSpeed!==null ? Math.max(gpsSpeed, kmh) : kmh
+    var moving = signal >= S.autoPauseKmh
+    if(!moving){ S.lowCount = (S.lowCount||0) + 1 } else { S.lowCount = 0 }
+    if(S.pts.length >= S.autoPauseMinPts && S.lowCount >= S.autoPauseNeed){
+      if(!S.paused){ S.paused=true; S.pauseStarted=Date.now(); setBadge('pause','(auto)PAUZA'); setBtn(); status('⏸ (auto)Pauza — brak ruchu ('+S.lowCount+'/'+S.autoPauseNeed+').') }
+      S.last = cur
       g('vSpeed').textContent='0.0'
       return
     }
-    // Auto-wznów gdy ruszamy
-    if(kmh>=1.5 && S.paused){
+    if(S.paused && moving){
+      if(S.pauseStarted){S.pausedAccum += Date.now()-S.pauseStarted; S.pauseStarted=0}
       S.paused=false
-      setBadge('rec','NAGRYWAM');setBtn()
+      setBadge('rec','NAGRYWAM')
+      setBtn()
       status('▶ Wznowiono automatycznie.')
     }
     if(S.paused) return
-    S.trip+=d;S.total+=d/1000;S.movT+=dt;S.movD+=d
-    var sa=S.altBuf.push(cur.alt);S.gain+=S.altBuf.gain(S.lastAlt,sa);S.lastAlt=sa
+    S.trip += d
+    S.total += d/1000
+    S.movT += dt
+    S.movD += d
+    var sa=S.altBuf.push(cur.alt)
+    S.gain += S.altBuf.gain(S.lastAlt,sa)
+    S.lastAlt=sa
     if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift();S.spdH.push(Math.round(kmh*10)/10);if(S.spdH.length>300)S.spdH.shift()}
-    S.pts.push(cur);S.last=cur;S.tp.push([cur.lat,cur.lon,Math.min(kmh,40)])
-    g('vSpeed').textContent=fmt(kmh,1);g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1);g('vTrip').textContent=fmt(S.trip/1000,2);g('vTotal').textContent=fmt(S.total,2);g('vGain').textContent=Math.round(S.gain)
-    drawChart();status('Nagrywam... acc:'+Math.round(cur.acc)+'m | pkt:'+S.pts.length+' | '+new Date(cur.t).toLocaleTimeString('pl-PL'))
+    S.pts.push(cur)
+    S.last=cur
+    S.tp.push([cur.lat,cur.lon,Math.min(kmh,40)])
+    g('vSpeed').textContent=fmt(kmh,1)
+    g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1)
+    g('vTrip').textContent=fmt(S.trip/1000,2)
+    g('vTotal').textContent=fmt(S.total,2)
+    g('vGain').textContent=Math.round(S.gain)
+    g('vMoveTimer').textContent=toHms(S.movT/1000)
+    g('vRecTimer').textContent=toHms((Date.now()-S.recStart-S.pausedAccum)/1000)
+    drawChart()
+    status('Nagrywam... acc:'+Math.round(cur.acc)+'m | pkt:'+S.pts.length+' | low:'+S.lowCount+' | '+new Date(cur.t).toLocaleTimeString('pl-PL'))
   }
 
   // ── buttons ──
   var start=function(){
     if(!navigator.geolocation){status('Geolokalizacja niedostępna.');return}
-    if(S.running&&S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();S.lastTick=Date.now();keepScreenAwake(true);status('Wznowiono nagrywanie.');return}
+    if(S.running&&S.paused){if(S.pauseStarted){S.pausedAccum += Date.now()-S.pauseStarted; S.pauseStarted=0} S.paused=false;setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wznowiono nagrywanie.');return}
     if(S.running) return
     S.running=true;S.paused=false;S.pts=[];S.tp=[];S.trip=0;S.gain=0;S.last=null;S.lastAlt=null;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.spdEma=new EMA(.3);S.altBuf=new AltBuf()
     g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wyszukuję sygnał GPS...')
-    S.startTime=Date.now();S.lastTick=S.startTime;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();g('vRecTimer').textContent=toHms((now-S.startTime)/1000);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
+    S.startTime=Date.now();S.recStart=S.startTime;S.pausedAccum=0;S.pauseStarted=0;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();var recElapsed=(now-S.recStart-S.pausedAccum)/1000;g('vRecTimer').textContent=toHms(recElapsed);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
     S.watchId=navigator.geolocation.watchPosition(onPos,function(e){status('Błąd GPS: '+e.message)},{enableHighAccuracy:true,maximumAge:2000,timeout:20000})
   }
   var stop=function(){
     if(!S.running) return
     navigator.geolocation.clearWatch(S.watchId);clearInterval(S.timerId)
-    S.running=false;S.paused=false;setBadge('stop','STOP');setBtn();keepScreenAwake(false);status('Nagrywanie zakończone.')
+    S.running=false;S.paused=false;S.pauseStarted=0;setBadge('stop','STOP');setBtn();keepScreenAwake(false);status('Nagrywanie zakończone.')
     var st=getStats(), ride=saveRide(st)
     g('mSub').textContent=ride.date+' · Trip: '+st.tripKm+' km'
     g('mStats').innerHTML=['Dystans','Śr. prędkość','Prędkość max.','Przewyższenie','Czas','Punkty GPS'].map(function(k,i){return'<div class="stat"><span class="k">'+k+'</span><span class="v">'+[st.tripKm+' km',st.avgKmh+' km/h',st.topKmh+' km/h',st.gainM+' m',st.dur,st.pts][i]+'</span></div>'}).join('')
@@ -303,14 +314,14 @@
   }
   var reset=function(){
     if(S.running&&!confirm('Zresetować trip w trakcie jazdy?')) return
-    S.trip=0;S.gain=0;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.tp=[];S.last=null;S.lastAlt=null
+    S.trip=0;S.gain=0;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.tp=[];S.last=null;S.lastAlt=null;S.lowCount=0;S.pausedAccum=0;S.pauseStarted=0
     g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     drawChart();status('Trip zresetowany.')
   }
   var toggleStart=function(){
     if(!S.running){start();return}
-    if(S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();S.lastTick=Date.now();keepScreenAwake(true);status('Wznowiono nagrywanie.')}
-    else{S.paused=true;setBadge('pause','PAUZA');setBtn();keepScreenAwake(false);status('⏸ Pauza.')}
+    if(S.paused){if(S.pauseStarted){S.pausedAccum += Date.now()-S.pauseStarted; S.pauseStarted=0} S.paused=false;setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wznowiono nagrywanie.')}
+    else{S.paused=true;S.pauseStarted=Date.now();setBadge('pause','PAUZA');setBtn();keepScreenAwake(false);status('⏸ Pauza.')}
   }
 
   // ── bind ──
