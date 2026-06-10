@@ -66,7 +66,7 @@
 
     /* ── MAP ── */
     .map-wrap{margin:0 10px 10px;border-radius:20px;overflow:hidden;border:1px solid var(--line);position:relative}
-    #map{height:240px;width:100%}
+    #map{height:240px;width:100%;min-height:240px}
     .map-overlay{position:absolute;bottom:8px;left:8px;z-index:999;display:flex;gap:6px}
     .map-pill{background:var(--map-pill-bg);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11px;color:var(--muted)}
     .map-pill span{color:var(--txt);font-weight:700}
@@ -643,7 +643,7 @@ function setStartLabel(running, paused) {
   const b = document.getElementById('startBtn')
   if (!b) return
   if (!running) b.textContent = '▶ Start'
-  else if (paused) b.textContent = '⏸ Pauza'
+  else if (paused) b.textContent = '▶ Wznów'
   else b.textContent = '⏸ Pauza'
 }
 
@@ -674,7 +674,7 @@ function pauseRecording(auto=false) {
   setStartLabel(true, true)
   const badge = document.getElementById('badge')
   if (badge) {
-    badge.className = auto ? 'badge paused' : 'badge paused'
+    badge.className = 'badge paused'
     badge.textContent = auto ? '(auto)PAUZA' : 'PAUZA'
   }
   setStatus(auto ? '⏸ (auto)Pauza – brak ruchu...' : '⏸ Pauza', true)
