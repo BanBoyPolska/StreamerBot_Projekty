@@ -354,6 +354,8 @@ function isValidPoint(prev, cur) {
 const S = {
   watchId: null,
   running: false,
+  paused: false,
+  pauseAuto: false,
   points: [],
   trip: 0,
   total: parseFloat(localStorage.getItem('bike_total_km') || '0'),
@@ -465,17 +467,15 @@ if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
   // Moving threshold: > 2 km/h
   const isMoving = speedKmh > 2.0
   if (isMoving) {
+    if (S.paused && S.pauseAuto) resumeRecording()
     S.trip += d
     S.total += d / 1000
     S.movingTime += dt
     S.movingDist += d
   } else {
-    // paused - update last position but don't count distance
+    if (!S.paused) pauseRecording(true)
     S.last = cur
-    const avgMovingPause = S.movingTime > 0 ? (S.movingDist/1000)/(S.movingTime/3600000) : 0
     $('speed').textContent = '0.0'
-    setStatus('⏸ Pauza – brak ruchu...', true)
-    $('badge').textContent = 'PAUZA'
     return
   }
 
@@ -638,6 +638,57 @@ function lerpColor(a, b, t) {
   return '#'+r+g+bl
 }
 
+
+function setStartLabel(running, paused) {
+  const b = document.getElementById('startBtn')
+  if (!b) return
+  if (!running) b.textContent = '▶ Start'
+  else if (paused) b.textContent = '⏸ Pauza'
+  else b.textContent = '⏸ Pauza'
+}
+
+function setAutoPauseLabel(on) {
+  const b = document.getElementById('badge')
+  if (!b) return
+  if (on) {
+    b.className = 'badge paused'
+    b.textContent = '(auto)PAUZA'
+  }
+}
+
+function toggleStartPause() {
+  if (!S.running) {
+    start()
+    return
+  }
+  if (S.paused) {
+    resumeRecording()
+  } else {
+    pauseRecording(false)
+  }
+}
+
+function pauseRecording(auto=false) {
+  S.paused = true
+  S.pauseAuto = auto
+  setStartLabel(true, true)
+  const badge = document.getElementById('badge')
+  if (badge) {
+    badge.className = auto ? 'badge paused' : 'badge paused'
+    badge.textContent = auto ? '(auto)PAUZA' : 'PAUZA'
+  }
+  setStatus(auto ? '⏸ (auto)Pauza – brak ruchu...' : '⏸ Pauza', true)
+}
+
+function resumeRecording() {
+  S.paused = false
+  S.pauseAuto = false
+  setStartLabel(true, false)
+  const badge = document.getElementById('badge')
+  if (badge) { badge.className = 'badge recording'; badge.textContent = 'NAGRYWAM' }
+  setStatus('Nagrywanie wznowione.', true)
+}
+
 function setStatus(msg, active = true) {
   $('statusText').textContent = msg
   $('statusDot').className = 'status-dot' + (active ? ' on' : '')
@@ -655,6 +706,8 @@ function start() {
   if (S.running) return
   if (!navigator.geolocation) { setStatus('Geolokalizacja niedostępna.', false); return }
   S.running = true
+  S.paused = false
+  S.pauseAuto = false
   S.points = []
   S.trip = 0
   S.gain = 0
@@ -669,6 +722,7 @@ function start() {
   trackPoints = []
 if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
   setBadge('recording')
+  setStartLabel(true, false)
   setStatus('Wyszukuję sygnał GPS...')
   S.watchId = navigator.geolocation.watchPosition(
     onPos,
@@ -686,6 +740,7 @@ function stop() {
   S.running = false
   stopTimer()
   setBadge('stopped')
+  setStartLabel(false, false)
   setStatus('Nagrywanie zakończone.', false)
   const stats = getStats()
   const ride = {
@@ -921,7 +976,7 @@ const boot = () => {
   }
   bind('themeBtn', toggleTheme)
   bind('installBtn', installApp)
-  bind('startBtn', start)
+  bind('startBtn', toggleStartPause)
   bind('stopBtn', stop)
   bind('resetBtn', resetTrip)
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {})
