@@ -212,18 +212,46 @@
 
   // ── GPS ──
   var onPos=function(p){
-    if(!S.running||S.paused) return
+    if(!S.running) return
     var cur={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,spd:p.coords.speed,acc:p.coords.accuracy,t:p.timestamp}
-    if(!S.last){if(cur.acc>50){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}S.last=cur;S.lastAlt=S.altBuf.push(cur.alt);status('GPS OK. Nagrywam trasę...');return}
-    var d=dist(S.last,cur),dt=cur.t-S.last.t,sms=dt>0?d/(dt/1000):0
+    // Zawsze aktualizuj wysokość i pokaż dokładność
+    g('vAlt').textContent=isFinite(cur.alt)?Math.round(cur.alt):'—'
+    // Pierwszy punkt — ustaw referencję, nie licz dystansu
+    if(!S.last){
+      if(cur.acc>60){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
+      S.last=cur;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur)
+      status('✅ GPS znaleziony (acc: '+Math.round(cur.acc)+' m). Nagrywam trasę...')
+      return
+    }
+    var d=dist(S.last,cur),dt=cur.t-S.last.t
+    if(dt<500) return  // ignoruj zbyt częste punkty
+    var sms=dt>0?d/(dt/1000):0
     var kmh=S.spdEma.push(sms*3.6)||0
-    if(kmh<=2){S.paused=true;S.last=cur;setBadge('pause','(auto)PAUZA');setBtn();status('⏸ (auto)Pauza — brak ruchu...');return}
+    var moving=kmh>2
+    // Auto-pauza — tylko po 5+ punktach i nie blokuje GPS
+    if(!moving && S.pts.length>5){
+      if(!S.paused){
+        S.paused=true
+        setBadge('pause','(auto)PAUZA');setBtn()
+        status('⏸ (auto)Pauza — brak ruchu...')
+      }
+      S.last=cur
+      g('vSpeed').textContent='0.0'
+      return
+    }
+    // Auto-wznów gdy ruszamy
+    if(moving && S.paused){
+      S.paused=false
+      setBadge('rec','NAGRYWAM');setBtn()
+      status('▶ Wznowiono automatycznie.')
+    }
+    if(S.paused) return
     S.trip+=d;S.total+=d/1000;S.movT+=dt;S.movD+=d
     var sa=S.altBuf.push(cur.alt);S.gain+=S.altBuf.gain(S.lastAlt,sa);S.lastAlt=sa
     if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift();S.spdH.push(Math.round(kmh*10)/10);if(S.spdH.length>300)S.spdH.shift()}
     S.pts.push(cur);S.last=cur;S.tp.push([cur.lat,cur.lon,Math.min(kmh,40)])
-    g('vSpeed').textContent=fmt(kmh,1);g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1);g('vTrip').textContent=fmt(S.trip/1000,2);g('vTotal').textContent=fmt(S.total,2);g('vGain').textContent=Math.round(S.gain);g('vAlt').textContent=isFinite(sa)?Math.round(sa):'—'
-    drawChart();status('Nagrywam... '+new Date(cur.t).toLocaleTimeString('pl-PL'))
+    g('vSpeed').textContent=fmt(kmh,1);g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1);g('vTrip').textContent=fmt(S.trip/1000,2);g('vTotal').textContent=fmt(S.total,2);g('vGain').textContent=Math.round(S.gain)
+    drawChart();status('Nagrywam... acc:'+Math.round(cur.acc)+'m | '+new Date(cur.t).toLocaleTimeString('pl-PL'))
   }
 
   // ── buttons ──
