@@ -352,7 +352,8 @@ const S = {
   speedEma: new EMA(0.3),
   altFilter: new AltFilter(5, 3),
   timerInterval: null,
-  altHistory: []
+  altHistory: [],
+  speedHistory: []
 }
 
 /* ───────────────────────────────────────────────
@@ -464,6 +465,8 @@ if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
   if (smoothAlt !== null) {
     S.altHistory.push(Math.round(smoothAlt))
     if (S.altHistory.length > 300) S.altHistory.shift()
+    S.speedHistory.push(Math.round(speedKmh * 10) / 10)
+    if (S.speedHistory.length > 300) S.speedHistory.shift()
   }
 
   S.points.push(cur)
@@ -614,6 +617,7 @@ function start() {
   S.movingTime = 0
   S.movingDist = 0
   S.altHistory = []
+  S.speedHistory = []
   S.speedEma = new EMA(0.3)
   S.altFilter = new AltFilter(5, 3)
   trackPoints = []
@@ -669,6 +673,7 @@ function resetTrip() {
     S.movingTime = 0
     S.movingDist = 0
     S.altHistory = []
+    S.speedHistory = []
     S.speedEma = new EMA(0.3)
     S.altFilter = new AltFilter(5, 3)
     S.last = null
@@ -678,6 +683,7 @@ if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
     setStatus('Trip zresetowany. Kontynuuj jazdę...')
   } else {
     S.trip = 0; S.gain = 0; S.movingTime = 0; S.movingDist = 0; S.altHistory = []
+    S.speedHistory = []
     S.speedEma = new EMA(0.3); S.altFilter = new AltFilter(5, 3); S.last = null; S.points = []; trackPoints = []
 if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
     $('trip').textContent = '0.00'
@@ -713,13 +719,15 @@ function buildGpx() {
    HTML SUMMARY GENERATOR
 ─────────────────────────────────────────────── */
 function buildHtml(stats) {
-  const { tripKm, totalKm, avgKmh, topKmh, gainM, points, duration } = stats
+  const { tripKm, totalKm, avgKmh, topKmh, gainM, points, duration, altHistory, speedHistory } = stats
   const now = new Date().toLocaleString('pl-PL')
-  // Prepare hotline data for embedded map
   const hotlineData = JSON.stringify(trackPoints || [])
   const center = trackPoints && trackPoints.length > 0
     ? [trackPoints[Math.floor(trackPoints.length/2)][0], trackPoints[Math.floor(trackPoints.length/2)][1]]
     : [50.27, 18.88]
+  const altData = JSON.stringify(altHistory || [])
+  const spdData = JSON.stringify(speedHistory || [])
+  const labels = JSON.stringify((altHistory||[]).map((_,i)=>i+1))
   return `<!doctype html>
 <html lang="pl">
 <head>
@@ -728,23 +736,28 @@ function buildHtml(stats) {
   <title>Podsumowanie trasy – ${now}</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    body{font-family:system-ui,Arial,sans-serif;max-width:680px;margin:24px auto;padding:0 16px;color:#1a2030;background:#f4f7fb}
+    body{font-family:system-ui,Arial,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;color:#1a2030;background:#f4f7fb}
     h1{color:#111a2e;border-bottom:3px solid #4ade80;padding-bottom:10px}
+    h2{color:#111a2e;font-size:16px;margin:24px 0 10px}
     .card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}
     .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf2f7}
     .row:last-child{border-bottom:0}
     .k{color:#6d83a8;font-size:14px}.v{font-weight:800;font-size:18px;color:#111a2e}
-    #summaryMap{height:340px;border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #d7e3f1}
-    .legend{display:flex;align-items:center;gap:8px;font-size:12px;color:#6d83a8;margin-top:8px}
+    #summaryMap{height:320px;border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #d7e3f1}
+    .legend{display:flex;align-items:center;gap:8px;font-size:12px;color:#6d83a8;margin-bottom:12px}
     .legend-bar{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}
+    .chart-wrap{background:#fff;border-radius:16px;padding:16px 16px 12px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}
     footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}
   </style>
 </head>
 <body>
   <h1>🚴 Podsumowanie trasy</h1>
   <p style="color:#6d83a8">${now}</p>
+
+  <h2>🗺 Mapa trasy</h2>
   <div id="summaryMap"></div>
-  <div class="legend"><span class="legend-bar"></span>0 km/h → 35+ km/h</div>
+  <div class="legend"><span class="legend-bar"></span>0 km/h → 35+ km/h (kolor = prędkość)</div>
+
   <div class="card">
     <div class="row"><span class="k">Dystans (Trip)</span><span class="v">${tripKm} km</span></div>
     <div class="row"><span class="k">Dystans całkowity roweru</span><span class="v">${totalKm} km</span></div>
@@ -754,22 +767,83 @@ function buildHtml(stats) {
     <div class="row"><span class="k">Czas w ruchu</span><span class="v">${duration}</span></div>
     <div class="row"><span class="k">Liczba punktów GPS</span><span class="v">${points}</span></div>
   </div>
+
+  <h2>📈 Prędkość w trakcie jazdy</h2>
+  <div class="chart-wrap"><canvas id="chartSpeed" height="120"></canvas></div>
+
+  <h2>⛰ Profil przewyższeń</h2>
+  <div class="chart-wrap"><canvas id="chartAlt" height="120"></canvas></div>
+
   <footer>Wygenerowano przez Bike Dashboard</footer>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
   <script src="https://unpkg.com/leaflet-hotline@0.4.0/dist/leaflet.hotline.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/script>
   <script>
+    /* ── MAP ── */
     const pts = ${hotlineData}
     const m = L.map('summaryMap').setView([${center[0]},${center[1]}], 14)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(m)
     if(pts.length >= 2){
-      const hl = L.hotline(pts, {min:0,max:35,palette:{'0.0':'#3b82f6','0.4':'#4ade80','0.7':'#fbbf24','1.0':'#f43f5e'},weight:5,outlineWidth:1,outlineColor:'rgba(0,0,0,.2)'}).addTo(m)
-      m.fitBounds(hl.getBounds(), {padding:[20,20]})
-      const first = pts[0]; const last = pts[pts.length-1]
-      L.marker([first[0],first[1]]).bindPopup('Start').addTo(m)
-      L.marker([last[0],last[1]]).bindPopup('Meta').addTo(m)
-    } else {
-      m.setView([${center[0]},${center[1]}],13)
+      const hl = L.hotline(pts,{min:0,max:35,palette:{'0.0':'#3b82f6','0.4':'#4ade80','0.7':'#fbbf24','1.0':'#f43f5e'},weight:5,outlineWidth:1,outlineColor:'rgba(0,0,0,.2)'}).addTo(m)
+      m.fitBounds(hl.getBounds(),{padding:[20,20]})
+      L.marker([pts[0][0],pts[0][1]]).bindPopup('🟢 Start').addTo(m)
+      L.marker([pts[pts.length-1][0],pts[pts.length-1][1]]).bindPopup('🏁 Meta').addTo(m)
     }
+
+    /* ── CHARTS ── */
+    const labels = ${labels}
+    const altData = ${altData}
+    const spdData = ${spdData}
+
+    function makeGradient(ctx, from, to) {
+      const g = ctx.createLinearGradient(0,0,0,200)
+      g.addColorStop(0, from); g.addColorStop(1, to); return g
+    }
+
+    const ctxSpd = document.getElementById('chartSpeed').getContext('2d')
+    new Chart(ctxSpd, {
+      type: 'line',
+      data: {
+        labels,
+        datasets:[{
+          label:'Prędkość (km/h)',
+          data: spdData,
+          borderColor:'#4ade80',
+          backgroundColor: makeGradient(ctxSpd,'rgba(74,222,128,.3)','rgba(74,222,128,.02)'),
+          borderWidth:2, pointRadius:0, fill:true, tension:.35
+        }]
+      },
+      options:{
+        responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' km/h'}}},
+        scales:{
+          x:{display:false},
+          y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{callback:v=>v+' km/h',font:{size:11}}}
+        }
+      }
+    })
+
+    const ctxAlt = document.getElementById('chartAlt').getContext('2d')
+    new Chart(ctxAlt, {
+      type: 'line',
+      data: {
+        labels,
+        datasets:[{
+          label:'Wysokość (m n.p.m.)',
+          data: altData,
+          borderColor:'#fbbf24',
+          backgroundColor: makeGradient(ctxAlt,'rgba(251,191,36,.3)','rgba(251,191,36,.02)'),
+          borderWidth:2, pointRadius:0, fill:true, tension:.35
+        }]
+      },
+      options:{
+        responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' m n.p.m.'}}},
+        scales:{
+          x:{display:false},
+          y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{callback:v=>v+' m',font:{size:11}}}
+        }
+      }
+    })
   <\/script>
 </body>
 </html>`
@@ -788,7 +862,9 @@ function getStats() {
     topKmh: fmt(topKmh, 1),
     gainM: Math.round(S.gain),
     points: S.points.length,
-    duration: toHms(S.movingTime / 1000)
+    duration: toHms(S.movingTime / 1000),
+    altHistory: S.altHistory.slice(),
+    speedHistory: S.speedHistory.slice()
   }
 }
 function showModal() {
