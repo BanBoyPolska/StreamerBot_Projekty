@@ -119,8 +119,8 @@
   var S = {
     running:false, paused:false, watchId:null, timerId:null, startTime:0,
     pts:[], tp:[], trip:0, total:parseFloat(localStorage.getItem('bk_total')||'0'),
-    gain:0, movT:0, movD:0, recStart:0, pausedAccum:0, pauseStarted:0, last:null, lastWall:0, lastAlt:null,
-    spdEma:new EMA(.3), altBuf:new AltBuf(),
+    gain:0, movT:0, movD:0, recStart:0, pausedAccum:0, pauseStarted:0, last:null, lastWall:0, lastAlt:null, lowCount:0, highCount:0,
+    spdEma:new EMA(.2), altBuf:new AltBuf(),
     altH:[], spdH:[], lowCount:0, autoPauseKmh:1.5, autoPauseMinPts:6, autoPauseNeed:4
   }
   g('vTotal').textContent = S.total.toFixed(2)
@@ -241,50 +241,74 @@
     var cur={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,spd:p.coords.speed,acc:p.coords.accuracy,t:wallNow}
     g('vAlt').textContent=isFinite(cur.alt)?Math.round(cur.alt):'—'
     if(!S.last){
-      if(cur.acc>60){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
+      if(cur.acc>50){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
       S.last=cur;S.lastWall=wallNow;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur)
       status('✅ GPS znaleziony (acc: '+Math.round(cur.acc)+' m). Nagrywam trasę...')
       return
     }
-    var d=dist(S.last,cur)
     var wallDt = wallNow - S.lastWall
-    if(wallDt<500) return
-    var sms = wallDt>0 ? d/(wallDt/1000) : 0
-    var gpsSpeed = isFinite(cur.spd) && cur.spd>=0 ? cur.spd*3.6 : null
-    var kmh = S.spdEma.push(sms*3.6) || 0
-    var signal = gpsSpeed!==null ? Math.max(gpsSpeed, kmh) : kmh
-    var moving = signal >= S.autoPauseKmh
-    if(!moving){ S.lowCount = (S.lowCount||0)+1 } else { S.lowCount=0 }
+    if(wallDt < 800) return
+    var d = dist(S.last, cur)
+
+    // --- Speed calculation ---
+    // Priority: native iOS speed (hardware-filtered) > computed from displacement
+    var nativeKmh = (isFinite(cur.spd) && cur.spd >= 0) ? cur.spd * 3.6 : null
+    var computedKmh = wallDt > 0 ? (d / (wallDt / 1000)) * 3.6 : 0
+    // Use native if accuracy is decent, else computed
+    var rawKmh = (nativeKmh !== null && cur.acc < 30) ? nativeKmh : computedKmh
+    // EMA smoothing (strong, alpha=0.2)
+    var kmh = S.spdEma.push(rawKmh) || 0
+    // Dead zone: below 1.5 km/h always treat as 0
+    var displayKmh = kmh < 1.5 ? 0 : kmh
+
+    // Stationary lock: require N consecutive moving readings before counting movement
+    var moving = displayKmh >= S.autoPauseKmh
+    if(!moving){ S.lowCount = (S.lowCount||0)+1; S.highCount=0 }
+    else { S.highCount = (S.highCount||0)+1; S.lowCount=0 }
+
+    // Auto-pause: N consecutive low points
     if(S.pts.length >= S.autoPauseMinPts && S.lowCount >= S.autoPauseNeed){
       if(!S.paused){
         S.paused=true; S.pauseStarted=Date.now()
         setBadge('pause','(auto)PAUZA'); setBtn()
-        status('⏸ (auto)Pauza — brak ruchu ('+S.lowCount+'/'+S.autoPauseNeed+').')
+        status('⏸ (auto)Pauza — brak ruchu.')
       }
       S.last=cur; S.lastWall=wallNow
       g('vSpeed').textContent='0.0'
       return
     }
-    if(S.paused && moving){
+
+    // Auto-resume: need highCount >= 3 to avoid resume on single GPS jitter
+    if(S.paused && S.highCount >= 3){
       if(S.pauseStarted){S.pausedAccum += Date.now()-S.pauseStarted; S.pauseStarted=0}
       S.paused=false; setBadge('rec','NAGRYWAM'); setBtn()
       status('▶ Wznowiono automatycznie.')
     }
     if(S.paused) return
+
     var safeDt = Math.min(wallDt, 10000)
-    S.trip += d; S.total += d/1000; S.movT += safeDt; S.movD += d
-    var sa=S.altBuf.push(cur.alt); S.gain += S.altBuf.gain(S.lastAlt,sa); S.lastAlt=sa
-    if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift();S.spdH.push(Math.round(kmh*10)/10);if(S.spdH.length>300)S.spdH.shift()}
-    S.pts.push(cur); S.last=cur; S.lastWall=wallNow; S.tp.push([cur.lat,cur.lon,Math.min(kmh,40)])
-    g('vSpeed').textContent=fmt(kmh,1)
-    g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1)
+    // Only count distance if actually moving (dead zone)
+    if(displayKmh >= S.autoPauseKmh){
+      S.trip += d; S.total += d/1000; S.movT += safeDt; S.movD += d
+    }
+
+    var sa = S.altBuf.push(cur.alt)
+    S.gain += S.altBuf.gain(S.lastAlt, sa); S.lastAlt=sa
+    if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift()}
+    S.spdH.push(Math.round(displayKmh*10)/10);if(S.spdH.length>300)S.spdH.shift()
+    S.pts.push(cur); S.last=cur; S.lastWall=wallNow
+    if(displayKmh >= S.autoPauseKmh) S.tp.push([cur.lat,cur.lon,Math.min(displayKmh,40)])
+
+    var avg = S.movD>0 && S.movT>0 ? fmt((S.movD/1000)/(S.movT/3600000),1) : '0.0'
+    g('vSpeed').textContent=fmt(displayKmh,1)
+    g('vAvg').textContent=avg
     g('vTrip').textContent=fmt(S.trip/1000,2)
     g('vTotal').textContent=fmt(S.total,2)
     g('vGain').textContent=Math.round(S.gain)
     g('vMoveTimer').textContent=toHms(S.movT/1000)
     g('vRecTimer').textContent=toHms((Date.now()-S.recStart-S.pausedAccum)/1000)
     drawChart()
-    status('Nagrywam... acc:'+Math.round(cur.acc)+'m | '+new Date(wallNow).toLocaleTimeString('pl-PL'))
+    status('Nagrywam... '+fmt(displayKmh,1)+' km/h | acc:'+Math.round(cur.acc)+'m | pkt:'+S.pts.length)
   }
 
   // ── buttons ──
@@ -312,7 +336,7 @@
   }
   var reset=function(){
     if(S.running&&!confirm('Zresetować trip w trakcie jazdy?')) return
-    S.trip=0;S.gain=0;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.tp=[];S.last=null;S.lastWall=0;S.lastAlt=null;S.lowCount=0;S.pausedAccum=0;S.pauseStarted=0
+    S.trip=0;S.gain=0;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.tp=[];S.last=null;S.lastWall=0;S.lastAlt=null;S.lowCount=0;S.highCount=0;S.pausedAccum=0;S.pauseStarted=0
     g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     drawChart();status('Trip zresetowany.')
   }
