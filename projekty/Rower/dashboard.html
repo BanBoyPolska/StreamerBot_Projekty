@@ -113,7 +113,8 @@
 
     /* ── LEAFLET dark fix ── */
     .leaflet-tile-container img{filter:var(--tile-filter)}
-    .theme-toggle{border:1px solid var(--line);background:var(--btn-soft-bg);color:var(--txt);padding:10px 12px;border-radius:12px;font-weight:700;font-size:13px}
+    .theme-toggle{border:1px solid var(--line);background:var(--btn-soft-bg);color:var(--txt);padding:10px 12px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation}
+    button{touch-action:manipulation}
     .ride-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
     .ride-item .meta{font-size:12px;color:var(--muted)}
     .ride-item .btns{display:flex;gap:8px;flex-shrink:0}
@@ -126,8 +127,8 @@
 <header>
   <h1>Bike Dashboard v3.1</h1>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-    <button class="theme-toggle" id="installBtn" style="display:none">⬇ Zainstaluj</button>
-    <button class="theme-toggle" id="themeBtn">☀ Jasny</button>
+    <button type="button" class="theme-toggle" id="installBtn" style="display:none">⬇ Zainstaluj</button>
+    <button type="button" class="theme-toggle" id="themeBtn">☀ Jasny</button>
     <span class="badge idle" id="badge">IDLE</span>
   </div>
 </header>
@@ -171,9 +172,9 @@
 </div>
 
 <div class="actions">
-  <button class="btn" id="startBtn">▶ Start</button>
-  <button class="btn" id="stopBtn">■ Stop</button>
-  <button class="btn" id="resetBtn">↺ Resetuj Trip</button>
+  <button type="button" class="btn" id="startBtn">▶ Start</button>
+  <button type="button" class="btn" id="stopBtn">■ Stop</button>
+  <button type="button" class="btn" id="resetBtn">↺ Resetuj Trip</button>
 </div>
 
 <div class="map-wrap">
@@ -209,9 +210,9 @@
     <p class="sub" id="modalSub">Podsumowanie wycieczki</p>
     <div id="modalStats"></div>
     <div class="modal-btns">
-      <button class="mbtn primary" id="btnGPX">📥 Pobierz GPX</button>
-      <button class="mbtn secondary" id="btnHTML">📄 Pobierz HTML</button>
-      <button class="mbtn full" id="btnClose">Zamknij bez zapisywania</button>
+      <button type="button" class="mbtn primary" id="btnGPX">📥 Pobierz GPX</button>
+      <button type="button" class="mbtn secondary" id="btnHTML">📄 Pobierz HTML</button>
+      <button type="button" class="mbtn full" id="btnClose">Zamknij bez zapisywania</button>
     </div>
   </div>
 </div>
@@ -223,6 +224,15 @@
 ─────────────────────────────────────────────── */
 const $ = id => document.getElementById(id)
 const fmt = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d) : '—'
+
+function bindTouchFallback(id, fn){
+  const el = $(id)
+  if (!el) return
+  el.addEventListener('click', fn, { passive: true })
+  el.addEventListener('touchend', e => { e.preventDefault(); fn(e) }, { passive: false })
+  el.addEventListener('pointerup', fn, { passive: true })
+}
+
 
 
 const RIDES_KEY = 'bike_rides_v3_1'
@@ -475,7 +485,7 @@ $('total').textContent = S.total.toFixed(2)
 drawAltChart()
 const savedTheme = localStorage.getItem('bike_theme') || 'dark'
 applyTheme(savedTheme)
-const boot = () => { drawAltChart(); renderRides(); $('themeBtn').onclick = toggleTheme; $('installBtn').onclick = installApp; $('startBtn').disabled = false; $('startBtn').onclick = start; $('stopBtn').onclick = stop; $('resetBtn').onclick = resetTrip; if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) } window.addEventListener('beforeunload', saveTotal); window.addEventListener('resize', drawAltChart) }
+const boot = () => { drawAltChart(); renderRides(); bindTouchFallback('themeBtn', toggleTheme); bindTouchFallback('installBtn', installApp); bindTouchFallback('startBtn', start); bindTouchFallback('stopBtn', stop); bindTouchFallback('resetBtn', resetTrip); $('startBtn').disabled = false; if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}) } window.addEventListener('beforeunload', saveTotal); window.addEventListener('resize', drawAltChart) }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot()
 window.__bikeBooted = true
 </script>
