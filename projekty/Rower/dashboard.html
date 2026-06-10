@@ -203,6 +203,20 @@
 </div>
 </div>
 
+
+<div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:10px 10px 6px">
+  <button type="button" class="theme-toggle" id="openMapBtn">🗺 Pokaż mapę</button>
+</div>
+<div id="mapModal" class="modal-bg" style="display:none;align-items:center;justify-content:center;padding:16px;">
+  <div class="modal" style="width:min(100%,900px);border-radius:20px;max-height:92dvh;background:var(--modal-bg);overflow:hidden;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)">
+      <strong>Mapa trasy</strong>
+      <button type="button" class="theme-toggle" id="closeMapBtn">✕ Zamknij</button>
+    </div>
+    <div id="fullMap" style="flex:1;min-height:60vh;width:100%"></div>
+  </div>
+</div>
+
 <div class="chart-panel">
   <h3>Profil wysokości</h3>
   <canvas id="altChart"></canvas>
@@ -780,10 +794,12 @@ function buildHtml(stats) {
 '.legend-bar{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}' +
 '.chart-wrap{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.08);min-height:160px}' +
 'canvas{display:block;width:100%!important}' +
+'#mapCloseBtn{position:fixed;top:14px;right:14px;z-index:9999;background:#111a2e;color:#fff;border:0;border-radius:999px;padding:10px 14px;font-weight:800}' +
 'footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}' +
 '</style>' +
 '</head>' +
 '<body>' +
+'<button id="mapCloseBtn" type="button">✕ Zamknij mapę</button>' +
 '<h1>🚴 Podsumowanie trasy</h1>' +
 '<p style="color:#6d83a8">' + now + '</p>' +
 '<h2>🗺 Mapa trasy</h2>' +
@@ -806,12 +822,7 @@ function buildHtml(stats) {
 '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><' + '/script>' +
 '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><' + '/script>' +
 '<script>' +
-'var TP=' + tpData + ';' +
-'var ALT=' + altData + ';' +
-'var SPD=' + spdData + ';' +
-'var LALT=' + labelsAlt + ';' +
-'var LSPD=' + labelsSpd + ';' +
-'var CENTER=[' + center[0] + ',' + center[1] + '];' +
+'var TP=' + tpData + '; var ALT=' + altData + '; var SPD=' + spdData + '; var LALT=' + labelsAlt + '; var LSPD=' + labelsSpd + '; var CENTER=[' + center[0] + ',' + center[1] + '];' +
 'function lerpC(a,b,t){var ah=a.slice(1),bh=b.slice(1);function p(s,i){return parseInt(s.slice(i,i+2),16)}var r=Math.round(p(ah,0)+(p(bh,0)-p(ah,0))*t).toString(16).padStart(2,"0");var g=Math.round(p(ah,2)+(p(bh,2)-p(ah,2))*t).toString(16).padStart(2,"0");var bl=Math.round(p(ah,4)+(p(bh,4)-p(ah,4))*t).toString(16).padStart(2,"0");return "#"+r+g+bl}' +
 'function spdColor(v){var n=Math.min(Math.max(v,0),40)/40;if(n<0.33)return lerpC("#3b82f6","#4ade80",n/0.33);if(n<0.66)return lerpC("#4ade80","#fbbf24",(n-0.33)/0.33);return lerpC("#fbbf24","#f43f5e",(n-0.66)/0.34)}' +
 'window.onload = function(){' +
@@ -819,23 +830,15 @@ function buildHtml(stats) {
 '  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(m);' +
 '  if(TP.length>=2){' +
 '    var bounds=[];' +
-'    for(var i=1;i<TP.length;i++){' +
-'      L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:spdColor(TP[i][2]),weight:5,opacity:.9,lineCap:"round"}).addTo(m);' +
-'      bounds.push([TP[i][0],TP[i][1]]);' +
-'    }' +
+'    for(var i=1;i<TP.length;i++){L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:spdColor(TP[i][2]),weight:5,opacity:.9,lineCap:"round"}).addTo(m);bounds.push([TP[i][0],TP[i][1]])}' +
 '    m.fitBounds(L.latLngBounds(bounds),{padding:[20,20]});' +
 '    L.marker([TP[0][0],TP[0][1]]).bindPopup("🟢 Start").addTo(m);' +
 '    L.marker([TP[TP.length-1][0],TP[TP.length-1][1]]).bindPopup("🏁 Meta").addTo(m);' +
 '  }' +
 '  function mkGrad(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}' +
-'  if(SPD.length>1){' +
-'    var cs=document.getElementById("chartSpeed").getContext("2d");' +
-'    new Chart(cs,{type:"line",data:{labels:LSPD,datasets:[{label:"km/h",data:SPD,borderColor:"#4ade80",backgroundColor:mkGrad(cs,"rgba(74,222,128,.35)","rgba(74,222,128,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+" km/h"}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" km/h"},font:{size:11}},grid:{color:"rgba(0,0,0,.06)"}}}}});' +
-'  } else { document.getElementById("chartSpeed").parentNode.innerHTML="<p style=color:#999;text-align:center;padding:20px>Brak danych prędkości</p>" }' +
-'  if(ALT.length>1){' +
-'    var ca=document.getElementById("chartAlt").getContext("2d");' +
-'    new Chart(ca,{type:"line",data:{labels:LALT,datasets:[{label:"m n.p.m.",data:ALT,borderColor:"#fbbf24",backgroundColor:mkGrad(ca,"rgba(251,191,36,.35)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+" m n.p.m."}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:11}},grid:{color:"rgba(0,0,0,.06)"}}}}});' +
-'  } else { document.getElementById("chartAlt").parentNode.innerHTML="<p style=color:#999;text-align:center;padding:20px>Brak danych wysokości</p>" }' +
+'  if(SPD.length>1){var cs=document.getElementById("chartSpeed").getContext("2d");new Chart(cs,{type:"line",data:{labels:LSPD,datasets:[{data:SPD,borderColor:"#4ade80",backgroundColor:mkGrad(cs,"rgba(74,222,128,.35)","rgba(74,222,128,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+" km/h"}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" km/h"},font:{size:11}},grid:{color:"rgba(0,0,0,.06)"}}}})} else {document.getElementById("chartSpeed").parentNode.innerHTML="<p style=color:#999;text-align:center;padding:20px>Brak danych prędkości</p>"}' +
+'  if(ALT.length>1){var ca=document.getElementById("chartAlt").getContext("2d");new Chart(ca,{type:"line",data:{labels:LALT,datasets:[{data:ALT,borderColor:"#fbbf24",backgroundColor:mkGrad(ca,"rgba(251,191,36,.35)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+" m n.p.m."}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:11}},grid:{color:"rgba(0,0,0,.06)"}}}})} else {document.getElementById("chartAlt").parentNode.innerHTML="<p style=color:#999;text-align:center;padding:20px>Brak danych wysokości</p>"}' +
+'  document.getElementById("mapCloseBtn").onclick=function(){window.close()}' +
 '}' +
 '<' + '/script>' +
 '</body></html>'
