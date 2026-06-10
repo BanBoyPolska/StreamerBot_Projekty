@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>Bike Dashboard</title>
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" href="icon.svg">
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
     body{background:#07111f;color:#e8eefc;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
@@ -79,6 +81,7 @@
   </div>
 
   <div id="statusEl">Kliknij Start, aby rozpocząć nagrywanie trasy.</div>
+  <div style="margin:0 10px 12px;font-size:12px;color:#6d83a8">Podczas nagrywania ekran będzie utrzymany aktywny, jeśli przeglądarka wspiera Wake Lock.</div>
 
   <div class="modal-bg" id="modalBg">
     <div class="modal">
@@ -211,6 +214,25 @@
   }
   var saveRide=function(st){ var ride={name:'Trasa '+new Date().toLocaleDateString('pl-PL'),date:new Date().toLocaleString('pl-PL'),tripKm:st.tripKm,gainM:st.gainM,dur:st.dur,fileBase:'trasa-'+Date.now(),gpx:toGpx(),html:buildSummaryHtml(st)}; var r=loadRides();r.unshift(ride);saveRides(r);renderRides();return ride }
 
+
+  // ── wake lock ──
+  var wakeLock = null
+  var keepScreenAwake = async function(on){
+    try{
+      if(!('wakeLock' in navigator)) return
+      if(on){
+        if(!wakeLock) wakeLock = await navigator.wakeLock.request('screen')
+      }else if(wakeLock){
+        await wakeLock.release()
+        wakeLock = null
+      }
+    }catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible' && S.running && !S.paused){
+      keepScreenAwake(true)
+    }
+  })
   // ── GPS ──
   var onPos=function(p){
     if(!S.running) return
@@ -258,18 +280,18 @@
   // ── buttons ──
   var start=function(){
     if(!navigator.geolocation){status('Geolokalizacja niedostępna.');return}
-    if(S.running&&S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();status('Wznowiono nagrywanie.');return}
+    if(S.running&&S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wznowiono nagrywanie.');return}
     if(S.running) return
     S.running=true;S.paused=false;S.pts=[];S.tp=[];S.trip=0;S.gain=0;S.last=null;S.lastAlt=null;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.spdEma=new EMA(.3);S.altBuf=new AltBuf()
     g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vTimer').textContent='00:00:00'
-    setBadge('rec','NAGRYWAM');setBtn();status('Wyszukuję sygnał GPS...')
+    setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wyszukuję sygnał GPS...')
     S.startTime=Date.now();clearInterval(S.timerId);S.timerId=setInterval(function(){g('vTimer').textContent=toHms((Date.now()-S.startTime)/1000)},1000)
     S.watchId=navigator.geolocation.watchPosition(onPos,function(e){status('Błąd GPS: '+e.message)},{enableHighAccuracy:true,maximumAge:2000,timeout:20000})
   }
   var stop=function(){
     if(!S.running) return
     navigator.geolocation.clearWatch(S.watchId);clearInterval(S.timerId)
-    S.running=false;S.paused=false;setBadge('stop','STOP');setBtn();status('Nagrywanie zakończone.')
+    S.running=false;S.paused=false;setBadge('stop','STOP');setBtn();keepScreenAwake(false);status('Nagrywanie zakończone.')
     var st=getStats(), ride=saveRide(st)
     g('mSub').textContent=ride.date+' · Trip: '+st.tripKm+' km'
     g('mStats').innerHTML=['Dystans','Śr. prędkość','Prędkość max.','Przewyższenie','Czas','Punkty GPS'].map(function(k,i){return'<div class="stat"><span class="k">'+k+'</span><span class="v">'+[st.tripKm+' km',st.avgKmh+' km/h',st.topKmh+' km/h',st.gainM+' m',st.dur,st.pts][i]+'</span></div>'}).join('')
@@ -286,8 +308,8 @@
   }
   var toggleStart=function(){
     if(!S.running){start();return}
-    if(S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();status('Wznowiono nagrywanie.')}
-    else{S.paused=true;setBadge('pause','PAUZA');setBtn();status('⏸ Pauza.')}
+    if(S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wznowiono nagrywanie.')}
+    else{S.paused=true;setBadge('pause','PAUZA');setBtn();keepScreenAwake(false);status('⏸ Pauza.')}
   }
 
   // ── bind ──
