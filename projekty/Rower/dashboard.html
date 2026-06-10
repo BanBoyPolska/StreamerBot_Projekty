@@ -47,6 +47,7 @@
     .badge.idle{background:rgba(255,255,255,.07);color:var(--muted)}
     .badge.recording{background:rgba(74,222,128,.12);color:var(--acc);animation:pulse 1.8s ease-in-out infinite}
     .badge.stopped{background:rgba(251,113,133,.12);color:var(--red)}
+    .badge.paused{background:rgba(251,191,36,.12);color:var(--warn);animation:pulse 1.8s ease-in-out infinite}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
     /* ── WIDGETS GRID ── */
@@ -235,7 +236,6 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-hotline@0.4.0/dist/leaflet.hotline.js"></script>
 <script>
 /* ───────────────────────────────────────────────
    HELPERS
@@ -455,6 +455,14 @@ if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
     S.total += d / 1000
     S.movingTime += dt
     S.movingDist += d
+  } else {
+    // paused - update last position but don't count distance
+    S.last = cur
+    const avgMovingPause = S.movingTime > 0 ? (S.movingDist/1000)/(S.movingTime/3600000) : 0
+    $('speed').textContent = '0.0'
+    setStatus('⏸ Pauza – brak ruchu...', true)
+    $('badge').textContent = 'PAUZA'
+    return
   }
 
   // Altitude
@@ -475,11 +483,11 @@ if(hotlineLayer){map.removeLayer(hotlineLayer);hotlineLayer=null}
   // Map
   posMarker.setLatLng([cur.lat, cur.lon])
   trackPoints.push([cur.lat, cur.lon, Math.min(speedKmh || 0, 40)])
-  if(hotlineLayer){ map.removeLayer(hotlineLayer) }
   if(trackPoints.length >= 2){
-    hotlineLayer = L.hotline(trackPoints, {
-      min: 0, max: 35, palette: { 0.0: '#3b82f6', 0.4: '#4ade80', 0.7: '#fbbf24', 1.0: '#f43f5e' },
-      weight: 5, outlineWidth: 1, outlineColor: 'rgba(0,0,0,.3)'
+    const p1 = trackPoints[trackPoints.length-2]
+    const p2 = trackPoints[trackPoints.length-1]
+    L.polyline([[p1[0],p1[1]],[p2[0],p2[1]]], {
+      color: speedColor(p2[2]), weight: 5, opacity: 0.9, lineCap:'round', lineJoin:'round'
     }).addTo(map)
   }
   map.panTo([cur.lat, cur.lon], { animate: true, duration: .5 })
@@ -590,6 +598,30 @@ function saveRideToStorage(stats) {
   saveRides(rides)
   renderRides()
   return ride
+}
+
+
+function speedColor(kmh) {
+  const v = Math.min(Math.max(kmh || 0, 0), 40) / 40
+  if (v < 0.33) {
+    const t = v / 0.33
+    return lerpColor('#3b82f6', '#4ade80', t)
+  } else if (v < 0.66) {
+    const t = (v - 0.33) / 0.33
+    return lerpColor('#4ade80', '#fbbf24', t)
+  } else {
+    const t = (v - 0.66) / 0.34
+    return lerpColor('#fbbf24', '#f43f5e', t)
+  }
+}
+function lerpColor(a, b, t) {
+  const ah = a.replace('#',''), bh = b.replace('#','')
+  const ar = parseInt(ah.slice(0,2),16), ag = parseInt(ah.slice(2,4),16), ab_ = parseInt(ah.slice(4,6),16)
+  const br = parseInt(bh.slice(0,2),16), bg = parseInt(bh.slice(2,4),16), bb = parseInt(bh.slice(4,6),16)
+  const r = Math.round(ar + (br-ar)*t).toString(16).padStart(2,'0')
+  const g = Math.round(ag + (bg-ag)*t).toString(16).padStart(2,'0')
+  const bl = Math.round(ab_ + (bb-ab_)*t).toString(16).padStart(2,'0')
+  return '#'+r+g+bl
 }
 
 function setStatus(msg, active = true) {
@@ -721,132 +753,92 @@ function buildGpx() {
 function buildHtml(stats) {
   const { tripKm, totalKm, avgKmh, topKmh, gainM, points, duration, altHistory, speedHistory } = stats
   const now = new Date().toLocaleString('pl-PL')
-  const hotlineData = JSON.stringify(trackPoints || [])
-  const center = trackPoints && trackPoints.length > 0
-    ? [trackPoints[Math.floor(trackPoints.length/2)][0], trackPoints[Math.floor(trackPoints.length/2)][1]]
-    : [50.27, 18.88]
-  const altData = JSON.stringify(altHistory || [])
-  const spdData = JSON.stringify(speedHistory || [])
-  const labels = JSON.stringify((altHistory||[]).map((_,i)=>i+1))
-  return `<!doctype html>
-<html lang="pl">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Podsumowanie trasy – ${now}</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <style>
-    body{font-family:system-ui,Arial,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;color:#1a2030;background:#f4f7fb}
-    h1{color:#111a2e;border-bottom:3px solid #4ade80;padding-bottom:10px}
-    h2{color:#111a2e;font-size:16px;margin:24px 0 10px}
-    .card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}
-    .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf2f7}
-    .row:last-child{border-bottom:0}
-    .k{color:#6d83a8;font-size:14px}.v{font-weight:800;font-size:18px;color:#111a2e}
-    #summaryMap{height:320px;border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #d7e3f1}
-    .legend{display:flex;align-items:center;gap:8px;font-size:12px;color:#6d83a8;margin-bottom:12px}
-    .legend-bar{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}
-    .chart-wrap{background:#fff;border-radius:16px;padding:16px 16px 12px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}
-    footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}
-  </style>
-</head>
-<body>
-  <h1>🚴 Podsumowanie trasy</h1>
-  <p style="color:#6d83a8">${now}</p>
-
-  <h2>🗺 Mapa trasy</h2>
-  <div id="summaryMap"></div>
-  <div class="legend"><span class="legend-bar"></span>0 km/h → 35+ km/h (kolor = prędkość)</div>
-
-  <div class="card">
-    <div class="row"><span class="k">Dystans (Trip)</span><span class="v">${tripKm} km</span></div>
-    <div class="row"><span class="k">Dystans całkowity roweru</span><span class="v">${totalKm} km</span></div>
-    <div class="row"><span class="k">Średnia prędkość (w ruchu)</span><span class="v">${avgKmh} km/h</span></div>
-    <div class="row"><span class="k">Prędkość max.</span><span class="v">${topKmh} km/h</span></div>
-    <div class="row"><span class="k">Przewyższenie</span><span class="v">${gainM} m</span></div>
-    <div class="row"><span class="k">Czas w ruchu</span><span class="v">${duration}</span></div>
-    <div class="row"><span class="k">Liczba punktów GPS</span><span class="v">${points}</span></div>
-  </div>
-
-  <h2>📈 Prędkość w trakcie jazdy</h2>
-  <div class="chart-wrap"><canvas id="chartSpeed" height="120"></canvas></div>
-
-  <h2>⛰ Profil przewyższeń</h2>
-  <div class="chart-wrap"><canvas id="chartAlt" height="120"></canvas></div>
-
-  <footer>Wygenerowano przez Bike Dashboard</footer>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-  <script src="https://unpkg.com/leaflet-hotline@0.4.0/dist/leaflet.hotline.js"><\/script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/script>
-  <script>
-    /* ── MAP ── */
-    const pts = ${hotlineData}
-    const m = L.map('summaryMap').setView([${center[0]},${center[1]}], 14)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(m)
-    if(pts.length >= 2){
-      const hl = L.hotline(pts,{min:0,max:35,palette:{'0.0':'#3b82f6','0.4':'#4ade80','0.7':'#fbbf24','1.0':'#f43f5e'},weight:5,outlineWidth:1,outlineColor:'rgba(0,0,0,.2)'}).addTo(m)
-      m.fitBounds(hl.getBounds(),{padding:[20,20]})
-      L.marker([pts[0][0],pts[0][1]]).bindPopup('🟢 Start').addTo(m)
-      L.marker([pts[pts.length-1][0],pts[pts.length-1][1]]).bindPopup('🏁 Meta').addTo(m)
-    }
-
-    /* ── CHARTS ── */
-    const labels = ${labels}
-    const altData = ${altData}
-    const spdData = ${spdData}
-
-    function makeGradient(ctx, from, to) {
-      const g = ctx.createLinearGradient(0,0,0,200)
-      g.addColorStop(0, from); g.addColorStop(1, to); return g
-    }
-
-    const ctxSpd = document.getElementById('chartSpeed').getContext('2d')
-    new Chart(ctxSpd, {
-      type: 'line',
-      data: {
-        labels,
-        datasets:[{
-          label:'Prędkość (km/h)',
-          data: spdData,
-          borderColor:'#4ade80',
-          backgroundColor: makeGradient(ctxSpd,'rgba(74,222,128,.3)','rgba(74,222,128,.02)'),
-          borderWidth:2, pointRadius:0, fill:true, tension:.35
-        }]
-      },
-      options:{
-        responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' km/h'}}},
-        scales:{
-          x:{display:false},
-          y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{callback:v=>v+' km/h',font:{size:11}}}
-        }
-      }
-    })
-
-    const ctxAlt = document.getElementById('chartAlt').getContext('2d')
-    new Chart(ctxAlt, {
-      type: 'line',
-      data: {
-        labels,
-        datasets:[{
-          label:'Wysokość (m n.p.m.)',
-          data: altData,
-          borderColor:'#fbbf24',
-          backgroundColor: makeGradient(ctxAlt,'rgba(251,191,36,.3)','rgba(251,191,36,.02)'),
-          borderWidth:2, pointRadius:0, fill:true, tension:.35
-        }]
-      },
-      options:{
-        responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' m n.p.m.'}}},
-        scales:{
-          x:{display:false},
-          y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{callback:v=>v+' m',font:{size:11}}}
-        }
-      }
-    })
-  <\/script>
-</body>
-</html>`
+  const tpCopy = (trackPoints||[]).map(p=>[p[0],p[1],p[2]])
+  const center = tpCopy.length > 0 ? [tpCopy[Math.floor(tpCopy.length/2)][0], tpCopy[Math.floor(tpCopy.length/2)][1]] : [50.27,18.88]
+  const altData = JSON.stringify(altHistory||[])
+  const spdData = JSON.stringify(speedHistory||[])
+  const tpData  = JSON.stringify(tpCopy)
+  const labelsAlt = JSON.stringify((altHistory||[]).map((_,i)=>i))
+  const labelsSpd = JSON.stringify((speedHistory||[]).map((_,i)=>i))
+  return '<!doctype html>' +
+'<html lang="pl">' +
+'<head>' +
+'<meta charset="utf-8">' +
+'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+'<title>Podsumowanie trasy</title>' +
+'<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>' +
+'<style>' +
+'body{font-family:system-ui,Arial,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;color:#1a2030;background:#f4f7fb}' +
+'h1{color:#111a2e;border-bottom:3px solid #4ade80;padding-bottom:10px}' +
+'h2{color:#111a2e;font-size:16px;margin:24px 0 10px}' +
+'.card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,.08)}' +
+'.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf2f7}' +
+'.row:last-child{border-bottom:0}' +
+'.k{color:#6d83a8;font-size:14px}.v{font-weight:800;font-size:18px;color:#111a2e}' +
+'#summaryMap{height:300px;width:100%;border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #d7e3f1;background:#e8f0fe}' +
+'.legend{display:flex;align-items:center;gap:8px;font-size:12px;color:#6d83a8;margin-bottom:12px}' +
+'.legend-bar{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}' +
+'.chart-wrap{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.08);min-height:160px}' +
+'canvas{display:block;width:100%!important}' +
+'footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:30px}' +
+'</style>' +
+'</head>' +
+'<body>' +
+'<h1>🚴 Podsumowanie trasy</h1>' +
+'<p style="color:#6d83a8">' + now + '</p>' +
+'<h2>🗺 Mapa trasy</h2>' +
+'<div id="summaryMap"></div>' +
+'<div class="legend"><span class="legend-bar"></span>0 km/h → 35+ km/h (kolor = prędkość)</div>' +
+'<div class="card">' +
+'<div class="row"><span class="k">Dystans (Trip)</span><span class="v">' + tripKm + ' km</span></div>' +
+'<div class="row"><span class="k">Dystans całkowity roweru</span><span class="v">' + totalKm + ' km</span></div>' +
+'<div class="row"><span class="k">Średnia prędkość (w ruchu)</span><span class="v">' + avgKmh + ' km/h</span></div>' +
+'<div class="row"><span class="k">Prędkość max.</span><span class="v">' + topKmh + ' km/h</span></div>' +
+'<div class="row"><span class="k">Przewyższenie</span><span class="v">' + gainM + ' m</span></div>' +
+'<div class="row"><span class="k">Czas w ruchu</span><span class="v">' + duration + '</span></div>' +
+'<div class="row"><span class="k">Liczba punktów GPS</span><span class="v">' + points + '</span></div>' +
+'</div>' +
+'<h2>📈 Prędkość w trakcie jazdy</h2>' +
+'<div class="chart-wrap"><canvas id="chartSpeed" height="140"></canvas></div>' +
+'<h2>⛰ Profil przewyższeń</h2>' +
+'<div class="chart-wrap"><canvas id="chartAlt" height="140"></canvas></div>' +
+'<footer>Wygenerowano przez Bike Dashboard</footer>' +
+'<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><' + '/script>' +
+'<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><' + '/script>' +
+'<script>' +
+'var TP=' + tpData + ';' +
+'var ALT=' + altData + ';' +
+'var SPD=' + spdData + ';' +
+'var LALT=' + labelsAlt + ';' +
+'var LSPD=' + labelsSpd + ';' +
+'var CENTER=[' + center[0] + ',' + center[1] + '];' +
+'function lerpC(a,b,t){var ah=a.slice(1),bh=b.slice(1);function p(s,i){return parseInt(s.slice(i,i+2),16)}var r=Math.round(p(ah,0)+(p(bh,0)-p(ah,0))*t).toString(16).padStart(2,"0");var g=Math.round(p(ah,2)+(p(bh,2)-p(ah,2))*t).toString(16).padStart(2,"0");var bl=Math.round(p(ah,4)+(p(bh,4)-p(ah,4))*t).toString(16).padStart(2,"0");return "#"+r+g+bl}' +
+'function spdColor(v){var n=Math.min(Math.max(v,0),40)/40;if(n<0.33)return lerpC("#3b82f6","#4ade80",n/0.33);if(n<0.66)return lerpC("#4ade80","#fbbf24",(n-0.33)/0.33);return lerpC("#fbbf24","#f43f5e",(n-0.66)/0.34)}' +
+'window.onload = function(){' +
+'  var m=L.map("summaryMap").setView(CENTER,14);' +
+'  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(m);' +
+'  if(TP.length>=2){' +
+'    var bounds=[];' +
+'    for(var i=1;i<TP.length;i++){' +
+'      L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:spdColor(TP[i][2]),weight:5,opacity:.9,lineCap:"round"}).addTo(m);' +
+'      bounds.push([TP[i][0],TP[i][1]]);' +
+'    }' +
+'    m.fitBounds(L.latLngBounds(bounds),{padding:[20,20]});' +
+'    L.marker([TP[0][0],TP[0][1]]).bindPopup("🟢 Start").addTo(m);' +
+'    L.marker([TP[TP.length-1][0],TP[TP.length-1][1]]).bindPopup("🏁 Meta").addTo(m);' +
+'  }' +
+'  function mkGrad(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}' +
+'  if(SPD.length>1){' +
+'    var cs=document.getElementById("chartSpeed").getContext("2d");' +
+'    new Chart(cs,{type:"line",data:{labels:LSPD,datasets:[{label:"km/h",data:SPD,borderColor:"#4ade80",backgroundColor:mkGrad(cs,"rgba(74,222,128,.35)","rgba(74,222,128,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+" km/h"}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" km/h"},font:{size:11}},grid:{color:"rgba(0,0,0,.06)"}}}}});' +
+'  } else { document.getElementById("chartSpeed").parentNode.innerHTML="<p style=color:#999;text-align:center;padding:20px>Brak danych prędkości</p>" }' +
+'  if(ALT.length>1){' +
+'    var ca=document.getElementById("chartAlt").getContext("2d");' +
+'    new Chart(ca,{type:"line",data:{labels:LALT,datasets:[{label:"m n.p.m.",data:ALT,borderColor:"#fbbf24",backgroundColor:mkGrad(ca,"rgba(251,191,36,.35)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+" m n.p.m."}}}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:11}},grid:{color:"rgba(0,0,0,.06)"}}}}});' +
+'  } else { document.getElementById("chartAlt").parentNode.innerHTML="<p style=color:#999;text-align:center;padding:20px>Brak danych wysokości</p>" }' +
+'}' +
+'<' + '/script>' +
+'</body></html>'
 }
 
 /* ───────────────────────────────────────────────
