@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Bike Dashboard</title>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+    body{background:#07111f;color:#e8eefc;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+    header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1e3154}
+    h1{font-size:20px}
+    #badge{font-size:11px;padding:4px 10px;border-radius:999px;font-weight:700;background:rgba(255,255,255,.07);color:#6d83a8}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+    .card{background:#111a2e;border:1px solid #1e3154;border-radius:18px;padding:14px;min-height:88px}
+    .wide{grid-column:span 2}
+    .lbl{font-size:11px;color:#6d83a8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .val{font-size:28px;font-weight:800;line-height:1}
+    .unt{font-size:11px;color:#6d83a8;margin-top:4px}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 10px 10px}
+    button{cursor:pointer;border:0;touch-action:manipulation;font-family:inherit}
+    #startBtn{border-radius:16px;padding:18px;font-size:18px;font-weight:800;color:#08111f;background:linear-gradient(135deg,#4ade80,#22c55e);width:100%}
+    #stopBtn{border-radius:16px;padding:18px;font-size:18px;font-weight:800;color:#08111f;background:linear-gradient(135deg,#fb7185,#f43f5e);width:100%}
+    #resetBtn{grid-column:span 2;border-radius:14px;padding:12px;font-size:15px;font-weight:700;background:rgba(255,255,255,.05);border:1px solid #1e3154;color:#6d83a8;width:100%}
+    .panel{margin:0 10px 10px;background:rgba(255,255,255,.03);border:1px solid #1e3154;border-radius:18px;padding:14px}
+    .panel h3{font-size:11px;color:#6d83a8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-weight:700}
+    #altCanvas{width:100%;height:80px;display:block}
+    #statusEl{margin:0 10px 20px;font-size:13px;color:#6d83a8;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid #1e3154;border-radius:12px}
+    .ride{display:flex;flex-direction:column;gap:5px;padding:10px 12px;border:1px solid #1e3154;border-radius:12px;background:rgba(255,255,255,.03);margin-bottom:8px}
+    .ride-name{font-size:14px;font-weight:700}.ride-meta{font-size:12px;color:#6d83a8}
+    .ride-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .ride-actions button{border-radius:9px;padding:6px 11px;font-weight:700;font-size:12px;border:1px solid #1e3154;background:rgba(255,255,255,.05);color:#e8eefc}
+    .btn-del{background:rgba(251,113,133,.1)!important;color:#fb7185!important;border-color:rgba(251,113,133,.2)!important}
+    .btn-ren{background:rgba(251,191,36,.1)!important;color:#fbbf24!important;border-color:rgba(251,191,36,.2)!important}
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:flex-end}
+    .modal-bg.open{display:flex}
+    .modal{background:#111a2e;border-radius:22px 22px 0 0;border:1px solid #1e3154;padding:22px 18px 32px;width:100%;max-height:88vh;overflow-y:auto}
+    .modal h2{margin-bottom:4px;font-size:20px}
+    .modal p{color:#6d83a8;font-size:13px;margin-bottom:14px}
+    .stat{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #1e3154;font-size:15px}
+    .stat:last-of-type{border:0}
+    .stat .k{color:#6d83a8}.stat .v{font-weight:800}
+    .mbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+    .mbtns button{border-radius:13px;padding:14px;font-size:14px;font-weight:800;border:0}
+    #mBtnGPX{background:linear-gradient(135deg,#4ade80,#22c55e);color:#08111f}
+    #mBtnHTML{background:rgba(255,255,255,.07);color:#e8eefc;border:1px solid #1e3154!important}
+    #mBtnClose{grid-column:span 2;background:rgba(251,113,133,.1);color:#fb7185;border:1px solid rgba(251,113,133,.2)!important}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚴 Bike Dashboard</h1>
+    <span id="badge">IDLE</span>
+  </header>
+
+  <div class="grid">
+    <div class="card"><div class="lbl">Prędkość</div><div class="val" id="vSpeed">0.0</div><div class="unt">km/h</div></div>
+    <div class="card"><div class="lbl">Śr. w ruchu</div><div class="val" id="vAvg">0.0</div><div class="unt">km/h</div></div>
+    <div class="card"><div class="lbl">Trip</div><div class="val" id="vTrip">0.00</div><div class="unt">km</div></div>
+    <div class="card"><div class="lbl">Dystans całk.</div><div class="val" id="vTotal">0.00</div><div class="unt">km</div></div>
+    <div class="card"><div class="lbl">Wysokość</div><div class="val" id="vAlt">—</div><div class="unt">m n.p.m.</div></div>
+    <div class="card"><div class="lbl">Przewyższenie</div><div class="val" id="vGain">0</div><div class="unt">m</div></div>
+    <div class="card wide"><div class="lbl">Czas w ruchu</div><div class="val" id="vTimer">00:00:00</div><div class="unt">hh:mm:ss</div></div>
+  </div>
+
+  <div class="actions">
+    <button id="startBtn">▶ Start</button>
+    <button id="stopBtn">■ Stop</button>
+    <button id="resetBtn">↺ Resetuj Trip</button>
+  </div>
+
+  <div class="panel">
+    <h3>Zapisane trasy</h3>
+    <div id="ridesList"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Profil wysokości</h3>
+    <canvas id="altCanvas"></canvas>
+  </div>
+
+  <div id="statusEl">Kliknij Start, aby rozpocząć nagrywanie trasy.</div>
+
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <h2>Trasa zakończona</h2>
+      <p id="mSub"></p>
+      <div id="mStats"></div>
+      <div class="mbtns">
+        <button id="mBtnGPX">📥 Pobierz GPX</button>
+        <button id="mBtnHTML">📄 Pobierz HTML</button>
+        <button id="mBtnClose">Zamknij bez zapisywania</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+
+  // ── helpers ──
+  var g = function(id){ return document.getElementById(id) }
+  var fmt = function(n,d){ return isFinite(n) ? (+n).toFixed(d||1) : '—' }
+  var toHms = function(s){ s=Math.max(0,Math.floor(s)); return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(function(v){return String(v).padStart(2,'0')}).join(':') }
+  var esc = function(s){ return String(s).replace(/[<>&"]/g,function(m){return{'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m]}) }
+  var dl = function(name,content,type){ var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:type})); a.download=name; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},1000) }
+
+  // ── GPS helpers ──
+  var dist = function(a,b){ var R=6371000,to=function(x){return x*Math.PI/180},dLat=to(b.lat-a.lat),dLon=to(b.lon-a.lon),x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(to(a.lat))*Math.cos(to(b.lat))*Math.sin(dLon/2)*Math.sin(dLon/2); return 2*R*Math.asin(Math.sqrt(x)) }
+  var EMA = function(a){ this.a=a||.3; this.v=null }
+  EMA.prototype.push = function(x){ if(!isFinite(x)) return this.v; this.v=this.v===null?x:this.a*x+(1-this.a)*this.v; return this.v }
+  var AltBuf = function(){ this.b=[] }
+  AltBuf.prototype.push = function(h){ if(!isFinite(h)) return null; this.b.push(h); if(this.b.length>5) this.b.shift(); return this.b.reduce(function(a,b){return a+b},0)/this.b.length }
+  AltBuf.prototype.gain = function(prev,cur){ if(prev===null||cur===null) return 0; var d=cur-prev; return d>3?d:0 }
+
+  // ── state ──
+  var S = {
+    running:false, paused:false, watchId:null, timerId:null, startTime:0,
+    pts:[], tp:[], trip:0, total:parseFloat(localStorage.getItem('bk_total')||'0'),
+    gain:0, movT:0, movD:0, last:null, lastAlt:null,
+    spdEma:new EMA(.3), altBuf:new AltBuf(),
+    altH:[], spdH:[]
+  }
+  g('vTotal').textContent = S.total.toFixed(2)
+
+  // ── badge ──
+  var setBadge = function(s,txt){ g('badge').style.cssText = s==='rec'?'background:rgba(74,222,128,.12);color:#4ade80':s==='pause'?'background:rgba(251,191,36,.12);color:#fbbf24':s==='stop'?'background:rgba(251,113,133,.12);color:#fb7185':'background:rgba(255,255,255,.07);color:#6d83a8'; g('badge').textContent=txt }
+  var setBtn = function(){ var b=g('startBtn'); if(!S.running) b.textContent='▶ Start'; else if(S.paused) b.textContent='▶ Wznów'; else b.textContent='⏸ Pauza' }
+  var status = function(m){ g('statusEl').textContent=m }
+
+  // ── alt chart ──
+  var drawChart = function(){ var c=g('altCanvas'),ctx=c.getContext('2d'),W=c.width=c.offsetWidth*devicePixelRatio,H=c.height=c.offsetHeight*devicePixelRatio; ctx.scale(devicePixelRatio,devicePixelRatio); ctx.clearRect(0,0,c.offsetWidth,c.offsetHeight); var D=S.altH; if(D.length<2){ctx.fillStyle='#6d83a8';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText('Brak danych',c.offsetWidth/2,c.offsetHeight/2);return} var mn=Math.min.apply(null,D),mx=Math.max.apply(null,D),rng=mx-mn||1; var grd=ctx.createLinearGradient(0,0,0,c.offsetHeight);grd.addColorStop(0,'rgba(251,191,36,.3)');grd.addColorStop(1,'rgba(251,191,36,.02)'); ctx.beginPath();ctx.moveTo(0,c.offsetHeight);D.forEach(function(v,i){ctx.lineTo((i/(D.length-1))*c.offsetWidth,c.offsetHeight-((v-mn)/rng)*(c.offsetHeight-8)-4)});ctx.lineTo(c.offsetWidth,c.offsetHeight);ctx.closePath();ctx.fillStyle=grd;ctx.fill(); ctx.beginPath();D.forEach(function(v,i){var x=(i/(D.length-1))*c.offsetWidth,y=c.offsetHeight-((v-mn)/rng)*(c.offsetHeight-8)-4;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.stroke() }
+
+  // ── GPX ──
+  var toGpx = function(){ return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Bike Dashboard" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Bike ride</name><trkseg>'+S.pts.map(function(p){return '<trkpt lat="'+p.lat+'" lon="'+p.lon+'">'+(isFinite(p.alt)?'<ele>'+p.alt.toFixed(2)+'</ele>':'')+'<time>'+new Date(p.t).toISOString()+'</time></trkpt>'}).join('')+'</trkseg></trk></gpx>' }
+
+  // ── stats ──
+  var getStats = function(){ var avg=S.movT>0?(S.movD/1000)/(S.movT/3600000):0; var top=S.pts.reduce(function(m,p){return Math.max(m,(p.spd||0)*3.6)},0); return{tripKm:fmt(S.trip/1000,2),totalKm:fmt(S.total,2),avgKmh:fmt(avg,1),topKmh:fmt(top,1),gainM:Math.round(S.gain),pts:S.pts.length,dur:toHms(S.movT/1000),altH:S.altH.slice(),spdH:S.spdH.slice()} }
+
+  // ── summary HTML ──
+  var buildSummaryHtml = function(st){
+    var now=new Date().toLocaleString('pl-PL')
+    var tp=JSON.stringify(S.tp.slice())
+    var alt=JSON.stringify(st.altH||[])
+    var spd=JSON.stringify(st.spdH||[])
+    var la=JSON.stringify((st.altH||[]).map(function(_,i){return i}))
+    var ls=JSON.stringify((st.spdH||[]).map(function(_,i){return i}))
+    var cx=S.tp.length?S.tp[Math.floor(S.tp.length/2)][0]:50.27
+    var cy=S.tp.length?S.tp[Math.floor(S.tp.length/2)][1]:18.88
+    var body='<!doctype html>'
+    +'<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<title>Podsumowanie trasy</title>'
+    +'<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">'
+    +'<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;background:#f4f7fb;color:#1a2030}h1{border-bottom:3px solid #4ade80;padding-bottom:10px}h2{font-size:16px;margin:24px 0 8px}.card{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 4px 16px rgba(0,0,0,.07)}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #edf2f7}.row:last-child{border:0}.k{color:#6d83a8;font-size:14px}.v{font-weight:800;font-size:17px}#smap{height:280px;border-radius:14px;margin:12px 0;border:1px solid #d7e3f1;background:#e8f0fe}.leg{font-size:12px;color:#6d83a8;margin-bottom:10px;display:flex;align-items:center;gap:8px}.leg span{display:inline-block;width:110px;height:7px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#4ade80,#fbbf24,#f43f5e)}.cw{background:#fff;border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 4px 14px rgba(0,0,0,.07);min-height:150px}canvas{display:block;width:100%!important}footer{text-align:center;color:#93a4c3;font-size:12px;margin-top:28px}</style>'
+    +'</head><body>'
+    +'<h1>🚴 Podsumowanie trasy</h1><p style="color:#6d83a8">'+now+'</p>'
+    +'<h2>🗺 Mapa trasy</h2><div id="smap"></div>'
+    +'<div class="leg"><span></span>0 km/h → 35+ km/h</div>'
+    +'<div class="card">'
+    +'<div class="row"><span class="k">Dystans (Trip)</span><span class="v">'+st.tripKm+' km</span></div>'
+    +'<div class="row"><span class="k">Dystans całkowity</span><span class="v">'+st.totalKm+' km</span></div>'
+    +'<div class="row"><span class="k">Śr. prędkość (ruch)</span><span class="v">'+st.avgKmh+' km/h</span></div>'
+    +'<div class="row"><span class="k">Prędkość max.</span><span class="v">'+st.topKmh+' km/h</span></div>'
+    +'<div class="row"><span class="k">Przewyższenie</span><span class="v">'+st.gainM+' m</span></div>'
+    +'<div class="row"><span class="k">Czas w ruchu</span><span class="v">'+st.dur+'</span></div>'
+    +'<div class="row"><span class="k">Punkty GPS</span><span class="v">'+st.pts+'</span></div>'
+    +'</div>'
+    +'<h2>📈 Prędkość</h2><div class="cw"><canvas id="cs" height="130"></canvas></div>'
+    +'<h2>⛰ Przewyższenia</h2><div class="cw"><canvas id="ca" height="130"></canvas></div>'
+    +'<footer>Wygenerowano przez Bike Dashboard</footer>'
+    +'<scr'+'ipt src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></scr'+'ipt>'
+    +'<scr'+'ipt src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></scr'+'ipt>'
+    +'<scr'+'ipt>'
+    +'var TP='+tp+',ALT='+alt+',SPD='+spd+',LA='+la+',LS='+ls+',CX='+cx+',CY='+cy+';'
+    +'function lc(a,b,t){var f=function(s,i){return parseInt(s.slice(i,i+2),16)};var pa=a.slice(1),pb=b.slice(1);return"#"+[0,2,4].map(function(i){return Math.round(f(pa,i)+(f(pb,i)-f(pa,i))*t).toString(16).padStart(2,"0")}).join("")}'
+    +'function sc(v){var n=Math.min(Math.max(v,0),40)/40;return n<.33?lc("#3b82f6","#4ade80",n/.33):n<.66?lc("#4ade80","#fbbf24",(n-.33)/.33):lc("#fbbf24","#f43f5e",(n-.66)/.34)}'
+    +'window.onload=function(){'
+    +'var m=L.map("smap").setView([CX,CY],14);'
+    +'L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(m);'
+    +'setTimeout(function(){m.invalidateSize()},300);'
+    +'if(TP.length>=2){var b=[];for(var i=1;i<TP.length;i++){L.polyline([[TP[i-1][0],TP[i-1][1]],[TP[i][0],TP[i][1]]],{color:sc(TP[i][2]),weight:5,opacity:.9,lineCap:"round"}).addTo(m);b.push([TP[i][0],TP[i][1]])}m.fitBounds(L.latLngBounds(b),{padding:[20,20]});L.marker([TP[0][0],TP[0][1]]).bindPopup("🟢 Start").addTo(m);L.marker([TP[TP.length-1][0],TP[TP.length-1][1]]).bindPopup("🏁 Meta").addTo(m);}'
+    +'function mg(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,130);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}'
+    +'if(SPD.length>1){var cs=document.getElementById("cs").getContext("2d");new Chart(cs,{type:"line",data:{labels:LS,datasets:[{data:SPD,borderColor:"#4ade80",backgroundColor:mg(cs,"rgba(74,222,128,.3)","rgba(74,222,128,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" km/h"},font:{size:10}}}}}})}'
+    +'if(ALT.length>1){var ca=document.getElementById("ca").getContext("2d");new Chart(ca,{type:"line",data:{labels:LA,datasets:[{data:ALT,borderColor:"#fbbf24",backgroundColor:mg(ca,"rgba(251,191,36,.3)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:10}}}}}})}'
+    +'};'
+    +'</scr'+'ipt></body></html>'
+    return body
+  }
+
+  // ── localStorage rides ──
+  var RKEY='bk_rides'
+  var loadRides=function(){try{return JSON.parse(localStorage.getItem(RKEY)||'[]')}catch(e){return[]}}
+  var saveRides=function(r){localStorage.setItem(RKEY,JSON.stringify(r.slice(0,30)))}
+  var renderRides=function(){
+    var el=g('ridesList'), rides=loadRides()
+    if(!rides.length){el.innerHTML='<div class="ride"><div class="ride-name" style="color:#6d83a8">Brak zapisanych tras</div></div>';return}
+    el.innerHTML=''
+    rides.forEach(function(r,i){
+      var d=document.createElement('div');d.className='ride'
+      d.innerHTML='<div class="ride-name">'+esc(r.name||r.date)+'</div><div class="ride-meta">Trip: '+r.tripKm+' km &nbsp;·&nbsp; +'+r.gainM+' m &nbsp;·&nbsp; '+r.dur+'</div><div class="ride-actions"><button data-i="'+i+'" data-a="dl">📥 Pobierz</button><button data-i="'+i+'" data-a="ren" class="btn-ren">✏️ Nazwa</button><button data-i="'+i+'" data-a="del" class="btn-del">🗑 Usuń</button></div>'
+      d.querySelectorAll('button').forEach(function(b){
+        b.onclick=function(){
+          var idx=+b.dataset.i, act=b.dataset.a, all=loadRides(), r2=all[idx]
+          if(!r2) return
+          if(act==='dl'){dl(r2.fileBase+'.gpx',r2.gpx,'application/gpx+xml');setTimeout(function(){dl(r2.fileBase+'.html',r2.html,'text/html')},300)}
+          else if(act==='ren'){var v=prompt('Nowa nazwa:',r2.name||r2.date);if(v&&v.trim()){all[idx].name=v.trim();saveRides(all);renderRides()}}
+          else if(act==='del'){if(confirm('Usunąć "'+esc(r2.name||r2.date)+'"?')){all.splice(idx,1);saveRides(all);renderRides()}}
+        }
+      })
+      el.appendChild(d)
+    })
+  }
+  var saveRide=function(st){ var ride={name:'Trasa '+new Date().toLocaleDateString('pl-PL'),date:new Date().toLocaleString('pl-PL'),tripKm:st.tripKm,gainM:st.gainM,dur:st.dur,fileBase:'trasa-'+Date.now(),gpx:toGpx(),html:buildSummaryHtml(st)}; var r=loadRides();r.unshift(ride);saveRides(r);renderRides();return ride }
+
+  // ── GPS ──
+  var onPos=function(p){
+    if(!S.running||S.paused) return
+    var cur={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,spd:p.coords.speed,acc:p.coords.accuracy,t:p.timestamp}
+    if(!S.last){if(cur.acc>50){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}S.last=cur;S.lastAlt=S.altBuf.push(cur.alt);status('GPS OK. Nagrywam trasę...');return}
+    var d=dist(S.last,cur),dt=cur.t-S.last.t,sms=dt>0?d/(dt/1000):0
+    var kmh=S.spdEma.push(sms*3.6)||0
+    if(kmh<=2){S.paused=true;S.last=cur;setBadge('pause','(auto)PAUZA');setBtn();status('⏸ (auto)Pauza — brak ruchu...');return}
+    S.trip+=d;S.total+=d/1000;S.movT+=dt;S.movD+=d
+    var sa=S.altBuf.push(cur.alt);S.gain+=S.altBuf.gain(S.lastAlt,sa);S.lastAlt=sa
+    if(isFinite(sa)){S.altH.push(Math.round(sa));if(S.altH.length>300)S.altH.shift();S.spdH.push(Math.round(kmh*10)/10);if(S.spdH.length>300)S.spdH.shift()}
+    S.pts.push(cur);S.last=cur;S.tp.push([cur.lat,cur.lon,Math.min(kmh,40)])
+    g('vSpeed').textContent=fmt(kmh,1);g('vAvg').textContent=fmt((S.movD/1000)/(S.movT/3600000),1);g('vTrip').textContent=fmt(S.trip/1000,2);g('vTotal').textContent=fmt(S.total,2);g('vGain').textContent=Math.round(S.gain);g('vAlt').textContent=isFinite(sa)?Math.round(sa):'—'
+    drawChart();status('Nagrywam... '+new Date(cur.t).toLocaleTimeString('pl-PL'))
+  }
+
+  // ── buttons ──
+  var start=function(){
+    if(!navigator.geolocation){status('Geolokalizacja niedostępna.');return}
+    if(S.running&&S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();status('Wznowiono nagrywanie.');return}
+    if(S.running) return
+    S.running=true;S.paused=false;S.pts=[];S.tp=[];S.trip=0;S.gain=0;S.last=null;S.lastAlt=null;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.spdEma=new EMA(.3);S.altBuf=new AltBuf()
+    g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vTimer').textContent='00:00:00'
+    setBadge('rec','NAGRYWAM');setBtn();status('Wyszukuję sygnał GPS...')
+    S.startTime=Date.now();clearInterval(S.timerId);S.timerId=setInterval(function(){g('vTimer').textContent=toHms((Date.now()-S.startTime)/1000)},1000)
+    S.watchId=navigator.geolocation.watchPosition(onPos,function(e){status('Błąd GPS: '+e.message)},{enableHighAccuracy:true,maximumAge:2000,timeout:20000})
+  }
+  var stop=function(){
+    if(!S.running) return
+    navigator.geolocation.clearWatch(S.watchId);clearInterval(S.timerId)
+    S.running=false;S.paused=false;setBadge('stop','STOP');setBtn();status('Nagrywanie zakończone.')
+    var st=getStats(), ride=saveRide(st)
+    g('mSub').textContent=ride.date+' · Trip: '+st.tripKm+' km'
+    g('mStats').innerHTML=['Dystans','Śr. prędkość','Prędkość max.','Przewyższenie','Czas','Punkty GPS'].map(function(k,i){return'<div class="stat"><span class="k">'+k+'</span><span class="v">'+[st.tripKm+' km',st.avgKmh+' km/h',st.topKmh+' km/h',st.gainM+' m',st.dur,st.pts][i]+'</span></div>'}).join('')
+    g('mBtnGPX').onclick=function(){dl(ride.fileBase+'.gpx',ride.gpx,'application/gpx+xml')}
+    g('mBtnHTML').onclick=function(){dl(ride.fileBase+'.html',ride.html,'text/html')}
+    g('mBtnClose').onclick=function(){g('modalBg').classList.remove('open')}
+    g('modalBg').classList.add('open')
+  }
+  var reset=function(){
+    if(S.running&&!confirm('Zresetować trip w trakcie jazdy?')) return
+    S.trip=0;S.gain=0;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.tp=[];S.last=null;S.lastAlt=null
+    g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vTimer').textContent='00:00:00'
+    drawChart();status('Trip zresetowany.')
+  }
+  var toggleStart=function(){
+    if(!S.running){start();return}
+    if(S.paused){S.paused=false;setBadge('rec','NAGRYWAM');setBtn();status('Wznowiono nagrywanie.')}
+    else{S.paused=true;setBadge('pause','PAUZA');setBtn();status('⏸ Pauza.')}
+  }
+
+  // ── bind ──
+  g('startBtn').onclick = toggleStart
+  g('stopBtn').onclick  = stop
+  g('resetBtn').onclick = reset
+
+  // ── init ──
+  localStorage.setItem('bike_total_km', String(S.total))
+  window.addEventListener('beforeunload', function(){ localStorage.setItem('bike_total_km', String(S.total)) })
+  renderRides()
+  drawChart()
+
+})();
+</script>
+</body>
+</html>
