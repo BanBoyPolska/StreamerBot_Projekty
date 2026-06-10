@@ -267,9 +267,10 @@
       status('▶ Wznowiono automatycznie.')
     }
     if(S.paused) return
+    var safeDt = Math.min(dt, 10000)  // cap pojedynczego segmentu do 10 sekund
     S.trip += d
     S.total += d/1000
-    S.movT += dt
+    S.movT += safeDt
     S.movD += d
     var sa=S.altBuf.push(cur.alt)
     S.gain += S.altBuf.gain(S.lastAlt,sa)
@@ -297,7 +298,7 @@
     S.running=true;S.paused=false;S.pts=[];S.tp=[];S.trip=0;S.gain=0;S.last=null;S.lastAlt=null;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.spdEma=new EMA(.3);S.altBuf=new AltBuf()
     g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wyszukuję sygnał GPS...')
-    S.startTime=Date.now();S.recStart=S.startTime;S.pausedAccum=0;S.pauseStarted=0;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();var recElapsed=(now-S.recStart-S.pausedAccum)/1000;g('vRecTimer').textContent=toHms(recElapsed);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
+    S.startTime=Date.now();S.recStart=S.startTime;S.pausedAccum=0;S.pauseStarted=0;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();var currentPause=S.paused&&S.pauseStarted?now-S.pauseStarted:0;var recElapsed=(now-S.recStart-S.pausedAccum-currentPause)/1000;g('vRecTimer').textContent=toHms(recElapsed);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
     S.watchId=navigator.geolocation.watchPosition(onPos,function(e){status('Błąd GPS: '+e.message)},{enableHighAccuracy:true,maximumAge:2000,timeout:20000})
   }
   var stop=function(){
