@@ -136,6 +136,7 @@
   // ── badge ──
   var setBadge = function(s,txt){ g('badge').style.cssText = s==='rec'?'background:rgba(74,222,128,.12);color:#4ade80':s==='pause'?'background:rgba(251,191,36,.12);color:#fbbf24':s==='stop'?'background:rgba(251,113,133,.12);color:#fb7185':'background:rgba(255,255,255,.07);color:#6d83a8'; g('badge').textContent=txt }
   var setBtn = function(){ var b=g('startBtn'); if(!S.running) b.textContent='▶ Start'; else if(S.paused) b.textContent='▶ Wznów'; else b.textContent='⏸ Pauza' }
+  var accColor = function(acc){ if(!isFinite(acc)) return '#e8eefc'; if(acc <= 10) return '#4ade80'; if(acc <= 30) return '#fbbf24'; return '#fb7185' }
   var status = function(m){ g('statusEl').textContent=m }
 
   // ── alt chart ──
@@ -251,7 +252,7 @@
     if(isFinite(cur.alt)&&cur.alt!==null) g('vAlt').textContent=Math.round(cur.alt)
     if(!S.last){
       if(cur.acc>50){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
-      S.last=cur;S.lastWall=wallNow;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur);S.tp.push([cur.lat,cur.lon,0])
+      S.last=cur;S.lastWall=wallNow;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur);S.tp.push([cur.lat,cur.lon,0]); g('vAcc').style.color=accColor(cur.acc)
       status('✅ GPS znaleziony (acc: '+Math.round(cur.acc)+' m). Nagrywam trasę...')
       return
     }
@@ -285,6 +286,7 @@
       S.last=cur; S.lastWall=wallNow
       g('vSpeed').textContent='0.0'
       g('vGain').textContent=Math.round(S.gain)
+      g('vAcc').style.color=accColor(cur.acc)
       return
     }
 
@@ -313,7 +315,7 @@
     g('vSpeed').textContent=fmt(displayKmh,1)
     g('vAvg').textContent=avg
     g('vTrip').textContent=fmt(S.trip/1000,2)
-    g('vTotal').textContent=fmt(S.total,2)
+    g('vAcc').textContent=isFinite(cur.acc)?Math.round(cur.acc):'—'; g('vAcc').style.color=accColor(cur.acc)
     g('vGain').textContent=Math.round(S.gain)
     g('vMoveTimer').textContent=toHms(S.movT/1000)
     g('vRecTimer').textContent=toHms((Date.now()-S.recStart)/1000)
