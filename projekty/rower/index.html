@@ -111,9 +111,17 @@
   var dist = function(a,b){ var R=6371000,to=function(x){return x*Math.PI/180},dLat=to(b.lat-a.lat),dLon=to(b.lon-a.lon),x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(to(a.lat))*Math.cos(to(b.lat))*Math.sin(dLon/2)*Math.sin(dLon/2); return 2*R*Math.asin(Math.sqrt(x)) }
   var EMA = function(a){ this.a=a||.3; this.v=null }
   EMA.prototype.push = function(x){ if(!isFinite(x)) return this.v; this.v=this.v===null?x:this.a*x+(1-this.a)*this.v; return this.v }
-  var AltBuf = function(){ this.b=[] }
-  AltBuf.prototype.push = function(h){ if(!isFinite(h)) return null; this.b.push(h); if(this.b.length>5) this.b.shift(); return this.b.reduce(function(a,b){return a+b},0)/this.b.length }
-  AltBuf.prototype.gain = function(prev,cur){ if(prev===null||cur===null) return 0; var d=cur-prev; return d>3?d:0 }
+  var AltBuf = function(){ this.b=[]; this.lastSmooth=null }
+  AltBuf.prototype.push = function(h){
+    if(!isFinite(h)||h===null) return this.lastSmooth
+    this.b.push(h); if(this.b.length>6) this.b.shift()
+    var s=this.b.reduce(function(a,v){return a+v},0)/this.b.length
+    this.lastSmooth=s; return s
+  }
+  AltBuf.prototype.gain = function(prev,cur){
+    if(prev===null||cur===null||!isFinite(prev)||!isFinite(cur)) return 0
+    var d=cur-prev; return d>2?d:0
+  }
 
   // ── state ──
   var S = {
@@ -239,7 +247,7 @@
     if(!S.running) return
     var wallNow = Date.now()
     var cur={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,spd:p.coords.speed,acc:p.coords.accuracy,t:wallNow}
-    g('vAlt').textContent=isFinite(cur.alt)?Math.round(cur.alt):'—'
+    if(isFinite(cur.alt)&&cur.alt!==null) g('vAlt').textContent=Math.round(cur.alt)
     if(!S.last){
       if(cur.acc>50){status('Czekam na dokładny sygnał GPS (acc: '+Math.round(cur.acc)+' m)...');return}
       S.last=cur;S.lastWall=wallNow;S.lastAlt=S.altBuf.push(cur.alt);S.pts.push(cur);S.tp.push([cur.lat,cur.lon,0])
@@ -275,6 +283,7 @@
       }
       S.last=cur; S.lastWall=wallNow
       g('vSpeed').textContent='0.0'
+      g('vGain').textContent=Math.round(S.gain)
       return
     }
 
@@ -306,7 +315,7 @@
     g('vTotal').textContent=fmt(S.total,2)
     g('vGain').textContent=Math.round(S.gain)
     g('vMoveTimer').textContent=toHms(S.movT/1000)
-    g('vRecTimer').textContent=toHms((Date.now()-S.recStart-S.pausedAccum)/1000)
+    g('vRecTimer').textContent=toHms((Date.now()-S.recStart)/1000)
     drawChart()
     status('Nagrywam... '+fmt(displayKmh,1)+' km/h | acc:'+Math.round(cur.acc)+'m | pkt:'+S.pts.length)
   }
@@ -319,7 +328,7 @@
     S.running=true;S.paused=false;S.pts=[];S.tp=[];S.trip=0;S.gain=0;S.last=null;S.lastAlt=null;S.movT=0;S.movD=0;S.altH=[];S.spdH=[];S.spdEma=new EMA(.3);S.altBuf=new AltBuf()
     g('vTrip').textContent='0.00';g('vGain').textContent='0';g('vSpeed').textContent='0.0';g('vAvg').textContent='0.0';g('vMoveTimer').textContent='00:00:00';g('vRecTimer').textContent='00:00:00'
     setBadge('rec','NAGRYWAM');setBtn();keepScreenAwake(true);status('Wyszukuję sygnał GPS...')
-    S.startTime=Date.now();S.recStart=S.startTime;S.pausedAccum=0;S.pauseStarted=0;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();var currentPause=S.paused&&S.pauseStarted?now-S.pauseStarted:0;var recElapsed=(now-S.recStart-S.pausedAccum-currentPause)/1000;g('vRecTimer').textContent=toHms(recElapsed);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
+    S.startTime=Date.now();S.recStart=S.startTime;S.pausedAccum=0;S.pauseStarted=0;clearInterval(S.timerId);S.timerId=setInterval(function(){var now=Date.now();g('vRecTimer').textContent=toHms((now-S.recStart)/1000);g('vMoveTimer').textContent=toHms(S.movT/1000)},1000)
     S.watchId=navigator.geolocation.watchPosition(onPos,function(e){status('Błąd GPS: '+e.message)},{enableHighAccuracy:true,maximumAge:2000,timeout:20000})
   }
   var stop=function(){
