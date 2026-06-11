@@ -129,7 +129,7 @@
     pts:[], tp:[], trip:0, total:parseFloat(localStorage.getItem('bk_total')||'0'),
     gain:0, movT:0, movD:0, recStart:0, pausedAccum:0, pauseStarted:0, last:null, lastWall:0, lastAlt:null, lowCount:0, highCount:0,
     spdEma:new EMA(.2), altBuf:new AltBuf(),
-    altH:[], spdH:[], lowCount:0, autoPauseKmh:1.5, autoPauseMinPts:6, autoPauseNeed:4
+    altH:[], spdH:[], lowCount:0, autoPauseKmh:1.5, autoPauseMinPts:4, autoPauseNeed:2
   }
   g('vAcc').textContent='—'
 
