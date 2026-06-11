@@ -58,7 +58,7 @@
     <div class="card"><div class="lbl">Prędkość</div><div class="val" id="vSpeed">0.0</div><div class="unt">km/h</div></div>
     <div class="card"><div class="lbl">Śr. w ruchu</div><div class="val" id="vAvg">0.0</div><div class="unt">km/h</div></div>
     <div class="card"><div class="lbl">Trip</div><div class="val" id="vTrip">0.00</div><div class="unt">km</div></div>
-    <div class="card"><div class="lbl">Dystans całk.</div><div class="val" id="vTotal">0.00</div><div class="unt">km</div></div>
+    <div class="card"><div class="lbl">Dokładność GPS</div><div class="val" id="vAcc">—</div><div class="unt">m</div></div>
     <div class="card"><div class="lbl">Wysokość</div><div class="val" id="vAlt">—</div><div class="unt">m n.p.m.</div></div>
     <div class="card"><div class="lbl">Przewyższenie</div><div class="val" id="vGain">0</div><div class="unt">m</div></div>
     <div class="card"><div class="lbl">Czas w ruchu</div><div class="val" id="vMoveTimer">00:00:00</div><div class="unt">hh:mm:ss</div></div>
@@ -131,7 +131,7 @@
     spdEma:new EMA(.2), altBuf:new AltBuf(),
     altH:[], spdH:[], lowCount:0, autoPauseKmh:1.5, autoPauseMinPts:6, autoPauseNeed:4
   }
-  g('vTotal').textContent = S.total.toFixed(2)
+  g('vAcc').textContent='—'
 
   // ── badge ──
   var setBadge = function(s,txt){ g('badge').style.cssText = s==='rec'?'background:rgba(74,222,128,.12);color:#4ade80':s==='pause'?'background:rgba(251,191,36,.12);color:#fbbf24':s==='stop'?'background:rgba(251,113,133,.12);color:#fb7185':'background:rgba(255,255,255,.07);color:#6d83a8'; g('badge').textContent=txt }
