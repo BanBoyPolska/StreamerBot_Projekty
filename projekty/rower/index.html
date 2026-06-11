@@ -107,7 +107,7 @@
     <div id="sPnlCloseBar">
       <button id="sPnlCloseBtn">✕ Zamknij Podsumowanie</button>
     </div>
-    <div id="sPnlContent"></div>
+    <iframe id="sPnlContent" style="width:100%;height:100vh;border:0;display:block;" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
   </div>
 <script>
 (function(){
@@ -190,7 +190,7 @@
     +'</div>'
     +'<h2>📈 Prędkość</h2><div class="cw"><canvas id="cs" height="130"></canvas></div>'
     +'<h2>⛰ Przewyższenia</h2><div class="cw"><canvas id="ca" height="130"></canvas></div>'
-    +'<footer>Wygenerowano przez Bike Dashboard</footer><div class=\"closewrap\"><button class=\"closebtn\" id=\"closeSummaryBtn\" type=\"button\">Zamknij Podsumowanie</button></div>'
+    +'<footer>Wygenerowano przez Bike Dashboard</footer>'
     +'<scr'+'ipt src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></scr'+'ipt>'
     +'<scr'+'ipt src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></scr'+'ipt>'
     +'<scr'+'ipt>'
@@ -205,7 +205,7 @@
     +'function mg(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,130);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}'
     +'if(SPD.length>1){var cs=document.getElementById("cs").getContext("2d");new Chart(cs,{type:"line",data:{labels:LS,datasets:[{data:SPD,borderColor:"#4ade80",backgroundColor:mg(cs,"rgba(74,222,128,.3)","rgba(74,222,128,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" km/h"},font:{size:10}}}}}})}'
     +'if(ALT.length>1){var ca=document.getElementById("ca").getContext("2d");new Chart(ca,{type:"line",data:{labels:LA,datasets:[{data:ALT,borderColor:"#fbbf24",backgroundColor:mg(ca,"rgba(251,191,36,.3)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:10}}}}}})}'
-    +'document.addEventListener(\"DOMContentLoaded\",function(){var b=document.getElementById(\"closeSummaryBtn\");if(b){b.onclick=function(){try{window.close()}catch(e){}; setTimeout(function(){if(!window.closed) history.back()},100)}}});'
+    +''
     +'};'
     +'</scr'+'ipt></body></html>'
     return body
@@ -226,7 +226,7 @@
         b.onclick=function(){
           var idx=+b.dataset.i, act=b.dataset.a, all=loadRides(), r2=all[idx]
           if(!r2) return
-          if(act==='sum'){var bg=document.getElementById('sPnlBg');document.getElementById('sPnlContent').innerHTML=r2.html;bg.classList.add('open');bg.scrollTop=0}
+          if(act==='sum'){var bg=document.getElementById('sPnlBg');document.getElementById('sPnlContent').srcdoc=r2.html;bg.classList.add('open');bg.scrollTop=0}
           else if(act==='dl'){dl(r2.fileBase+'.gpx',r2.gpx,'application/gpx+xml');setTimeout(function(){dl(r2.fileBase+'.html',r2.html,'text/html')},300)}
           else if(act==='ren'){var v=prompt('Nowa nazwa:',r2.name||r2.date);if(v&&v.trim()){all[idx].name=v.trim();saveRides(all);renderRides()}}
           else if(act==='del'){if(confirm('Usunąć "'+esc(r2.name||r2.date)+'"?')){all.splice(idx,1);saveRides(all);renderRides()}}
@@ -385,7 +385,7 @@
 
   document.getElementById('sPnlCloseBtn').addEventListener('click',function(){
     document.getElementById('sPnlBg').classList.remove('open');
-    document.getElementById('sPnlContent').innerHTML='';
+    document.getElementById('sPnlContent').srcdoc='';
   });
 </script>
 </body>
