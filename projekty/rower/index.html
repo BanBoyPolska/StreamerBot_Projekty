@@ -49,10 +49,10 @@
 
     #sPnlBg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1100;overflow-y:auto}
     #sPnlBg.open{display:block}
-    #sPnlInner{background:#07111f;min-height:100vh;padding:16px}
+    #sPnlContent{padding:0 16px 40px}
     #sPnlCloseBar{position:sticky;top:0;z-index:10;padding:10px 0 14px;background:#07111f;text-align:center}
     #sPnlCloseBtn{width:100%;padding:14px 16px;border-radius:14px;border:1px solid #1e3154;background:rgba(251,113,133,.12);color:#fb7185;font-weight:800;font-size:15px;cursor:pointer}
-    #sPnlFrame{width:100%;border:0;min-height:80vh;display:block}
+    
   </style>
 </head>
 <body>
@@ -204,11 +204,11 @@
     +'};'
     +'</scr'+'ipt>
   <div id="sPnlBg">
-    <div id="sPnlInner">
+    
       <div id="sPnlCloseBar">
         <button id="sPnlCloseBtn">✕ Zamknij Podsumowanie</button>
       </div>
-      <iframe id="sPnlFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+      <div id="sPnlContent"></div>
     </div>
   </div>
 </body></html>'
@@ -230,7 +230,7 @@
         b.onclick=function(){
           var idx=+b.dataset.i, act=b.dataset.a, all=loadRides(), r2=all[idx]
           if(!r2) return
-          if(act==='sum'){var fr=document.getElementById('sPnlFrame');var bl=new Blob([r2.html],{type:'text/html'});var u=URL.createObjectURL(bl);fr.src=u;document.getElementById('sPnlBg').classList.add('open')}
+          if(act==='sum'){document.getElementById('sPnlContent').innerHTML=r2.html;document.getElementById('sPnlBg').classList.add('open');document.getElementById('sPnlBg').scrollTop=0}
           else if(act==='dl'){dl(r2.fileBase+'.gpx',r2.gpx,'application/gpx+xml');setTimeout(function(){dl(r2.fileBase+'.html',r2.html,'text/html')},300)}
           else if(act==='ren'){var v=prompt('Nowa nazwa:',r2.name||r2.date);if(v&&v.trim()){all[idx].name=v.trim();saveRides(all);renderRides()}}
           else if(act==='del'){if(confirm('Usunąć "'+esc(r2.name||r2.date)+'"?')){all.splice(idx,1);saveRides(all);renderRides()}}
@@ -388,11 +388,8 @@
 })();
 
   document.getElementById('sPnlCloseBtn').addEventListener('click', function(){
-    var bg = document.getElementById('sPnlBg');
-    bg.classList.remove('open');
-    var fr = document.getElementById('sPnlFrame');
-    if(fr.src && fr.src.startsWith('blob:')) URL.revokeObjectURL(fr.src);
-    fr.src = '';
+    document.getElementById('sPnlBg').classList.remove('open');
+    document.getElementById('sPnlContent').innerHTML='';
   });
 </script>
 </body>
