@@ -47,12 +47,11 @@
     #mBtnHTML{background:rgba(255,255,255,.07);color:#e8eefc;border:1px solid #1e3154!important}
     #mBtnClose{grid-column:span 2;background:rgba(251,113,133,.1);color:#fb7185;border:1px solid rgba(251,113,133,.2)!important}
 
-    #sPnlBg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1100;overflow-y:auto}
-    #sPnlBg.open{display:block}
+    #sPnlBg{visibility:hidden;pointer-events:none;position:fixed;inset:0;background:#07111f;z-index:1100;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    #sPnlBg.open{visibility:visible;pointer-events:auto}
+    #sPnlCloseBar{position:sticky;top:0;z-index:10;padding:12px 16px 16px;background:#07111f;text-align:center}
+    #sPnlCloseBtn{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(251,113,133,.3);background:rgba(251,113,133,.12);color:#fb7185;font-weight:800;font-size:15px;cursor:pointer;touch-action:manipulation}
     #sPnlContent{padding:0 16px 40px}
-    #sPnlCloseBar{position:sticky;top:0;z-index:10;padding:10px 0 14px;background:#07111f;text-align:center}
-    #sPnlCloseBtn{width:100%;padding:14px 16px;border-radius:14px;border:1px solid #1e3154;background:rgba(251,113,133,.12);color:#fb7185;font-weight:800;font-size:15px;cursor:pointer}
-    
   </style>
 </head>
 <body>
@@ -202,14 +201,7 @@
     +'if(ALT.length>1){var ca=document.getElementById("ca").getContext("2d");new Chart(ca,{type:"line",data:{labels:LA,datasets:[{data:ALT,borderColor:"#fbbf24",backgroundColor:mg(ca,"rgba(251,191,36,.3)","rgba(251,191,36,.02)"),borderWidth:2,pointRadius:0,fill:true,tension:.35}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:function(v){return v+" m"},font:{size:10}}}}}})}'
     +'document.addEventListener(\"DOMContentLoaded\",function(){var b=document.getElementById(\"closeSummaryBtn\");if(b){b.onclick=function(){try{window.close()}catch(e){}; setTimeout(function(){if(!window.closed) history.back()},100)}}});'
     +'};'
-    +'</scr'+'ipt>
-  <div id="sPnlBg">
-    <div id="sPnlCloseBar">
-      <button id="sPnlCloseBtn">✕ Zamknij Podsumowanie</button>
-    </div>
-    <div id="sPnlContent"></div>
-  </div>
-</body></html>'
+    +'</scr'+'ipt></body></html>'
     return body
   }
 
@@ -228,7 +220,7 @@
         b.onclick=function(){
           var idx=+b.dataset.i, act=b.dataset.a, all=loadRides(), r2=all[idx]
           if(!r2) return
-          if(act==='sum'){document.getElementById('sPnlContent').innerHTML=r2.html;document.getElementById('sPnlBg').classList.add('open');document.getElementById('sPnlBg').scrollTop=0}
+          if(act==='sum'){var bg=document.getElementById('sPnlBg');document.getElementById('sPnlContent').innerHTML=r2.html;bg.classList.add('open');bg.scrollTop=0}
           else if(act==='dl'){dl(r2.fileBase+'.gpx',r2.gpx,'application/gpx+xml');setTimeout(function(){dl(r2.fileBase+'.html',r2.html,'text/html')},300)}
           else if(act==='ren'){var v=prompt('Nowa nazwa:',r2.name||r2.date);if(v&&v.trim()){all[idx].name=v.trim();saveRides(all);renderRides()}}
           else if(act==='del'){if(confirm('Usunąć "'+esc(r2.name||r2.date)+'"?')){all.splice(idx,1);saveRides(all);renderRides()}}
@@ -385,10 +377,16 @@
 
 })();
 
-  document.getElementById('sPnlCloseBtn').addEventListener('click', function(){
+  document.getElementById('sPnlCloseBtn').addEventListener('click',function(){
     document.getElementById('sPnlBg').classList.remove('open');
     document.getElementById('sPnlContent').innerHTML='';
   });
 </script>
+  <div id="sPnlBg">
+    <div id="sPnlCloseBar">
+      <button id="sPnlCloseBtn">✕ Zamknij Podsumowanie</button>
+    </div>
+    <div id="sPnlContent"></div>
+  </div>
 </body>
 </html>
